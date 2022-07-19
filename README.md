@@ -1,6 +1,6 @@
 # _approve2_
 
-Backwards compatible, second generation ERC20 approval/meta-tx system.
+Backwards compatible, low-overhead, next generation token approval/meta-tx system.
 
 ## Contributing
 
