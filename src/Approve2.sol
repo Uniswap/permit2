@@ -121,7 +121,9 @@ contract Approve2 {
     ) external virtual returns (bool) {
         uint256 allowed = allowance[token][from][msg.sender]; // Saves gas for limited approvals.
 
-        if (allowed != type(uint256).max) allowance[token][from][msg.sender] = allowed - amount;
+        if (allowed != type(uint256).max)
+            if (allowed >= amount) allowance[token][from][msg.sender] = allowed - amount;
+            else require(hasApprovedAll[from][msg.sender], "APPROVE_ALL_REQUIRED");
 
         token.safeTransferFrom(from, to, amount);
 
