@@ -1,6 +1,6 @@
 # _approve2_
 
-EIP-2612-style permit for any token.
+Backwards compatible, second generation ERC20 approval/meta-tx system.
 
 ## Contributing
 
