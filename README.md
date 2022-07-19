@@ -1,6 +1,6 @@
 # _approve2_
 
-EIP-2612-style permit for any token.
+Backwards compatible, low-overhead, next generation token approval/meta-tx system.
 
 ## Contributing
 
