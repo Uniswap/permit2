@@ -1,4 +1,4 @@
-# parapermit
+# *para*permit
 
 EIP-2612-style permit for any token.
 
@@ -24,3 +24,7 @@ forge test
 ```sh
 forge snapshot
 ```
+
+## Acknowledgments
+
+Inspired by [permit-everywhere](https://github.com/merklejerk/permit-everywhere).
