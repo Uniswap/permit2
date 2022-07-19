@@ -23,7 +23,7 @@ contract Parapermit {
 
     mapping(address => mapping(address => uint256)) public allowance;
 
-    event Approval(address indexed owner, address indexed spender, uint256 amount);
+    event Permit(address indexed owner, address indexed spender, uint256 amount);
 
     constructor() {
         INITIAL_CHAIN_ID = block.chainid;
@@ -96,7 +96,7 @@ contract Parapermit {
             allowance[recoveredAddress][spender] = value;
         }
 
-        emit Approval(owner, spender, value);
+        emit Permit(owner, spender, value);
     }
 
     /*//////////////////////////////////////////////////////////////
