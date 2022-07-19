@@ -6,7 +6,7 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {Approve2} from "./Approve2.sol";
 
-library Approve2ib {
+library Approve2Lib {
     using SafeTransferLib for ERC20;
 
     function permit2(
