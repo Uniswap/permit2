@@ -24,3 +24,7 @@ forge test
 ```sh
 forge snapshot
 ```
+
+## Acknowledgments
+
+Inspired by [permit-everywhere](https://github.com/merklejerk/permit-everywhere).
