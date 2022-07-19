@@ -1,4 +1,4 @@
-# *para*permit
+# _approve2_
 
 EIP-2612-style permit for any token.
 
@@ -9,8 +9,8 @@ You will need a copy of [Foundry](https://github.com/foundry-rs/foundry) install
 ### Setup
 
 ```sh
-git clone https://github.com/transmissions11/parapermit.git
-cd parapermit
+git clone https://github.com/transmissions11/approve2.git
+cd approve2
 ```
 
 ### Run Tests

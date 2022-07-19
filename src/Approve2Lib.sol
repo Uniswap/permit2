@@ -4,14 +4,14 @@ pragma solidity 0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
-import {Parapermit} from "./Parapermit.sol";
+import {Approve2} from "./Approve2.sol";
 
-library ParaPermit {
+library Approve2ib {
     using SafeTransferLib for ERC20;
 
-    function paraPermit(
+    function permit2(
         ERC20 token,
-        Parapermit parapermit,
+        Approve2 approve2,
         address owner,
         address spender,
         uint256 value,
@@ -27,17 +27,17 @@ library ParaPermit {
             // Attempt to call permit on the token.
             try token.permit(owner, spender, value, deadline, v, r, s) {} catch {
                 // If permit didn't work, then we need to check if the owner is the spender.
-                if (token.nonces(owner) != nonce + 1) parapermit.permit(owner, spender, value, deadline, v, r, s);
+                if (token.nonces(owner) != nonce + 1) approve2.permit(owner, spender, value, deadline, v, r, s);
             }
         } catch {
-            // If there is no nonce function, go straight to Parapermit.
-            parapermit.permit(owner, spender, value, deadline, v, r, s);
+            // If there is no nonce function, go straight to Approve2.
+            approve2.permit(owner, spender, value, deadline, v, r, s);
         }
     }
 
-    function paraTransferFrom(
+    function transferFrom2(
         ERC20 token,
-        Parapermit permit,
+        Approve2 permit,
         address from,
         address to,
         uint256 amount
@@ -46,7 +46,7 @@ library ParaPermit {
             // Use normal transfer if possible.
             token.safeTransferFrom(from, to, amount);
         } else {
-            // Otherwise try Parapermit (assume permit has already happened).
+            // Otherwise try Approve2 (assume permit has already happened).
             permit.transferFrom(token, from, to, amount);
         }
     }

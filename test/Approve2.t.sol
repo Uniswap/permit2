@@ -3,12 +3,12 @@ pragma solidity 0.8.13;
 
 import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
 
-import {Parapermit} from "../src/Parapermit.sol";
+import {Approve2} from "../src/Approve2.sol";
 
-contract SampleContractTest is DSTestPlus {
-    Parapermit parapermit;
+contract Approve2Test is DSTestPlus {
+    Approve2 approve2;
 
     function setUp() public {
-        parapermit = new Parapermit();
+        approve2 = new Approve2();
     }
 }
