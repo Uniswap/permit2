@@ -1,0 +1,20 @@
+{
+  "name": "foundry-template",
+  "license": "MIT",
+  "version": "1.0.0",
+  "description": "Streamlined template for getting started with Foundry and Solmate.",
+  "files": [
+    "src/**/*.sol"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/transmissions11/foundry-template.git"
+  },
+  "devDependencies": {
+    "prettier": "^2.3.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.13"
+  },
+  "scripts": {
+    "lint": "prettier --write **.sol"
+  }
+}
