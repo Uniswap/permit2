@@ -1,6 +1,6 @@
-# foundry-template
+# parapermit
 
-Streamlined template for getting started with Foundry and Solmate.
+EIP-2612-style permit for any token.
 
 ## Contributing
 
@@ -9,8 +9,8 @@ You will need a copy of [Foundry](https://github.com/foundry-rs/foundry) install
 ### Setup
 
 ```sh
-git clone https://github.com/transmissions11/foundry-template.git
-cd foundry-template
+git clone https://github.com/transmissions11/parapermit.git
+cd parapermit
 ```
 
 ### Run Tests
