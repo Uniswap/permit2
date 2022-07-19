@@ -1,4 +1,4 @@
-# parapermit
+# *para*permit
 
 EIP-2612-style permit for any token.
 
