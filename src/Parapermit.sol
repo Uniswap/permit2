@@ -2,8 +2,11 @@
 pragma solidity 0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 contract Parapermit {
+    using SafeTransferLib for ERC20;
+
     /*//////////////////////////////////////////////////////////////
                              EIP-712 STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -110,6 +113,8 @@ contract Parapermit {
 
         if (allowed != type(uint256).max) allowance[from][msg.sender] = allowed - amount;
 
-        token.transferFrom(from, to, amount);
+        token.safeTransferFrom(from, to, amount);
+
+        return true;
     }
 }
