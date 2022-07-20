@@ -256,7 +256,7 @@ contract Approve2 {
 
             // Revoke allowance each spender who is approved for all tokens.
             for (uint256 i = 0; i < operators.length; ++i) {
-                isOperator[msg.sender][operators[i]] = true;
+                isOperator[msg.sender][operators[i]] = false;
             }
         }
 
