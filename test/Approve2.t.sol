@@ -53,6 +53,7 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
 
     function setUp() public {
         testPermit2Full();
+        testStandardPermit();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -66,7 +67,9 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
                 abi.encodePacked(
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, 0, block.timestamp))
+                    keccak256(
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                    )
                 )
             )
         );
@@ -81,7 +84,9 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
                 abi.encodePacked(
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, 0, block.timestamp))
+                    keccak256(
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                    )
                 )
             )
         );
@@ -96,7 +101,9 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
                 abi.encodePacked(
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, 0, block.timestamp))
+                    keccak256(
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                    )
                 )
             )
         );
