@@ -60,21 +60,18 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
     //////////////////////////////////////////////////////////////*/
 
     function testStandardPermit() public {
-        uint256 privateKey = 0xBEEF;
-        address owner = hevm.addr(privateKey);
-
         (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
-            privateKey,
+            PK,
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(PERMIT_TYPEHASH, owner, address(0xCAFE), 1e18, 0, block.timestamp))
+                    keccak256(abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, 0, block.timestamp))
                 )
             )
         );
 
-        token.permit(owner, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        token.permit(PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
     function testOZSafePermit() public {
