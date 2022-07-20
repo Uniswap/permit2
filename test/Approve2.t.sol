@@ -53,6 +53,7 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
 
     function setUp() public {
         testPermit2Full();
+        testPermit2NonPermitToken();
         testStandardPermit();
     }
 
