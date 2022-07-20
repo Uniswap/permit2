@@ -49,6 +49,10 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
         nonPermitToken.mint(address(this), type(uint128).max);
         nonPermitToken.approve(address(this), type(uint128).max);
         nonPermitToken.approve(address(approve2), type(uint128).max);
+
+        nonPermitToken.mint(PK_OWNER, type(uint128).max);
+        hevm.prank(PK_OWNER);
+        nonPermitToken.approve(address(approve2), type(uint128).max);
     }
 
     function setUp() public {
@@ -174,5 +178,11 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
         hevm.startPrank(address(0xCAFE));
 
         transferFrom2(token, PK_OWNER, address(0xBEEF), 1e18);
+    }
+
+    function testTransferFrom2NonPermitToken() public {
+        hevm.startPrank(address(0xCAFE));
+
+        transferFrom2(nonPermitToken, PK_OWNER, address(0xBEEF), 1e18);
     }
 }
