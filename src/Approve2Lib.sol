@@ -5,6 +5,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import {Approve2} from "./Approve2.sol";
 
+// TODO: clobber slots
+
 /// @title Approve2Lib
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Enables efficient transfers and EIP-2612/DAI
@@ -125,7 +127,7 @@ contract Approve2Lib {
 
             // Write the abi-encoded calldata into memory, beginning
             // with the function selector for EIP-2612 DOMAIN_SEPARATOR.
-            mstore(freeMemoryPointer, 0x0df63210)
+            mstore(freeMemoryPointer, 0x0df6321000000000000000000000000000000000000000000000000000000000)
 
             let success := and(
                 // Should resolve false if it returned <32 bytes or its first word is 0.
