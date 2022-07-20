@@ -56,10 +56,9 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
     }
 
     function setUp() public {
-        testStandardPermit();
-
         testPermit2Full();
         testPermit2NonPermitToken();
+        testStandardPermit();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -74,13 +73,13 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
                     )
                 )
             )
         );
 
-        token.permit(PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        token.permit(PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
     function testOZSafePermit() public {
@@ -91,13 +90,13 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
                     )
                 )
             )
         );
 
-        SafeERC20.safePermit(IERC20Permit(address(token)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        SafeERC20.safePermit(IERC20Permit(address(token)), PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
     function testPermit2() public {
@@ -108,13 +107,13 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
                     )
                 )
             )
         );
 
-        permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -126,11 +125,11 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
     }
 
     function testOZSafeTransferFrom() public {
-        SafeERC20.safeTransferFrom(IERC20(address(token)), address(this), address(0xBEEF), 1e18);
+        SafeERC20.safeTransferFrom(IERC20(address(token)), address(this), address(0xB00B), 1e18);
     }
 
     function testTransferFrom2() public {
-        transferFrom2(token, address(this), address(0xBEEF), 1e18);
+        transferFrom2(token, address(this), address(0xB00B), 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -178,12 +177,12 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
     function testTransferFrom2Full() public {
         hevm.startPrank(address(0xCAFE));
 
-        transferFrom2(token, PK_OWNER, address(0xBEEF), 1e18);
+        transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
     }
 
     function testTransferFrom2NonPermitToken() public {
         hevm.startPrank(address(0xCAFE));
 
-        transferFrom2(nonPermitToken, PK_OWNER, address(0xBEEF), 1e18);
+        transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
     }
 }
