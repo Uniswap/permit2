@@ -6,6 +6,8 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {Approve2} from "./Approve2.sol";
 
+// TODO: DAI special case
+
 library Approve2Lib {
     using SafeTransferLib for ERC20;
 
@@ -42,16 +44,14 @@ library Approve2Lib {
         address to,
         uint256 amount
     ) internal {
-
         if (safeTransferFrom)
-
-        if (token.allowance(from, address(this)) >= amount) {
-            // Use normal transfer if possible.
-            token.safeTransferFrom(from, to, amount);
-        } else {
-            // Otherwise try Approve2 (assume permit has already happened).
-            permit.transferFrom(token, from, to, amount);
-        }
+            if (token.allowance(from, address(this)) >= amount) {
+                // Use normal transfer if possible.
+                token.safeTransferFrom(from, to, amount);
+            } else {
+                // Otherwise try Approve2 (assume permit has already happened).
+                permit.transferFrom(token, from, to, amount);
+            }
     }
 
     /*//////////////////////////////////////////////////////////////

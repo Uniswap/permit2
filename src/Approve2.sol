@@ -5,6 +5,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 // todo: could use create2 based system for some interesting properties
+// todo: multicall or at least batch revoke approval thing (lock down all approvals)
+//
 
 contract Approve2 {
     using SafeTransferLib for ERC20;
@@ -15,9 +17,16 @@ contract Approve2 {
 
     uint128 constant PARADIGM_DANGERLIST = 0;
 
+    uint128 constant OPT_OUT_DANGERLIST = type(uint128).max;
+
     mapping(uint128 => address) dangerListOwners;
 
     mapping(uint128 => mapping(address => bool)) dangerList;
+
+    constructor() {
+        // Reserve the opt out danger list for this contract.
+        dangerListOwners[OPT_OUT_DANGERLIST] = address(this);
+    }
 
     /*//////////////////////////////////////////////////////////////
                              EIP-712 STORAGE
@@ -32,7 +41,20 @@ contract Approve2 {
 
     mapping(address => UserData) public getUserData;
 
-    mapping(address => mapping(address => bool)) hasApprovedAll;
+    mapping(address => mapping(address => bool)) isApprovedForAll;
+
+    function DOMAIN_SEPARATOR(address token) public view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                    keccak256("Approve2"), // We use unique a unique name and version spender ensure
+                    keccak256("Approve2 v1"), // if the token ever adds permit support we don't collide.
+                    block.chainid,
+                    token // We use the token's address for easy frontend compatibility.
+                )
+            );
+    }
 
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
@@ -46,11 +68,62 @@ contract Approve2 {
                             APPROVE ALL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function setApprovedAll(address to, bool approvedAll) public {
-        hasApprovedAll[msg.sender][to] = approvedAll;
+    function setIsApprovedForAll(address spender, bool approvedAll) public {
+        // Ensure the spender is not on the user's chosen danger list.
+        require(isOnDangerList(getUserData[msg.sender].dangerListId, spender), "SPENDER_IS_DANGEROUS");
+
+        isApprovedForAll[msg.sender][spender] = approvedAll;
+
+        // todo: event?
     }
 
-    // TODO: need a permit for this
+    function permitAll(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        unchecked {
+            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+
+            // todo: does inlining this increase gas?
+            uint256 nonce = ++getUserData[owner].nonce; // Get and preemptively increment the user's nonce.
+
+            // Ensure the spender is not on the user's chosen danger list.
+            require(isOnDangerList(getUserData[owner].dangerListId, spender), "SPENDER_IS_DANGEROUS");
+
+            address recoveredAddress = ecrecover(
+                keccak256(
+                    abi.encodePacked(
+                        "\x19\x01",
+                        DOMAIN_SEPARATOR(address(this)),
+                        keccak256(
+                            abi.encode(
+                                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                                owner,
+                                spender,
+                                value,
+                                nonce,
+                                deadline
+                            )
+                        )
+                    )
+                ),
+                v,
+                r,
+                s
+            );
+
+            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
+
+            isApprovedForAll[owner][spender] = true;
+
+            // todo: event?
+        }
+    }
 
     /*//////////////////////////////////////////////////////////////
                               PERMIT LOGIC
@@ -65,32 +138,28 @@ contract Approve2 {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external virtual {
-        require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
-
-        // Unchecked because the only math done is incrementing
-        // the owner's nonce which cannot realistically overflow.
+    ) external {
         unchecked {
+            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+
+            // todo: does inlining this increase gas?
+            uint256 nonce = ++getUserData[owner].nonce; // Get and preemptively increment the user's nonce.
+
+            // Ensure the spender is not on the user's chosen danger list.
+            require(isOnDangerList(getUserData[owner].dangerListId, spender), "SPENDER_IS_DANGEROUS");
+
             address recoveredAddress = ecrecover(
                 keccak256(
                     abi.encodePacked(
                         "\x19\x01",
-                        keccak256(
-                            abi.encode(
-                                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                                keccak256("Approve2"), // We use unique a unique name and version to ensure if
-                                keccak256("Approve2 v1"), // the token ever adds permit support we don't collide.
-                                block.chainid,
-                                address(token) // We use the token's address for easy frontend compatibility.
-                            )
-                        ),
+                        DOMAIN_SEPARATOR(token),
                         keccak256(
                             abi.encode(
                                 keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                                 owner,
                                 spender,
                                 value,
-                                ++getUserData[owner].nonce,
+                                nonce,
                                 deadline
                             )
                         )
@@ -104,9 +173,9 @@ contract Approve2 {
             require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
 
             allowance[token][recoveredAddress][spender] = value;
-        }
 
-        emit Permit(token, owner, spender, value);
+            emit Permit(token, owner, spender, value);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -116,16 +185,16 @@ contract Approve2 {
     function transferFrom(
         ERC20 token,
         address from,
-        address to,
+        address spender,
         uint256 amount
-    ) external virtual returns (bool) {
+    ) external returns (bool) {
         uint256 allowed = allowance[token][from][msg.sender]; // Saves gas for limited approvals.
 
         if (allowed != type(uint256).max)
             if (allowed >= amount) allowance[token][from][msg.sender] = allowed - amount;
-            else require(hasApprovedAll[from][msg.sender], "APPROVE_ALL_REQUIRED");
+            else require(isApprovedForAll[from][msg.sender], "APPROVE_ALL_REQUIRED");
 
-        token.safeTransferFrom(from, to, amount);
+        token.safeTransferFrom(from, spender, amount);
 
         // TODO: event?
 
@@ -140,7 +209,11 @@ contract Approve2 {
         ++getUserData[msg.sender].nonce;
     }
 
-    function chooseDangerList(uint128 dangerListId) external {
+    function optOutOfDangerList() external {
+        chooseDangerList(OPT_OUT_DANGERLIST);
+    }
+
+    function chooseDangerList(uint128 dangerListId) public {
         getUserData[msg.sender].dangerListId = dangerListId;
     }
 
@@ -158,5 +231,11 @@ contract Approve2 {
         require(dangerListOwners[dangerListId] == msg.sender, "NOT_DANGERLIST_OWNER");
 
         dangerList[dangerListId][msg.sender] = status;
+    }
+
+    function isOnDangerList(uint128 dangerListId, address spender) public view returns (bool) {
+        if (dangerListId == OPT_OUT_DANGERLIST) return false;
+
+        return dangerList[dangerListId][spender];
     }
 }
