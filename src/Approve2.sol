@@ -4,52 +4,42 @@ pragma solidity 0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
-// todo: could use create2 based system for some interesting properties
 // todo: multicall or at least batch revoke approval thing (lock down all approvals)
-//
 
+/// @title Approve2
+/// @author transmissions11 <t11s@paradigm.xyz>
+/// @notice Backwards compatible, low-overhead,
+/// next generation token approval/meta-tx system.
 contract Approve2 {
     using SafeTransferLib for ERC20;
 
     /*//////////////////////////////////////////////////////////////
-                            DANGERLIST LOGIC
+                          EIP-712 STORAGE/LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    uint128 constant PARADIGM_DANGERLIST = 0;
+    /// @notice Maps addresses to their current nonces. Used to prevent replay
+    /// attacks and allow invalidating in-flight permits via invalidateNonce.
+    mapping(address => uint256) public nonces;
 
-    uint128 constant OPT_OUT_DANGERLIST = type(uint128).max;
-
-    mapping(uint128 => address) dangerListOwners;
-
-    mapping(uint128 => mapping(address => bool)) dangerList;
-
-    constructor() {
-        // Reserve the opt out danger list for this contract.
-        dangerListOwners[OPT_OUT_DANGERLIST] = address(this);
+    /// @notice Invalidate a specific number of nonces. Can be used
+    /// to invalidate in-flight permits before they are executed.
+    /// @param noncesToInvalidate The number of nonces to invalidate.
+    function invalidateNonce(uint256 noncesToInvalidate) external {
+        nonces[msg.sender] += noncesToInvalidate;
     }
 
-    /*//////////////////////////////////////////////////////////////
-                             EIP-712 STORAGE
-    //////////////////////////////////////////////////////////////*/
-
-    struct UserData {
-        uint128 nonce;
-        uint128 dangerListId;
-    }
-
-    // todo: raw bitpacking would be cheaper
-
-    mapping(address => UserData) public getUserData;
-
-    mapping(address => mapping(address => bool)) isApprovedForAll;
-
+    /// @notice The EIP-712 "domain separator" the contract
+    /// will use when validating signatures for a given token.
+    /// @param token The token to get the domain separator for.
+    /// @dev For calls to permitAll, the address of
+    /// the Approve2 contract will be used the token.
     function DOMAIN_SEPARATOR(address token) public view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
                     keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                    keccak256("Approve2"), // We use unique a unique name and version spender ensure
-                    keccak256("Approve2 v1"), // if the token ever adds permit support we don't collide.
+                    keccak256("Approve2"),
+                    keccak256("1"),
                     block.chainid,
                     token // We use the token's address for easy frontend compatibility.
                 )
@@ -60,41 +50,119 @@ contract Approve2 {
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    mapping(ERC20 => mapping(address => mapping(address => uint256))) public allowance;
+    /// @notice Maps user addresses to spender addresses and whether they are
+    /// are approved to spend any amount of any token the user has approved.
+    mapping(address => mapping(address => bool)) public isApprovedForAll;
 
-    event Permit(ERC20 indexed token, address indexed owner, address indexed spender, uint256 amount);
+    /// @notice Maps users to tokens to spender addresses and how much they
+    /// are approved to spend the amount of that token the user has approved.
+    mapping(address => mapping(ERC20 => mapping(address => uint256))) public allowance;
 
-    /*//////////////////////////////////////////////////////////////
-                            APPROVE ALL LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    function setIsApprovedForAll(address spender, bool approvedAll) public {
-        // Ensure the spender is not on the user's chosen danger list.
-        require(isOnDangerList(getUserData[msg.sender].dangerListId, spender), "SPENDER_IS_DANGEROUS");
-
-        isApprovedForAll[msg.sender][spender] = approvedAll;
-
-        // todo: event?
+    /// @notice Set whether an spender address is approved
+    /// to transfer any one of the sender's approved tokens.
+    /// @param spender The spender address to approve or unapprove.
+    /// @param approved Whether the spender is approved.
+    function approveForAll(address spender, bool approved) public {
+        isApprovedForAll[msg.sender][spender] = approved;
     }
 
-    function permitAll(
+    /// @notice Approve a spender to transfer a specific
+    /// amount of a specific ERC20 token from the sender.
+    /// @param token The token to approve.
+    /// @param spender The spender address to approve.
+    /// @param amount The amount of the token to approve.
+    function approve(
+        ERC20 token,
+        address spender,
+        uint256 amount
+    ) public {
+        allowance[msg.sender][token][spender] = amount;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              PERMIT LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Permit a user to spend a given amount of another
+    /// user's approved amount of the a given token via EIP-712 signature.
+    /// @param token The token to permit spending.
+    /// @param owner The user to permit spending from.
+    /// @param spender The user to permit spending to.
+    /// @param amount The amount to permit spending.
+    /// @param deadline  The timestamp after which the signature is no longer valid.
+    /// @param v Must produce valid secp256k1 signature from the owner along with r and s.
+    /// @param r Must produce valid secp256k1 signature from the owner along with v and s.
+    /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
+    /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
+    function permit(
+        ERC20 token,
         address owner,
         address spender,
-        uint256 value,
+        uint256 amount,
         uint256 deadline,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external {
         unchecked {
+            // Ensure the signature's deadline has not already passed.
             require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
 
-            // todo: does inlining this increase gas?
-            uint256 nonce = ++getUserData[owner].nonce; // Get and preemptively increment the user's nonce.
+            // Recover the signer address from the signature.
+            address recoveredAddress = ecrecover(
+                keccak256(
+                    abi.encodePacked(
+                        "\x19\x01",
+                        DOMAIN_SEPARATOR(address(token)),
+                        keccak256(
+                            abi.encode(
+                                keccak256(
+                                    "Permit(address owner,address spender,uint256 amount,uint256 nonce,uint256 deadline)"
+                                ),
+                                owner,
+                                spender,
+                                amount,
+                                nonces[owner]++,
+                                deadline
+                            )
+                        )
+                    )
+                ),
+                v,
+                r,
+                s
+            );
 
-            // Ensure the spender is not on the user's chosen danger list.
-            require(isOnDangerList(getUserData[owner].dangerListId, spender), "SPENDER_IS_DANGEROUS");
+            // Ensure the signature is valid and the signer is the owner.
+            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
 
+            // Set the allowance of the spender to the given amount.
+            allowance[recoveredAddress][token][spender] = amount;
+        }
+    }
+
+    /// @notice Permit a user to spend any amount of any of
+    /// another user's approved tokens via EIP-712 signature.
+    /// @param owner The user to permit spending from.
+    /// @param spender The user to permit spending to.
+    /// @param deadline The timestamp after which the signature is no longer valid.
+    /// @param v Must produce valid secp256k1 signature from the owner along with r and s.
+    /// @param r Must produce valid secp256k1 signature from the owner along with v and s.
+    /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
+    /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
+    function permitAll(
+        address owner,
+        address spender,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        unchecked {
+            // Ensure the signature's deadline has not already passed.
+            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+
+            // Recover the signer address from the signature.
             address recoveredAddress = ecrecover(
                 keccak256(
                     abi.encodePacked(
@@ -102,11 +170,10 @@ contract Approve2 {
                         DOMAIN_SEPARATOR(address(this)),
                         keccak256(
                             abi.encode(
-                                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                                keccak256("PermitAll(address owner,address spender,uint256 nonce,uint256 deadline)"),
                                 owner,
                                 spender,
-                                value,
-                                nonce,
+                                nonces[owner]++,
                                 deadline
                             )
                         )
@@ -117,64 +184,11 @@ contract Approve2 {
                 s
             );
 
+            // Ensure the signature is valid and the signer is the owner.
             require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
 
+            // Set isApprovedForAll for the spender to true.
             isApprovedForAll[owner][spender] = true;
-
-            // todo: event?
-        }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              PERMIT LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    function permit(
-        ERC20 token,
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        unchecked {
-            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
-
-            // todo: does inlining this increase gas?
-            uint256 nonce = ++getUserData[owner].nonce; // Get and preemptively increment the user's nonce.
-
-            // Ensure the spender is not on the user's chosen danger list.
-            require(isOnDangerList(getUserData[owner].dangerListId, spender), "SPENDER_IS_DANGEROUS");
-
-            address recoveredAddress = ecrecover(
-                keccak256(
-                    abi.encodePacked(
-                        "\x19\x01",
-                        DOMAIN_SEPARATOR(token),
-                        keccak256(
-                            abi.encode(
-                                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
-                                owner,
-                                spender,
-                                value,
-                                nonce,
-                                deadline
-                            )
-                        )
-                    )
-                ),
-                v,
-                r,
-                s
-            );
-
-            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
-
-            allowance[token][recoveredAddress][spender] = value;
-
-            emit Permit(token, owner, spender, value);
         }
     }
 
@@ -182,60 +196,36 @@ contract Approve2 {
                              TRANSFER LOGIC
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Transfer approved tokens from one address to another.
+    /// @param token The token to transfer.
+    /// @param from The address to transfer from.
+    /// @param to The address to transfer to.
+    /// @param amount The amount of tokens to transfer.
+    /// @dev Requires either the from address to have approved at least the desired amount
+    /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(
         ERC20 token,
         address from,
-        address spender,
+        address to,
         uint256 amount
-    ) external returns (bool) {
-        uint256 allowed = allowance[token][from][msg.sender]; // Saves gas for limited approvals.
+    ) external {
+        unchecked {
+            uint256 allowed = allowance[from][token][msg.sender]; // Saves gas for limited approvals.
 
-        if (allowed != type(uint256).max)
-            if (allowed >= amount) allowance[token][from][msg.sender] = allowed - amount;
-            else require(isApprovedForAll[from][msg.sender], "APPROVE_ALL_REQUIRED");
+            // If the from address has set an unlimited approval, we'll go straight to the transfer.
+            if (allowed != type(uint256).max) {
+                if (allowed >= amount) {
+                    // If msg.sender has enough approved to them, decrement their allowance.
+                    allowance[from][token][msg.sender] = allowed - amount;
+                } else {
+                    // Otherwise, check if msg.sender has an approval for all of the from
+                    // address's tokens, otherwise we'll revert and block the transfer.
+                    require(isApprovedForAll[from][msg.sender], "APPROVE_ALL_REQUIRED");
+                }
+            }
 
-        token.safeTransferFrom(from, spender, amount);
-
-        // TODO: event?
-
-        return true;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                             USER DATA LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    function invalidateNonce() external {
-        ++getUserData[msg.sender].nonce;
-    }
-
-    function optOutOfDangerList() external {
-        chooseDangerList(OPT_OUT_DANGERLIST);
-    }
-
-    function chooseDangerList(uint128 dangerListId) public {
-        getUserData[msg.sender].dangerListId = dangerListId;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            DANGERLIST LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    function claimDangerlist(uint128 dangerListId) external {
-        require(dangerListOwners[dangerListId] == address(0), "DANGERLIST_ALREADY_CLAIMED");
-
-        dangerListOwners[dangerListId] = msg.sender;
-    }
-
-    function setDangerlistStatus(uint128 dangerListId, bool status) external {
-        require(dangerListOwners[dangerListId] == msg.sender, "NOT_DANGERLIST_OWNER");
-
-        dangerList[dangerListId][msg.sender] = status;
-    }
-
-    function isOnDangerList(uint128 dangerListId, address spender) public view returns (bool) {
-        if (dangerListId == OPT_OUT_DANGERLIST) return false;
-
-        return dangerList[dangerListId][spender];
+            // Transfer the tokens from the from address to the recipient.
+            token.safeTransferFrom(from, to, amount);
+        }
     }
 }
