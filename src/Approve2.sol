@@ -4,8 +4,6 @@ pragma solidity 0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
-// todo: multicall or at least batch revoke approval thing (lock down all approvals)
-
 /// @title Approve2
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Backwards compatible, low-overhead,
@@ -50,9 +48,9 @@ contract Approve2 {
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Maps user addresses to spender addresses and whether they are
+    /// @notice Maps user addresses to "operator" addresses and whether they are
     /// are approved to spend any amount of any token the user has approved.
-    mapping(address => mapping(address => bool)) public isApprovedForAll;
+    mapping(address => mapping(address => bool)) public isOperator;
 
     /// @notice Maps users to tokens to spender addresses and how much they
     /// are approved to spend the amount of that token the user has approved.
@@ -60,10 +58,10 @@ contract Approve2 {
 
     /// @notice Set whether an spender address is approved
     /// to transfer any one of the sender's approved tokens.
-    /// @param spender The spender address to approve or unapprove.
-    /// @param approved Whether the spender is approved.
-    function approveForAll(address spender, bool approved) public {
-        isApprovedForAll[msg.sender][spender] = approved;
+    /// @param operator The operator address to approve or unapprove.
+    /// @param approved Whether the operator is approved.
+    function setOperator(address operator, bool approved) external {
+        isOperator[msg.sender][operator] = approved;
     }
 
     /// @notice Approve a spender to transfer a specific
@@ -75,7 +73,7 @@ contract Approve2 {
         ERC20 token,
         address spender,
         uint256 amount
-    ) public {
+    ) external {
         allowance[msg.sender][token][spender] = amount;
     }
 
@@ -187,8 +185,8 @@ contract Approve2 {
             // Ensure the signature is valid and the signer is the owner.
             require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
 
-            // Set isApprovedForAll for the spender to true.
-            isApprovedForAll[owner][spender] = true;
+            // Set isOperator for the spender to true.
+            isOperator[owner][spender] = true;
         }
     }
 
@@ -218,14 +216,50 @@ contract Approve2 {
                     // If msg.sender has enough approved to them, decrement their allowance.
                     allowance[from][token][msg.sender] = allowed - amount;
                 } else {
-                    // Otherwise, check if msg.sender has an approval for all of the from
-                    // address's tokens, otherwise we'll revert and block the transfer.
-                    require(isApprovedForAll[from][msg.sender], "APPROVE_ALL_REQUIRED");
+                    // Otherwise, check if msg.sender is an operator for the
+                    // from address, otherwise we'll revert and block the transfer.
+                    require(isOperator[from][msg.sender], "APPROVE_ALL_REQUIRED");
                 }
             }
 
             // Transfer the tokens from the from address to the recipient.
             token.safeTransferFrom(from, to, amount);
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             LOCKDOWN LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    // todo: bench if a struct for token spender pairs is cheaper
+
+    /// @notice Enables performing a "lockdown" of the sender's Approve2 identity
+    /// by batch revoking approvals, unapproving operators, and invalidating nonces.
+    /// @param tokens An array of tokens who's corresponding spenders should have their
+    /// approvals revoked. Each index should correspond to an index in the spenders array.
+    /// @param spenders An array of addresses to revoke approvals from.
+    /// Each index should correspond to an index in the tokens array.
+    /// @param operators An array of addresses to revoke operator approval from.
+    function lockdown(
+        ERC20[] calldata tokens,
+        address[] calldata spenders,
+        address[] calldata operators,
+        uint256 noncesToInvalidate
+    ) public {
+        unchecked {
+            require(tokens.length == spenders.length, "LENGTH_MISMATCH");
+
+            // Revoke allowances for each pair of spenders and tokens.
+            for (uint256 i = 0; i < spenders.length; ++i) {
+                allowance[msg.sender][tokens[i]][spenders[i]] = 0;
+            }
+
+            // Revoke allowance each spender who is approved for all tokens.
+            for (uint256 i = 0; i < operators.length; ++i) {
+                isOperator[msg.sender][operators[i]] = true;
+            }
+        }
+
+        nonces[msg.sender] += noncesToInvalidate;
     }
 }

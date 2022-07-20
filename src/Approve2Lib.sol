@@ -17,7 +17,9 @@ library Approve2Lib {
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    Approve2 constant approve2 = Approve2(address(0xBEEF));
+    bytes32 constant APPROVE2_ADDRESS = 0xBEEF000000000000000000000000000000000000000000000000000000000000;
+
+    bytes32 constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
     /*//////////////////////////////////////////////////////////////
                               PERMIT LOGIC
@@ -43,22 +45,109 @@ library Approve2Lib {
         bytes32 r,
         bytes32 s
     ) public {
-        // TODO: DAI special case
+        assembly {
+            // Get a pointer to some free memory.
+            let freeMemoryPointer := mload(0x40)
 
-        // TODO: safePermit? it could fail silently like with WETH right? fuck. add to solmate?
+            // Write the abi-encoded calldata into memory, beginning
+            // with the function selector for EIP-2612 DOMAIN_SEPARATOR.
+            mstore(freeMemoryPointer, 0x0df63210)
 
-        // TODO: idt the returndata decoding for nonce will be caught, should test with weth
+            let success := and(
+                // Should resolve false if it returned <32 bytes or its first word is 0.
+                and(iszero(iszero(mload(0))), gt(returndatasize(), 31)),
+                // We use 4 because our calldata is just a single 4 byte function selector.
+                // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
+                // Counterintuitively, this call must be positioned second to the or() call in the
+                // surrounding and() call or else returndatasize() will be zero during the computation.
+                call(gas(), token, 0, freeMemoryPointer, 4, 0, 32)
+            )
 
-        // Get and cache the starting nonce.
-        try token.nonces(owner) returns (uint256 nonce) {
-            // Attempt to call permit on the token.
-            try token.permit(owner, spender, amount, deadline, v, r, s) {} catch {
-                // If permit didn't work, then we need to check if the owner is the spender.
-                if (token.nonces(owner) != nonce + 1) approve2.permit(owner, spender, amount, deadline, v, r, s);
+            // todo: jumpi inversion?
+            // todo: are manual ifs more performant?
+            // todo: does switch order matter?
+
+            // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
+            if success {
+                // If the token's selector matches DAI's, it requires
+                // special logic, otherwise we can use EIP-2612 permit.
+                switch eq(mload(0), DAI_DOMAIN_SEPARATOR)
+                case 1 {
+                    /*//////////////////////////////////////////////////////////////
+                                          NONCE RETRIEVAL LOGIC
+                    //////////////////////////////////////////////////////////////*/
+
+                    // Write the abi-encoded calldata into memory, beginning with the function selector.
+                    mstore(freeMemoryPointer, 0x7ecebe0000000000000000000000000000000000000000000000000000000000)
+                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
+
+                    // We use 36 because the length of our calldata totals up like so: 4 + 32.
+                    // We use 0 and 32 to copy up to 32 bytes of return data into scratch space.
+                    pop(call(gas(), token, 0, freeMemoryPointer, 36, 0, 32))
+
+                    /*//////////////////////////////////////////////////////////////
+                                            DAI PERMIT LOGIC
+                    //////////////////////////////////////////////////////////////*/
+
+                    // Write the abi-encoded calldata into memory, beginning with the function selector.
+                    mstore(freeMemoryPointer, 0x8fcbaf0c00000000000000000000000000000000000000000000000000000000)
+                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
+                    mstore(add(freeMemoryPointer, 36), spender) // Append the "spender" argument.
+                    mstore(add(freeMemoryPointer, 68), mload(0)) // Append the "nonce" argument.
+                    mstore(add(freeMemoryPointer, 100), deadline) // Append the "deadline" argument.
+                    mstore(add(freeMemoryPointer, 132), 1) // Append the "allowed" argument.
+                    mstore(add(freeMemoryPointer, 164), v) // Append the "v" argument.
+                    mstore(add(freeMemoryPointer, 196), r) // Append the "r" argument.
+                    mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
+
+                    // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
+                    success := call(gas(), token, 0, freeMemoryPointer, 260, 0, 0)
+                }
+                case 0 {
+                    /*//////////////////////////////////////////////////////////////
+                                          STANDARD PERMIT LOGIC
+                    //////////////////////////////////////////////////////////////*/
+
+                    // Write the abi-encoded calldata into memory, beginning with the function selector.
+                    mstore(freeMemoryPointer, 0x12d7a2bc00000000000000000000000000000000000000000000000000000000)
+                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
+                    mstore(add(freeMemoryPointer, 36), spender) // Append the "spender" argument.
+                    mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
+                    mstore(add(freeMemoryPointer, 100), deadline) // Append the "deadline" argument.
+                    mstore(add(freeMemoryPointer, 132), v) // Append the "v" argument.
+                    mstore(add(freeMemoryPointer, 164), r) // Append the "r" argument.
+                    mstore(add(freeMemoryPointer, 196), s) // Append the "s" argument.
+
+                    // We use 228 because the length of our calldata totals up like so: 4 + 32 * 7.
+                    success := call(gas(), token, 0, freeMemoryPointer, 228, 0, 0)
+                }
             }
-        } catch {
-            // If there is no nonce function, go straight to Approve2.
-            approve2.permit(owner, spender, amount, deadline, v, r, s);
+
+            // If the initial DOMAIN_SEPARATOR call on the token failed or a
+            // subsequent call to permit failed, fall back to using Approve2.
+            if iszero(success) {
+                /*//////////////////////////////////////////////////////////////
+                                     APPROVE2 FALLBACK LOGIC
+                //////////////////////////////////////////////////////////////*/
+
+                // Write the abi-encoded calldata into memory, beginning with the function selector.
+                mstore(freeMemoryPointer, 0xd339056d00000000000000000000000000000000000000000000000000000000)
+                mstore(add(freeMemoryPointer, 4), token) // Append the "token" argument.
+                mstore(add(freeMemoryPointer, 36), owner) // Append the "owner" argument.
+                mstore(add(freeMemoryPointer, 68), spender) // Append the "spender" argument.
+                mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
+                mstore(add(freeMemoryPointer, 132), deadline) // Append the "deadline" argument.
+                mstore(add(freeMemoryPointer, 164), v) // Append the "v" argument.
+                mstore(add(freeMemoryPointer, 196), r) // Append the "r" argument.
+                mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
+
+                // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
+                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
+                    // Bubble up any revert reasons returned.
+                    returndatacopy(0, 0, returndatasize())
+                    revert(0, returndatasize())
+                }
+            }
         }
     }
 
@@ -77,30 +166,11 @@ library Approve2Lib {
         address to,
         uint256 amount
     ) internal {
-        // Attempt to safeTransferFrom, exiting immediately if it succeeds.
-        if (safeTransferFrom(token, from, to, amount)) return;
-
-        // Otherwise fallback to trying the transfer via Approve2.
-        approve2TransferFrom(token, from, to, amount);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                           SAFE TRANSFER LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Safely transfer a given amount of tokens from one user to another.
-    /// @param token The token to transfer.
-    /// @param from The user to transfer from.
-    /// @param to The user to transfer to.
-    /// @param amount The amount to transfer.
-    /// @return success True if the transfer was successful, false otherwise.
-    function safeTransferFrom(
-        ERC20 token,
-        address from,
-        address to,
-        uint256 amount
-    ) internal returns (bool success) {
         assembly {
+            /*//////////////////////////////////////////////////////////////
+                              ATTEMPT SAFE TRANSFER FROM
+            //////////////////////////////////////////////////////////////*/
+
             // Get a pointer to some free memory.
             let freeMemoryPointer := mload(0x40)
 
@@ -110,49 +180,37 @@ library Approve2Lib {
             mstore(add(freeMemoryPointer, 36), to) // Append the "to" argument.
             mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
 
-            success := and(
-                // Set success to whether the call reverted, if not we check it either
-                // returned exactly 1 (can't just be non-zero data), or had no return data.
-                or(and(eq(mload(0), 1), gt(returndatasize(), 31)), iszero(returndatasize())),
-                // We use 100 because the length of our calldata totals up like so: 4 + 32 * 3.
-                // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-                // Counterintuitively, this call must be positioned second to the or() call in the
-                // surrounding and() call or else returndatasize() will be zero during the computation.
-                call(gas(), token, 0, freeMemoryPointer, 100, 0, 32)
-            )
-        }
-    }
+            // If the call to transferFrom fails for any reason, try using Approve2.
+            if iszero(
+                and(
+                    // Set success to whether the call reverted, if not we check it either
+                    // returned exactly 1 (can't just be non-zero data), or had no return data.
+                    or(and(eq(mload(0), 1), gt(returndatasize(), 31)), iszero(returndatasize())),
+                    // We use 100 because the length of our calldata totals up like so: 4 + 32 * 3.
+                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
+                    // Counterintuitively, this call must be positioned second to the or() call in the
+                    // surrounding and() call or else returndatasize() will be zero during the computation.
+                    call(gas(), token, 0, freeMemoryPointer, 100, 0, 32)
+                )
+            ) {
+                /*//////////////////////////////////////////////////////////////
+                                      FALLBACK TO APPROVE2
+                //////////////////////////////////////////////////////////////*/
 
-    /// @dev Transfer a given amount of tokens from one user to another using Approve2.
-    /// @param token The token to transfer.
-    /// @param from The user to transfer from.
-    /// @param to The user to transfer to.
-    /// @param amount The amount to transfer.
-    /// @return success True if the transfer was successful, false otherwise.
-    function approve2TransferFrom(
-        ERC20 token,
-        address from,
-        address to,
-        uint256 amount
-    ) internal returns (bool success) {
-        // Can't access address constants directly
-        // in inline assembly, so we must do this.
-        address approve2Address = address(approve2);
+                // Write the abi-encoded calldata into memory, beginning with the function selector.
+                mstore(freeMemoryPointer, 0x15dacbea00000000000000000000000000000000000000000000000000000000)
+                mstore(add(freeMemoryPointer, 4), token) // Append the "token" argument.
+                mstore(add(freeMemoryPointer, 36), from) // Append the "from" argument.
+                mstore(add(freeMemoryPointer, 68), to) // Append the "to" argument.
+                mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
 
-        assembly {
-            // Get a pointer to some free memory.
-            let freeMemoryPointer := mload(0x40)
-
-            // Write the abi-encoded calldata into memory, beginning with the function selector.
-            mstore(freeMemoryPointer, 0x15dacbea00000000000000000000000000000000000000000000000000000000)
-            mstore(add(freeMemoryPointer, 4), token) // Append the "token" argument.
-            mstore(add(freeMemoryPointer, 36), from) // Append the "from" argument.
-            mstore(add(freeMemoryPointer, 68), to) // Append the "to" argument.
-            mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
-
-            // Set success to whether the call reverted. We don't expect return data.
-            // We use 100 because the length of our calldata totals up like so: 4 + 32 * 4.
-            success := call(gas(), approve2Address, 0, freeMemoryPointer, 130, 0, 0)
+                // We use 100 because the length of our calldata totals up like so: 4 + 32 * 4.
+                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 130, 0, 0)) {
+                    // Bubble up any revert reasons returned.
+                    returndatacopy(0, 0, returndatasize())
+                    revert(0, returndatasize())
+                }
+            }
         }
     }
 }
