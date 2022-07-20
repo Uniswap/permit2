@@ -6,8 +6,6 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {Approve2} from "./Approve2.sol";
 
-// TODO: DAI special case
-
 /// @title Approve2Lib
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Library that enables efficient transfers
@@ -45,6 +43,8 @@ library Approve2Lib {
         bytes32 r,
         bytes32 s
     ) public {
+        // TODO: DAI special case
+
         // TODO: safePermit? it could fail silently like with WETH right? fuck. add to solmate?
 
         // TODO: idt the returndata decoding for nonce will be caught, should test with weth
