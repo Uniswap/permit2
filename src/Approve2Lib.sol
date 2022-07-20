@@ -85,8 +85,8 @@ contract Approve2Lib {
                 mstore(add(freeMemoryPointer, 68), to) // Append the "to" argument.
                 mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
 
-                // We use 100 because the length of our calldata totals up like so: 4 + 32 * 4.
-                if iszero(call(gas(), approve2, 0, freeMemoryPointer, 130, 0, 0)) {
+                // We use 132 because the length of our calldata totals up like so: 4 + 32 * 4.
+                if iszero(call(gas(), approve2, 0, freeMemoryPointer, 132, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
