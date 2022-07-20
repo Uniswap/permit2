@@ -2,24 +2,96 @@
 pragma solidity 0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {Approve2} from "./Approve2.sol";
 
 /// @title Approve2Lib
 /// @author transmissions11 <t11s@paradigm.xyz>
-/// @notice Library that enables efficient transfers
-/// meta-txs for any token by falling back to Approve2.
-library Approve2Lib {
-    using SafeTransferLib for ERC20;
-
+/// @notice Enables efficient transfers and EIP-2612/DAI
+/// permits for any token by falling back to Approve2.
+contract Approve2Lib {
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    bytes32 constant APPROVE2_ADDRESS = 0xBEEF000000000000000000000000000000000000000000000000000000000000;
+    /// @dev The unique EIP-712 domain domain separator for the DAI token contract.
+    bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
-    bytes32 constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
+    /*//////////////////////////////////////////////////////////////
+                               IMMUTABLES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev The address of the Approve2 contract the library will use.
+    Approve2 internal immutable APPROVE2;
+
+    constructor(Approve2 approve2) {
+        APPROVE2 = approve2;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             TRANSFER LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Transfer a given amount of tokens from one user to another.
+    /// @param token The token to transfer.
+    /// @param from The user to transfer from.
+    /// @param to The user to transfer to.
+    /// @param amount The amount to transfer.
+    function transferFrom2(
+        ERC20 token,
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {
+        Approve2 approve2 = APPROVE2;
+
+        assembly {
+            /*//////////////////////////////////////////////////////////////
+                              ATTEMPT SAFE TRANSFER FROM
+            //////////////////////////////////////////////////////////////*/
+
+            // Get a pointer to some free memory.
+            let freeMemoryPointer := mload(0x40)
+
+            // Write the abi-encoded calldata into memory, beginning with the function selector.
+            mstore(freeMemoryPointer, 0x23b872dd00000000000000000000000000000000000000000000000000000000)
+            mstore(add(freeMemoryPointer, 4), from) // Append the "from" argument.
+            mstore(add(freeMemoryPointer, 36), to) // Append the "to" argument.
+            mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
+
+            // If the call to transferFrom fails for any reason, try using Approve2.
+            if iszero(
+                and(
+                    // Set success to whether the call reverted, if not we check it either
+                    // returned exactly 1 (can't just be non-zero data), or had no return data.
+                    or(and(eq(mload(0), 1), gt(returndatasize(), 31)), iszero(returndatasize())),
+                    // We use 100 because the length of our calldata totals up like so: 4 + 32 * 3.
+                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
+                    // Counterintuitively, this call must be positioned second to the or() call in the
+                    // surrounding and() call or else returndatasize() will be zero during the computation.
+                    call(gas(), token, 0, freeMemoryPointer, 100, 0, 32)
+                )
+            ) {
+                /*//////////////////////////////////////////////////////////////
+                                      FALLBACK TO APPROVE2
+                //////////////////////////////////////////////////////////////*/
+
+                // Write the abi-encoded calldata into memory, beginning with the function selector.
+                mstore(freeMemoryPointer, 0x15dacbea00000000000000000000000000000000000000000000000000000000)
+                mstore(add(freeMemoryPointer, 4), token) // Append the "token" argument.
+                mstore(add(freeMemoryPointer, 36), from) // Append the "from" argument.
+                mstore(add(freeMemoryPointer, 68), to) // Append the "to" argument.
+                mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
+
+                // We use 100 because the length of our calldata totals up like so: 4 + 32 * 4.
+                if iszero(call(gas(), approve2, 0, freeMemoryPointer, 130, 0, 0)) {
+                    // Bubble up any revert reasons returned.
+                    returndatacopy(0, 0, returndatasize())
+                    revert(0, returndatasize())
+                }
+            }
+        }
+    }
 
     /*//////////////////////////////////////////////////////////////
                               PERMIT LOGIC
@@ -44,7 +116,9 @@ library Approve2Lib {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public {
+    ) internal virtual {
+        Approve2 approve2 = APPROVE2;
+
         assembly {
             // Get a pointer to some free memory.
             let freeMemoryPointer := mload(0x40)
@@ -142,70 +216,7 @@ library Approve2Lib {
                 mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
 
                 // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
-                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
-                    // Bubble up any revert reasons returned.
-                    returndatacopy(0, 0, returndatasize())
-                    revert(0, returndatasize())
-                }
-            }
-        }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                             TRANSFER LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Transfer a given amount of tokens from one user to another.
-    /// @param token The token to transfer.
-    /// @param from The user to transfer from.
-    /// @param to The user to transfer to.
-    /// @param amount The amount to transfer.
-    function transferFrom2(
-        ERC20 token,
-        address from,
-        address to,
-        uint256 amount
-    ) internal {
-        assembly {
-            /*//////////////////////////////////////////////////////////////
-                              ATTEMPT SAFE TRANSFER FROM
-            //////////////////////////////////////////////////////////////*/
-
-            // Get a pointer to some free memory.
-            let freeMemoryPointer := mload(0x40)
-
-            // Write the abi-encoded calldata into memory, beginning with the function selector.
-            mstore(freeMemoryPointer, 0x23b872dd00000000000000000000000000000000000000000000000000000000)
-            mstore(add(freeMemoryPointer, 4), from) // Append the "from" argument.
-            mstore(add(freeMemoryPointer, 36), to) // Append the "to" argument.
-            mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
-
-            // If the call to transferFrom fails for any reason, try using Approve2.
-            if iszero(
-                and(
-                    // Set success to whether the call reverted, if not we check it either
-                    // returned exactly 1 (can't just be non-zero data), or had no return data.
-                    or(and(eq(mload(0), 1), gt(returndatasize(), 31)), iszero(returndatasize())),
-                    // We use 100 because the length of our calldata totals up like so: 4 + 32 * 3.
-                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-                    // Counterintuitively, this call must be positioned second to the or() call in the
-                    // surrounding and() call or else returndatasize() will be zero during the computation.
-                    call(gas(), token, 0, freeMemoryPointer, 100, 0, 32)
-                )
-            ) {
-                /*//////////////////////////////////////////////////////////////
-                                      FALLBACK TO APPROVE2
-                //////////////////////////////////////////////////////////////*/
-
-                // Write the abi-encoded calldata into memory, beginning with the function selector.
-                mstore(freeMemoryPointer, 0x15dacbea00000000000000000000000000000000000000000000000000000000)
-                mstore(add(freeMemoryPointer, 4), token) // Append the "token" argument.
-                mstore(add(freeMemoryPointer, 36), from) // Append the "from" argument.
-                mstore(add(freeMemoryPointer, 68), to) // Append the "to" argument.
-                mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
-
-                // We use 100 because the length of our calldata totals up like so: 4 + 32 * 4.
-                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 130, 0, 0)) {
+                if iszero(call(gas(), approve2, 0, freeMemoryPointer, 260, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
