@@ -137,10 +137,6 @@ contract Approve2Lib {
                 call(gas(), token, 0, freeMemoryPointer, 4, 0, 32)
             )
 
-            // todo: jumpi inversion?
-            // todo: are manual ifs more performant?
-            // todo: does switch order matter?
-
             // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
             if success {
                 // If the token's selector matches DAI's, it requires
