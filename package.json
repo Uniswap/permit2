@@ -8,7 +8,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/transmissions11/approve2.git"
+    "url": "git+https://github.com/paradigmxyz/approve2.git"
   },
   "devDependencies": {
     "prettier": "^2.3.1",

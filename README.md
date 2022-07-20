@@ -9,7 +9,7 @@ You will need a copy of [Foundry](https://github.com/foundry-rs/foundry) install
 ### Setup
 
 ```sh
-git clone https://github.com/transmissions11/approve2.git
+git clone https://github.com/paradigmxyz/approve2.git
 cd approve2
 ```
 
