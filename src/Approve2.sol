@@ -83,8 +83,8 @@ contract Approve2 {
                               PERMIT LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Permit a user to spend a given amount of another
-    /// user's approved amount of the a given token via EIP-712 signature.
+    /// @notice Permit a user to spend a given amount of another user's
+    /// approved amount of the given token via the owner's EIP-712 signature.
     /// @param token The token to permit spending.
     /// @param owner The user to permit spending from.
     /// @param spender The user to permit spending to.
@@ -141,8 +141,8 @@ contract Approve2 {
         }
     }
 
-    /// @notice Permit a user to spend any amount of any of
-    /// another user's approved tokens via EIP-712 signature.
+    /// @notice Permit a user to spend any amount of any of another
+    /// user's approved tokens via the owner's EIP-712 signature.
     /// @param owner The user to permit spending from.
     /// @param spender The user to permit spending to.
     /// @param deadline The timestamp after which the signature is no longer valid.
