@@ -119,15 +119,13 @@ contract Approve2Lib {
         bytes32 r,
         bytes32 s
     ) internal virtual {
-        Approve2 approve2 = APPROVE2;
-
         assembly {
             // Get a pointer to some free memory.
             let freeMemoryPointer := mload(0x40)
 
             // Write the abi-encoded calldata into memory, beginning
             // with the function selector for EIP-2612 DOMAIN_SEPARATOR.
-            mstore(freeMemoryPointer, 0x0df6321000000000000000000000000000000000000000000000000000000000)
+            mstore(freeMemoryPointer, 0x3644e51500000000000000000000000000000000000000000000000000000000)
 
             let success := and(
                 // Should resolve false if it returned <32 bytes or its first word is 0.
@@ -185,7 +183,7 @@ contract Approve2Lib {
                     //////////////////////////////////////////////////////////////*/
 
                     // Write the abi-encoded calldata into memory, beginning with the function selector.
-                    mstore(freeMemoryPointer, 0x12d7a2bc00000000000000000000000000000000000000000000000000000000)
+                    mstore(freeMemoryPointer, 0xd505accf00000000000000000000000000000000000000000000000000000000)
                     mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
                     mstore(add(freeMemoryPointer, 36), spender) // Append the "spender" argument.
                     mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
@@ -218,7 +216,8 @@ contract Approve2Lib {
                 mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
 
                 // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
-                if iszero(call(gas(), approve2, 0, freeMemoryPointer, 260, 0, 0)) {
+                // TODO: stack too deep so had to inline, will need to figure this out
+                if iszero(call(gas(), 0xce71065d4017f316ec606fe4422e11eb2c47c246, 0, freeMemoryPointer, 260, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
