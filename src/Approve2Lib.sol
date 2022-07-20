@@ -146,6 +146,24 @@ contract Approve2Lib {
                 // If the token's selector matches DAI's, it requires
                 // special logic, otherwise we can use EIP-2612 permit.
                 switch eq(mload(0), DAI_DOMAIN_SEPARATOR)
+                case 0 {
+                    /*//////////////////////////////////////////////////////////////
+                                          STANDARD PERMIT LOGIC
+                    //////////////////////////////////////////////////////////////*/
+
+                    // Write the abi-encoded calldata into memory, beginning with the function selector.
+                    mstore(freeMemoryPointer, 0xd505accf00000000000000000000000000000000000000000000000000000000)
+                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
+                    mstore(add(freeMemoryPointer, 36), spender) // Append the "spender" argument.
+                    mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
+                    mstore(add(freeMemoryPointer, 100), deadline) // Append the "deadline" argument.
+                    mstore(add(freeMemoryPointer, 132), v) // Append the "v" argument.
+                    mstore(add(freeMemoryPointer, 164), r) // Append the "r" argument.
+                    mstore(add(freeMemoryPointer, 196), s) // Append the "s" argument.
+
+                    // We use 228 because the length of our calldata totals up like so: 4 + 32 * 7.
+                    success := call(gas(), token, 0, freeMemoryPointer, 228, 0, 0)
+                }
                 case 1 {
                     /*//////////////////////////////////////////////////////////////
                                           NONCE RETRIEVAL LOGIC
@@ -176,24 +194,6 @@ contract Approve2Lib {
 
                     // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
                     success := call(gas(), token, 0, freeMemoryPointer, 260, 0, 0)
-                }
-                case 0 {
-                    /*//////////////////////////////////////////////////////////////
-                                          STANDARD PERMIT LOGIC
-                    //////////////////////////////////////////////////////////////*/
-
-                    // Write the abi-encoded calldata into memory, beginning with the function selector.
-                    mstore(freeMemoryPointer, 0xd505accf00000000000000000000000000000000000000000000000000000000)
-                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
-                    mstore(add(freeMemoryPointer, 36), spender) // Append the "spender" argument.
-                    mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
-                    mstore(add(freeMemoryPointer, 100), deadline) // Append the "deadline" argument.
-                    mstore(add(freeMemoryPointer, 132), v) // Append the "v" argument.
-                    mstore(add(freeMemoryPointer, 164), r) // Append the "r" argument.
-                    mstore(add(freeMemoryPointer, 196), s) // Append the "s" argument.
-
-                    // We use 228 because the length of our calldata totals up like so: 4 + 32 * 7.
-                    success := call(gas(), token, 0, freeMemoryPointer, 228, 0, 0)
                 }
             }
 
