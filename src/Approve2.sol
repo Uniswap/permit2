@@ -243,7 +243,7 @@ contract Approve2 {
         address[] calldata spenders,
         address[] calldata operators,
         uint256 noncesToInvalidate
-    ) public {
+    ) external {
         unchecked {
             require(tokens.length == spenders.length, "LENGTH_MISMATCH");
 
