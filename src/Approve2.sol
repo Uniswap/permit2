@@ -252,7 +252,7 @@ contract Approve2 {
                 allowance[msg.sender][tokens[i]][spenders[i]] = 0;
             }
 
-            // Revoke allowance each spender who is approved for all tokens.
+            // Revoke each of the sender's provided operator's powers.
             for (uint256 i = 0; i < operators.length; ++i) {
                 isOperator[msg.sender][operators[i]] = false;
             }
