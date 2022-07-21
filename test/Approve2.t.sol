@@ -29,7 +29,7 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
 
     MockNonPermitERC20 immutable nonPermitToken = new MockNonPermitERC20("Mock NonPermit Token", "MOCK", 18);
 
-    constructor() Approve2Lib(approve2) {
+    constructor() {
         PK = 0xBEEF;
         PK_OWNER = hevm.addr(PK);
 
@@ -167,7 +167,7 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
             )
         );
 
-        permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Approve2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -177,12 +177,12 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
     function testTransferFrom2Full() public {
         hevm.startPrank(address(0xCAFE));
 
-        transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
+        Approve2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
     }
 
     function testTransferFrom2NonPermitToken() public {
         hevm.startPrank(address(0xCAFE));
 
-        transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+        Approve2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
     }
 }

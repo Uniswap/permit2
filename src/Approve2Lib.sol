@@ -2,6 +2,7 @@
 pragma solidity 0.8.15;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
 import {Approve2} from "./Approve2.sol";
 
@@ -19,16 +20,8 @@ contract Approve2Lib {
     /// @dev The unique EIP-712 domain domain separator for the DAI token contract.
     bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
-    /*//////////////////////////////////////////////////////////////
-                               IMMUTABLES
-    //////////////////////////////////////////////////////////////*/
-
     /// @dev The address of the Approve2 contract the library will use.
-    Approve2 internal immutable APPROVE2;
-
-    constructor(Approve2 approve2) {
-        APPROVE2 = approve2;
-    }
+    bytes32 internal constant APPROVE2_ADDRESS = 0x000000000000000000000000ce71065d4017f316ec606fe4422e11eb2c47c246;
 
     /*//////////////////////////////////////////////////////////////
                              TRANSFER LOGIC
@@ -45,8 +38,6 @@ contract Approve2Lib {
         address to,
         uint256 amount
     ) internal virtual {
-        Approve2 approve2 = APPROVE2;
-
         assembly {
             /*//////////////////////////////////////////////////////////////
                               ATTEMPT SAFE TRANSFER FROM
@@ -86,7 +77,7 @@ contract Approve2Lib {
                 mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
 
                 // We use 132 because the length of our calldata totals up like so: 4 + 32 * 4.
-                if iszero(call(gas(), approve2, 0, freeMemoryPointer, 132, 0, 0)) {
+                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 132, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
@@ -212,8 +203,7 @@ contract Approve2Lib {
                 mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
 
                 // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
-                // TODO: stack too deep so had to inline, will need to figure this out
-                if iszero(call(gas(), 0xce71065d4017f316ec606fe4422e11eb2c47c246, 0, freeMemoryPointer, 260, 0, 0)) {
+                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
