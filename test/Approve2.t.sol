@@ -11,7 +11,7 @@ import {Approve2Lib} from "../src/Approve2Lib.sol";
 
 import {MockNonPermitERC20} from "./mocks/MockNonPermitERC20.sol";
 
-contract Approve2Test is DSTestPlus, Approve2Lib {
+contract Approve2Test is DSTestPlus {
     bytes32 constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
@@ -113,7 +113,7 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
             )
         );
 
-        permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+        Approve2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -129,7 +129,7 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
     }
 
     function testTransferFrom2() public {
-        transferFrom2(token, address(this), address(0xB00B), 1e18);
+        Approve2Lib.transferFrom2(token, address(this), address(0xB00B), 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -150,7 +150,7 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
             )
         );
 
-        permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Approve2Lib.permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
     function testPermit2NonPermitToken() public {
@@ -184,5 +184,81 @@ contract Approve2Test is DSTestPlus, Approve2Lib {
         hevm.startPrank(address(0xCAFE));
 
         Approve2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          END TO END BENCHMARKS
+    //////////////////////////////////////////////////////////////*/
+
+    function testOZSafePermitPlusOZSafeTransferFrom() public {
+        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+            PK,
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR,
+                    keccak256(
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                    )
+                )
+            )
+        );
+
+        hevm.startPrank(address(0xB00B));
+
+        startMeasuringGas("safePermit + safeTransferFrom with an EIP-2612 native token");
+
+        SafeERC20.safePermit(IERC20Permit(address(token)), PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+        SafeERC20.safeTransferFrom(IERC20(address(token)), PK_OWNER, address(0xB00B), 1e18);
+
+        stopMeasuringGas();
+    }
+
+    function testPermit2PlusTransferFrom2() public {
+        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+            PK,
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR_TOKEN,
+                    keccak256(
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp)
+                    )
+                )
+            )
+        );
+
+        hevm.startPrank(address(0xCAFE));
+
+        startMeasuringGas("permit2 + transferFrom2 with an EIP-2612 native token");
+
+        Approve2Lib.permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Approve2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
+
+        stopMeasuringGas();
+    }
+
+    function testPermit2PlusTransferFrom2WithNonPermit() public {
+        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+            PK,
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
+                    keccak256(
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp)
+                    )
+                )
+            )
+        );
+
+        hevm.startPrank(address(0xCAFE));
+
+        startMeasuringGas("permit2 + transferFrom2 with a non EIP-2612 native token");
+
+        Approve2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Approve2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+
+        stopMeasuringGas();
     }
 }

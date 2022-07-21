@@ -12,7 +12,7 @@ import {Approve2} from "./Approve2.sol";
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Enables efficient transfers and EIP-2612/DAI
 /// permits for any token by falling back to Approve2.
-contract Approve2Lib {
+library Approve2Lib {
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -37,7 +37,7 @@ contract Approve2Lib {
         address from,
         address to,
         uint256 amount
-    ) internal virtual {
+    ) internal {
         assembly {
             /*//////////////////////////////////////////////////////////////
                               ATTEMPT SAFE TRANSFER FROM
@@ -109,7 +109,7 @@ contract Approve2Lib {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) internal virtual {
+    ) internal {
         assembly {
             // Get a pointer to some free memory.
             let freeMemoryPointer := mload(0x40)
