@@ -220,19 +220,19 @@ contract Approve2Test is DSTestPlus {
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
-                    DOMAIN_SEPARATOR_TOKEN,
+                    DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
                     )
                 )
             )
         );
 
-        hevm.startPrank(address(0xCAFE));
+        hevm.startPrank(address(0xB00B));
 
         startMeasuringGas("permit2 + transferFrom2 with an EIP-2612 native token");
 
-        Approve2Lib.permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Approve2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
         Approve2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
 
         stopMeasuringGas();
