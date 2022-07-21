@@ -22,7 +22,11 @@ contract Approve2 {
     /// @notice Invalidate a specific number of nonces. Can be used
     /// to invalidate in-flight permits before they are executed.
     /// @param noncesToInvalidate The number of nonces to invalidate.
-    function invalidateNonce(uint256 noncesToInvalidate) external {
+    function invalidateNonces(uint256 noncesToInvalidate) public {
+        // Limit how quickly users can invalidate their nonces to
+        // ensure no one accidentally invalidates all their nonces.
+        require(noncesToInvalidate <= type(uint16).max);
+
         nonces[msg.sender] += noncesToInvalidate;
     }
 
@@ -229,7 +233,7 @@ contract Approve2 {
                              LOCKDOWN LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // todo: bench if a struct for token spender pairs is cheaper
+    // TODO: Bench if a struct for token-spender pairs is cheaper.
 
     /// @notice Enables performing a "lockdown" of the sender's Approve2 identity
     /// by batch revoking approvals, unapproving operators, and invalidating nonces.
@@ -245,19 +249,22 @@ contract Approve2 {
         uint256 noncesToInvalidate
     ) external {
         unchecked {
+            // Will revert if trying to invalidate
+            // more than type(uint16).max nonces.
+            invalidateNonces(noncesToInvalidate);
+
+            // Each index should correspond to an index in the other array.
             require(tokens.length == spenders.length, "LENGTH_MISMATCH");
 
             // Revoke allowances for each pair of spenders and tokens.
             for (uint256 i = 0; i < spenders.length; ++i) {
-                allowance[msg.sender][tokens[i]][spenders[i]] = 0;
+                delete allowance[msg.sender][tokens[i]][spenders[i]];
             }
 
             // Revoke each of the sender's provided operator's powers.
             for (uint256 i = 0; i < operators.length; ++i) {
-                isOperator[msg.sender][operators[i]] = false;
+                delete isOperator[msg.sender][operators[i]];
             }
         }
-
-        nonces[msg.sender] += noncesToInvalidate;
     }
 }

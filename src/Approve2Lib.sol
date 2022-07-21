@@ -6,7 +6,7 @@ import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
 import {Approve2} from "./Approve2.sol";
 
-// TODO: clobber slots
+// TODO: Clobber slots instead of using the free memory pointer.
 
 /// @title Approve2Lib
 /// @author transmissions11 <t11s@paradigm.xyz>
