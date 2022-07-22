@@ -123,7 +123,7 @@ library Approve2Lib {
                 and(iszero(iszero(mload(0))), gt(returndatasize(), 31)),
                 // We use 4 because our calldata is just a single 4 byte function selector.
                 // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-                // Counterintuitively, this call must be positioned second to the or() call in the
+                // Counterintuitively, this call must be positioned second to the and() call in the
                 // surrounding and() call or else returndatasize() will be zero during the computation.
                 call(gas(), token, 0, freeMemoryPointer, 4, 0, 32)
             )
