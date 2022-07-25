@@ -13,6 +13,8 @@ contract Approve2 {
 
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
 
+    uint256 private constant _UINT16_MAX = (1 << 16) - 1;
+
     /*//////////////////////////////////////////////////////////////
                           EIP-712 STORAGE/LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -25,11 +27,17 @@ contract Approve2 {
     /// to invalidate in-flight permits before they are executed.
     /// @param noncesToInvalidate The number of nonces to invalidate.
     function invalidateNonces(uint256 noncesToInvalidate) public {
-        // Limit how quickly users can invalidate their nonces to
-        // ensure no one accidentally invalidates all their nonces.
-        require(noncesToInvalidate <= type(uint16).max);
-
-        nonces[msg.sender] += noncesToInvalidate;
+        assembly {
+            // Limit how quickly users can invalidate their nonces to
+            // ensure no one accidentally invalidates all their nonces.
+            if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
+                revert(0, 0)
+            }
+            mstore(0x00, address())
+            mstore(0x20, nonces.slot)
+            let nonceSlot := keccak256(0x00, 0x40)
+            sstore(nonceSlot, add(sload(nonceSlot), noncesToInvalidate))
+        }
     }
 
     /// @notice The EIP-712 "domain separator" the contract
@@ -129,7 +137,7 @@ contract Approve2 {
                 revert(0x00, 0x64) // Revert with (offset, size).
             }
 
-            // Mask the input address to clear the upper 96 bits.
+            // Mask the input addresses to clear the upper 96 bits.
             owner := and(owner, _BITMASK_ADDRESS)
             spender := and(spender, _BITMASK_ADDRESS)
             token := and(token, _BITMASK_ADDRESS)
@@ -240,7 +248,7 @@ contract Approve2 {
                 revert(0x00, 0x64) // Revert with (offset, size).
             }
 
-            // Mask the input address to clear the upper 96 bits.
+            // Mask the input addresses to clear the upper 96 bits.
             owner := and(owner, _BITMASK_ADDRESS)
             spender := and(spender, _BITMASK_ADDRESS)
 
@@ -332,23 +340,75 @@ contract Approve2 {
         address to,
         uint256 amount
     ) external {
-        unchecked {
-            uint256 allowed = allowance[from][token][msg.sender]; // Saves gas for limited approvals.
+        assembly {
+            // Mask the input addresses to clear the upper 96 bits.
+            to := and(to, _BITMASK_ADDRESS)
+            from := and(from, _BITMASK_ADDRESS)
+            token := and(token, _BITMASK_ADDRESS)
 
-            // If the from address has set an unlimited approval, we'll go straight to the transfer.
-            if (allowed != type(uint256).max) {
-                if (allowed >= amount) {
+            mstore(0x20, allowance.slot)
+            mstore(0x00, from)
+            mstore(0x20, keccak256(0x00, 0x40))
+            mstore(0x00, token)
+            mstore(0x20, keccak256(0x00, 0x40))
+            mstore(0x00, caller())
+
+            let allowedSlot := keccak256(0x00, 0x40) // Saves gas for limited approvals.
+            let allowed := sload(allowedSlot)
+
+            // If the from address has set an unlimited appro val, we'll go straight to the transfer.
+            if iszero(iszero(not(allowed))) {
+                switch lt(allowed, amount)
+                case 0 {
                     // If msg.sender has enough approved to them, decrement their allowance.
-                    allowance[from][token][msg.sender] = allowed - amount;
-                } else {
+                    sstore(allowedSlot, sub(allowed, amount))
+                }
+                default {
                     // Otherwise, check if msg.sender is an operator for the
                     // from address, otherwise we'll revert and block the transfer.
-                    require(isOperator[from][msg.sender], "APPROVE_ALL_REQUIRED");
+                    mstore(0x20, isOperator.slot)
+                    mstore(0x00, from)
+                    mstore(0x20, keccak256(0x00, 0x40))
+                    mstore(0x00, caller())
+                    if iszero(sload(keccak256(0x00, 0x40))) {
+                        mstore(0x00, hex"08c379a0") // Function selector of the error method.
+                        mstore(0x04, 0x20) // Offset of the error string.
+                        mstore(0x24, 20) // Length of the error string.
+                        mstore(0x44, "APPROVE_ALL_REQUIRED") // The error string.
+                        revert(0x00, 0x64) // Revert with (offset, size).
+                    }
                 }
             }
 
-            // Transfer the tokens from the from address to the recipient.
-            token.safeTransferFrom(from, to, amount);
+            // We'll write our calldata to this slot below, but restore it later.
+            let memPointer := mload(0x40)
+
+            // Write the abi-encoded calldata into memory, beginning with the function selector.
+            mstore(0x00, 0x23b872dd)
+            mstore(0x20, from) // Append the "from" argument.
+            mstore(0x40, to) // Append the "to" argument.
+            mstore(0x60, amount) // Append the "amount" argument.
+
+            if iszero(
+                and(
+                    // Set success to whether the call reverted, if not we check it either
+                    // returned exactly 1 (can't just be non-zero data), or had no return data.
+                    or(eq(mload(0x00), 1), iszero(returndatasize())),
+                    // We use 0x64 because that's the total length of our calldata (0x04 + 0x20 * 3)
+                    // Counterintuitively, this call() must be positioned after the or() in the
+                    // surrounding and() because and() evaluates its arguments from right to left.
+                    call(gas(), token, 0, 0x1c, 0x64, 0x00, 0x20)
+                )
+            ) {
+                mstore(0x00, hex"08c379a0") // Function selector of the error method.
+                mstore(0x04, 0x20) // Offset of the error string.
+                mstore(0x24, 20) // Length of the error string.
+                mstore(0x44, "TRANSFER_FROM_FAILED") // The error string.
+                revert(0x00, 0x64) // Revert with (offset, size).
+            }
+
+            mstore(0x60, 0) // Restore the zero slot to zero.
+            mstore(0x40, memPointer) // Restore the memPointer.
         }
     }
 
@@ -371,47 +431,57 @@ contract Approve2 {
         address[] calldata operators,
         uint256 noncesToInvalidate
     ) external {
-        unchecked {
-            // Will revert if trying to invalidate
-            // more than type(uint16).max nonces.
-            invalidateNonces(noncesToInvalidate);
-
+        assembly {
+            // Limit how quickly users can invalidate their nonces to
+            // ensure no one accidentally invalidates all their nonces.
+            if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
+                revert(0, 0)
+            }
+            mstore(0x00, address())
+            mstore(0x20, nonces.slot)
+            let nonceSlot := keccak256(0x00, 0x40)
+            sstore(nonceSlot, add(sload(nonceSlot), noncesToInvalidate))
+            
             // Each index should correspond to an index in the other array.
-            require(tokens.length == spenders.length, "LENGTH_MISMATCH");
+            if iszero(eq(tokens.length, spenders.length)) {
+                mstore(0x00, hex"08c379a0") // Function selector of the error method.
+                mstore(0x04, 0x20) // Offset of the error string.
+                mstore(0x24, 15) // Length of the error string.
+                mstore(0x44, "LENGTH_MISMATCH") // The error string.
+                revert(0x00, 0x64) // Revert with (offset, size).
+            }
 
-            assembly {
-                // Revoke allowances for each pair of spenders and tokens.
-                for {
-                    let end := add(spenders.offset, shl(5, spenders.length))
-                    let i := spenders.offset
-                    let j := tokens.offset
-                    mstore(0x20, allowance.slot)
-                    mstore(0x00, caller())
-                    let h := keccak256(0x00, 0x40)
-                } iszero(eq(i, end)) {
-                    j := add(j, 0x20)
-                    i := add(i, 0x20)
-                } {
-                    mstore(0x20, h)
-                    calldatacopy(0x00, j, 0x20)
-                    mstore(0x20, keccak256(0x00, 0x40))
-                    calldatacopy(0x00, i, 0x20)
-                    sstore(keccak256(0x00, 0x40), 0)
-                }
+            // Revoke allowances for each pair of spenders and tokens.
+            for {
+                let end := add(spenders.offset, shl(5, spenders.length))
+                let i := spenders.offset
+                let j := tokens.offset
+                mstore(0x20, allowance.slot)
+                mstore(0x00, caller())
+                let h := keccak256(0x00, 0x40)
+            } iszero(eq(i, end)) {
+                j := add(j, 0x20)
+                i := add(i, 0x20)
+            } {
+                mstore(0x20, h)
+                calldatacopy(0x00, j, 0x20)
+                mstore(0x20, keccak256(0x00, 0x40))
+                calldatacopy(0x00, i, 0x20)
+                sstore(keccak256(0x00, 0x40), 0)
+            }
 
-                // Revoke allowances for each pair of spenders and tokens.
-                for {
-                    let end := add(operators.offset, shl(5, operators.length))
-                    let i := operators.offset 
-                    mstore(0x20, isOperator.slot)
-                    mstore(0x00, caller())
-                    mstore(0x20, keccak256(0x00, 0x40))
-                } iszero(eq(i, end)) {
-                    i := add(i, 0x20)
-                } {
-                    calldatacopy(0x00, i, 0x20)
-                    sstore(keccak256(0x00, 0x40), 0)   
-                }
+            // Revoke allowances for each pair of spenders and tokens.
+            for {
+                let end := add(operators.offset, shl(5, operators.length))
+                let i := operators.offset 
+                mstore(0x20, isOperator.slot)
+                mstore(0x00, caller())
+                mstore(0x20, keccak256(0x00, 0x40))
+            } iszero(eq(i, end)) {
+                i := add(i, 0x20)
+            } {
+                calldatacopy(0x00, i, 0x20)
+                sstore(keccak256(0x00, 0x40), 0)   
             }
         }
     }
