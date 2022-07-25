@@ -161,7 +161,7 @@ library Approve2Lib {
                     // We use 228 because the length of our calldata totals up like so: 4 + 32 * 7.
                     success := call(gas(), token, 0, freeMemoryPointer, 228, 0, 0)
                 }
-                case 1 {
+                default {
                     /*//////////////////////////////////////////////////////////////
                                           NONCE RETRIEVAL LOGIC
                     //////////////////////////////////////////////////////////////*/
