@@ -437,7 +437,7 @@ contract Approve2 {
             if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
                 revert(0, 0)
             }
-            mstore(0x00, address())
+            mstore(0x00, caller())
             mstore(0x20, nonces.slot)
             let nonceSlot := keccak256(0x00, 0x40)
             sstore(nonceSlot, add(sload(nonceSlot), noncesToInvalidate))
