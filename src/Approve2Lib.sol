@@ -43,46 +43,56 @@ library Approve2Lib {
                               ATTEMPT SAFE TRANSFER FROM
             //////////////////////////////////////////////////////////////*/
 
-            // Get a pointer to some free memory.
-            let freeMemoryPointer := mload(0x40)
+            // We'll write some calldata to this slot below, but restore it later.
+            let memPointer := mload(0x40)
 
             // Write the abi-encoded calldata into memory, beginning with the function selector.
-            mstore(freeMemoryPointer, 0x23b872dd00000000000000000000000000000000000000000000000000000000)
-            mstore(add(freeMemoryPointer, 4), from) // Append the "from" argument.
-            mstore(add(freeMemoryPointer, 36), to) // Append the "to" argument.
-            mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
+            mstore(0, 0x23b872dd) // 0x23b872dd is the function selector for transferFrom.
+            mstore(32, from) // Append the "from" argument.
+            mstore(64, to) // Append the "to" argument.
+            mstore(96, amount) // Append the "amount" argument.
 
             // If the call to transferFrom fails for any reason, try using Approve2.
             if iszero(
                 and(
                     // Set success to whether the call reverted, if not we check it either
                     // returned exactly 1 (can't just be non-zero data), or had no return data.
-                    or(and(eq(mload(0), 1), gt(returndatasize(), 31)), iszero(returndatasize())),
-                    // We use 100 because the length of our calldata totals up like so: 4 + 32 * 3.
-                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-                    // Counterintuitively, this call must be positioned second to the or() call in the
-                    // surrounding and() call or else returndatasize() will be zero during the computation.
-                    call(gas(), token, 0, freeMemoryPointer, 100, 0, 32)
+                    or(eq(mload(0), 1), iszero(returndatasize())),
+                    // Counterintuitively, this call() must be positioned after the or() in the
+                    // surrounding and() because and() evaluates its arguments from right to left.
+                    // We use 0 and 28 because our calldata begins with the last 4 bytes of the first slot.
+                    // We use 100 because the length of our generated calldata totals up like so: 4 + 32 * 3.
+                    // We use 0 and 32 to copy up to 32 bytes of return data into the first slot of scratch space.
+                    call(gas(), token, 0, 28, 100, 0, 32)
                 )
             ) {
                 /*//////////////////////////////////////////////////////////////
                                       FALLBACK TO APPROVE2
                 //////////////////////////////////////////////////////////////*/
 
-                // Write the abi-encoded calldata into memory, beginning with the function selector.
-                mstore(freeMemoryPointer, 0x15dacbea00000000000000000000000000000000000000000000000000000000)
-                mstore(add(freeMemoryPointer, 4), token) // Append the "token" argument.
-                mstore(add(freeMemoryPointer, 36), from) // Append the "from" argument.
-                mstore(add(freeMemoryPointer, 68), to) // Append the "to" argument.
-                mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
+                // We'll write some calldata to this slot below, but restore it later.
+                let memSlot128 := mload(128)
 
-                // We use 132 because the length of our calldata totals up like so: 4 + 32 * 4.
-                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 132, 0, 0)) {
+                // Write the abi-encoded calldata into memory, beginning with the function selector.
+                mstore(0, 0x15dacbea) // 0x15dacbea is the function selector for Approve2's transferFrom.
+                mstore(32, token) // Append the "token" argument.
+                mstore(64, from) // Append the "from" argument.
+                mstore(96, to) // Append the "to" argument.
+                mstore(128, amount) // Append the "amount" argument.
+
+                // We use 0 and 28 because our calldata begins with the last 4 bytes of the first slot.
+                // We use 132 because the length of our generated calldata totals up like so: 4 + 32 * 4.
+                if iszero(call(gas(), APPROVE2_ADDRESS, 0, 28, 132, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
                 }
+
+                mstore(128, memSlot128) // Restore slot 128.
             }
+
+            mstore(0x60, 0) // Restore the zero slot to zero.
+            mstore(0x40, memPointer) // Restore the memPointer.
         }
     }
 
