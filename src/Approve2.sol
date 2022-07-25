@@ -11,6 +11,8 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 contract Approve2 {
     using SafeTransferLib for ERC20;
 
+    uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
+
     /*//////////////////////////////////////////////////////////////
                           EIP-712 STORAGE/LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -35,17 +37,23 @@ contract Approve2 {
     /// @param token The token to get the domain separator for.
     /// @dev For calls to permitAll, the address of
     /// the Approve2 contract will be used the token.
-    function DOMAIN_SEPARATOR(address token) public view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                    keccak256("Approve2"),
-                    keccak256("1"),
-                    block.chainid,
-                    token // We use the token's address for easy frontend compatibility.
-                )
-            );
+    function DOMAIN_SEPARATOR(address token) public view returns (bytes32 result) {
+        assembly {
+            let m0x40 := mload(0x40)
+            let m0x80 := mload(0x80)
+            // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+            mstore(0x00, 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f)
+            // keccak256("Approve2")
+            mstore(0x20, 0x2b5743ce396fc0fb7c46d02cbef4ec38cf7e859e3570e69baaf898ed84405e0d)
+            // keccak256("1")
+            mstore(0x40, 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6)
+            mstore(0x60, chainid())
+            mstore(0x80, and(token, _BITMASK_ADDRESS))
+            result := keccak256(0x00, 0xa0)
+            mstore(0x80, m0x80)
+            mstore(0x60, 0)
+            mstore(0x40, m0x40)
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -106,38 +114,97 @@ contract Approve2 {
         bytes32 r,
         bytes32 s
     ) external {
-        unchecked {
+        assembly {
+            // Cache the reserved memory slots.
+            let m0x40 := mload(0x40)
+            let m0x80 := mload(0x80)
+            let m0xa0 := mload(0xa0)
+
             // Ensure the signature's deadline has not already passed.
-            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+            if lt(deadline, timestamp()) {
+                mstore(0x00, hex"08c379a0") // Function selector of the error method.
+                mstore(0x04, 0x20) // Offset of the error string.
+                mstore(0x24, 23) // Length of the error string.
+                mstore(0x44, "PERMIT_DEADLINE_EXPIRED") // The error string.
+                revert(0x00, 0x64) // Revert with (offset, size).
+            }
 
-            // Recover the signer address from the signature.
-            address recoveredAddress = ecrecover(
-                keccak256(
-                    abi.encodePacked(
-                        "\x19\x01",
-                        DOMAIN_SEPARATOR(address(token)),
-                        keccak256(
-                            abi.encode(
-                                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
-                                owner,
-                                spender,
-                                amount,
-                                nonces[owner]++,
-                                deadline
-                            )
-                        )
-                    )
-                ),
-                v,
-                r,
-                s
-            );
+            // Mask the input address to clear the upper 96 bits.
+            owner := and(owner, _BITMASK_ADDRESS)
+            spender := and(spender, _BITMASK_ADDRESS)
+            token := and(token, _BITMASK_ADDRESS)
 
+            // Load and increment the nonce.
+            mstore(0x00, owner)
+            mstore(0x20, nonces.slot)
+            let nonceSlot := keccak256(0x00, 0x40)
+            let nonce := sload(nonceSlot)
+            sstore(nonceSlot, add(nonce, 1))
+
+            // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
+            mstore(0x00, 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9)
+            mstore(0x20, owner)
+            mstore(0x40, spender)
+            mstore(0x60, amount)
+            mstore(0x80, nonce)
+            mstore(0xa0, deadline)
+            
+            let h := keccak256(0x00, 0xc0)
+
+            // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+            mstore(0x00, 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f)
+            // keccak256("Approve2")
+            mstore(0x20, 0x2b5743ce396fc0fb7c46d02cbef4ec38cf7e859e3570e69baaf898ed84405e0d)
+            // keccak256("1")
+            mstore(0x40, 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6)
+            mstore(0x60, chainid())
+            mstore(0x80, token)
+
+            mstore(0x20, keccak256(0x00, 0xa0))
+            mstore(0x00, 0x1901)
+            mstore(0x40, h)
+
+            mstore(0x00, keccak256(0x1e, 0x42))
+            mstore(0x20, and(v, 0xff))
+            mstore(0x40, r)
+            mstore(0x60, s)
+
+            pop(
+                staticcall(
+                    gas(), // Amount of gas left for the transaction.
+                    0x01, // Address of `ecrecover`.
+                    0x00, // Start of input.
+                    0x80, // Size of input.
+                    0x40, // Start of output.
+                    0x20 // Size of output.
+                )
+            )
+            // Restore the zero slot.
+            mstore(0x60, 0)
+            // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
+            let recoveredAddress := mload(sub(0x60, returndatasize()))
             // Ensure the signature is valid and the signer is the owner.
-            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
+            if or(iszero(recoveredAddress), iszero(eq(recoveredAddress, owner))) {
+                mstore(0x00, hex"08c379a0") // Function selector of the error method.
+                mstore(0x04, 0x20) // Offset of the error string.
+                mstore(0x24, 14) // Length of the error string.
+                mstore(0x44, "INVALID_SIGNER") // The error string.
+                revert(0x00, 0x64) // Revert with (offset, size).
+            }
 
             // Set the allowance of the spender to the given amount.
-            allowance[recoveredAddress][token][spender] = amount;
+            mstore(0x20, allowance.slot)
+            mstore(0x00, recoveredAddress)
+            mstore(0x20, keccak256(0x00, 0x40))
+            mstore(0x00, token)
+            mstore(0x20, keccak256(0x00, 0x40))
+            mstore(0x00, spender)
+            sstore(keccak256(0x00, 0x40), amount)
+
+            // Restore the reserved memory slots.
+            mstore(0xa0, m0xa0)
+            mstore(0x80, m0x80)
+            mstore(0x40, m0x40)
         }
     }
 
@@ -158,37 +225,93 @@ contract Approve2 {
         bytes32 r,
         bytes32 s
     ) external {
-        unchecked {
+        assembly {
+            // Cache the reserved memory slots.
+            let m0x40 := mload(0x40)
+            let m0x80 := mload(0x80)
+            let m0xa0 := mload(0xa0)
+
             // Ensure the signature's deadline has not already passed.
-            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+            if lt(deadline, timestamp()) {
+                mstore(0x00, hex"08c379a0") // Function selector of the error method.
+                mstore(0x04, 0x20) // Offset of the error string.
+                mstore(0x24, 23) // Length of the error string.
+                mstore(0x44, "PERMIT_DEADLINE_EXPIRED") // The error string.
+                revert(0x00, 0x64) // Revert with (offset, size).
+            }
 
-            // Recover the signer address from the signature.
-            address recoveredAddress = ecrecover(
-                keccak256(
-                    abi.encodePacked(
-                        "\x19\x01",
-                        DOMAIN_SEPARATOR(address(this)),
-                        keccak256(
-                            abi.encode(
-                                keccak256("PermitAll(address owner,address spender,uint256 nonce,uint256 deadline)"),
-                                owner,
-                                spender,
-                                nonces[owner]++,
-                                deadline
-                            )
-                        )
-                    )
-                ),
-                v,
-                r,
-                s
-            );
+            // Mask the input address to clear the upper 96 bits.
+            owner := and(owner, _BITMASK_ADDRESS)
+            spender := and(spender, _BITMASK_ADDRESS)
 
+            // Load and increment the nonce.
+            mstore(0x00, owner)
+            mstore(0x20, nonces.slot)
+            let nonceSlot := keccak256(0x00, 0x40)
+            let nonce := sload(nonceSlot)
+            sstore(nonceSlot, add(nonce, 1))
+
+            // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
+            mstore(0x00, 0x8b2a9c07938b6d62909dc00103ea4e71485caf5019e7fa95b0a87e13825663b0)
+            mstore(0x20, owner)
+            mstore(0x40, spender)
+            mstore(0x60, nonce)
+            mstore(0x80, deadline)
+
+            let h := keccak256(0x00, 0xa0)
+
+            // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+            mstore(0x00, 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f)
+            // keccak256("Approve2")
+            mstore(0x20, 0x2b5743ce396fc0fb7c46d02cbef4ec38cf7e859e3570e69baaf898ed84405e0d)
+            // keccak256("1")
+            mstore(0x40, 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6)
+            mstore(0x60, chainid())
+            mstore(0x80, address())
+
+            mstore(0x20, keccak256(0x00, 0xa0))
+            mstore(0x00, 0x1901)
+            mstore(0x40, h)
+
+            mstore(0x00, keccak256(0x1e, 0x42))
+            mstore(0x20, and(v, 0xff))
+            mstore(0x40, r)
+            mstore(0x60, s)
+
+            pop(
+                staticcall(
+                    gas(), // Amount of gas left for the transaction.
+                    0x01, // Address of `ecrecover`.
+                    0x00, // Start of input.
+                    0x80, // Size of input.
+                    0x40, // Start of output.
+                    0x20 // Size of output.
+                )
+            )
+            // Restore the zero slot.
+            mstore(0x60, 0)
+            // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
+            let recoveredAddress := mload(sub(0x60, returndatasize()))
             // Ensure the signature is valid and the signer is the owner.
-            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
+            if or(iszero(recoveredAddress), iszero(eq(recoveredAddress, owner))) {
+                mstore(0x00, hex"08c379a0") // Function selector of the error method.
+                mstore(0x04, 0x20) // Offset of the error string.
+                mstore(0x24, 14) // Length of the error string.
+                mstore(0x44, "INVALID_SIGNER") // The error string.
+                revert(0x00, 0x64) // Revert with (offset, size).
+            }
 
             // Set isOperator for the spender to true.
-            isOperator[owner][spender] = true;
+            mstore(0x20, isOperator.slot)
+            mstore(0x00, owner)
+            mstore(0x20, keccak256(0x00, 0x40))
+            mstore(0x00, spender)
+            sstore(keccak256(0x00, 0x40), 1)
+
+            // Restore the reserved memory slots.
+            mstore(0xa0, m0xa0)
+            mstore(0x80, m0x80)
+            mstore(0x40, m0x40)
         }
     }
 
@@ -256,14 +379,39 @@ contract Approve2 {
             // Each index should correspond to an index in the other array.
             require(tokens.length == spenders.length, "LENGTH_MISMATCH");
 
-            // Revoke allowances for each pair of spenders and tokens.
-            for (uint256 i = 0; i < spenders.length; ++i) {
-                delete allowance[msg.sender][tokens[i]][spenders[i]];
-            }
+            assembly {
+                // Revoke allowances for each pair of spenders and tokens.
+                for {
+                    let end := add(spenders.offset, shl(5, spenders.length))
+                    let i := spenders.offset
+                    let j := tokens.offset
+                    mstore(0x20, allowance.slot)
+                    mstore(0x00, caller())
+                    let h := keccak256(0x00, 0x40)
+                } iszero(eq(i, end)) {
+                    j := add(j, 0x20)
+                    i := add(i, 0x20)
+                } {
+                    mstore(0x20, h)
+                    calldatacopy(0x00, j, 0x20)
+                    mstore(0x20, keccak256(0x00, 0x40))
+                    calldatacopy(0x00, i, 0x20)
+                    sstore(keccak256(0x00, 0x40), 0)
+                }
 
-            // Revoke each of the sender's provided operator's powers.
-            for (uint256 i = 0; i < operators.length; ++i) {
-                delete isOperator[msg.sender][operators[i]];
+                // Revoke allowances for each pair of spenders and tokens.
+                for {
+                    let end := add(operators.offset, shl(5, operators.length))
+                    let i := operators.offset 
+                    mstore(0x20, isOperator.slot)
+                    mstore(0x00, caller())
+                    mstore(0x20, keccak256(0x00, 0x40))
+                } iszero(eq(i, end)) {
+                    i := add(i, 0x20)
+                } {
+                    calldatacopy(0x00, i, 0x20)
+                    sstore(keccak256(0x00, 0x40), 0)   
+                }
             }
         }
     }
