@@ -128,6 +128,10 @@ library Approve2Lib {
             // with the function selector for EIP-2612 DOMAIN_SEPARATOR.
             mstore(freeMemoryPointer, 0x3644e51500000000000000000000000000000000000000000000000000000000)
 
+            // Although the call() and gt() expressions will only return 0 or 1,
+            // the mload() may return a non-zero value greater than 1.
+            // By using mul() instead of and() here, we can avoid using iszero() to flush the
+            // truthiness to the first bit, helping us save a bit of gas.
             let success := mul(
                 // Should resolve false if it returned <32 bytes or its first word is 0.
                 mul(mload(0), gt(returndatasize(), 31)),
