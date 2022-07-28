@@ -21,22 +21,24 @@ contract Approve2 {
 
     /// @notice Maps addresses to their current nonces. Used to prevent replay
     /// attacks and allow invalidating in-flight permits via invalidateNonce.
-    mapping(address => uint256) public nonces;
+    /// @param owner The owner of the nonces.
+    function nonces(address owner) external view returns (uint256 result) {
+        assembly {
+            result := sload(and(owner, _BITMASK_ADDRESS))
+        }
+    }
 
     /// @notice Invalidate a specific number of nonces. Can be used
     /// to invalidate in-flight permits before they are executed.
     /// @param noncesToInvalidate The number of nonces to invalidate.
-    function invalidateNonces(uint256 noncesToInvalidate) public {
+    function invalidateNonces(uint256 noncesToInvalidate) external {
         assembly {
             // Limit how quickly users can invalidate their nonces to
             // ensure no one accidentally invalidates all their nonces.
             if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
                 revert(0, 0)
             }
-            mstore(0x00, caller())
-            mstore(0x20, nonces.slot)
-            let nonceSlot := keccak256(0x00, 0x40)
-            sstore(nonceSlot, add(sload(nonceSlot), noncesToInvalidate))
+            sstore(caller(), add(sload(caller()), noncesToInvalidate))
         }
     }
 
@@ -67,18 +69,37 @@ contract Approve2 {
 
     /// @notice Maps user addresses to "operator" addresses and whether they are
     /// are approved to spend any amount of any token the user has approved.
-    mapping(address => mapping(address => bool)) public isOperator;
+    function isOperator(address owner, address operator) external view returns (bool result) {
+        assembly {
+            mstore(0x00, and(owner, _BITMASK_ADDRESS))
+            mstore(0x20, and(operator, _BITMASK_ADDRESS))
+            result := sload(keccak256(0x00, 0x40))
+        }
+    }
 
     /// @notice Maps users to tokens to spender addresses and how much they
     /// are approved to spend the amount of that token the user has approved.
-    mapping(address => mapping(ERC20 => mapping(address => uint256))) public allowance;
+    function allowance(address owner, ERC20 token, address spender) external view returns (uint256 result) {
+        assembly {
+            mstore(0x00, and(owner, _BITMASK_ADDRESS))
+            mstore(0x20, and(token, _BITMASK_ADDRESS))
+            mstore(0x40, and(spender, _BITMASK_ADDRESS))
+            result := sload(keccak256(0x00, 0x60))
+
+            mstore(0x40, 0)
+        }
+    }
 
     /// @notice Set whether an spender address is approved
     /// to transfer any one of the sender's approved tokens.
     /// @param operator The operator address to approve or unapprove.
     /// @param approved Whether the operator is approved.
     function setOperator(address operator, bool approved) external {
-        isOperator[msg.sender][operator] = approved;
+        assembly {
+            mstore(0x00, and(caller(), _BITMASK_ADDRESS))
+            mstore(0x20, and(operator, _BITMASK_ADDRESS))
+            sstore(keccak256(0x00, 0x40), approved)
+        }
     }
 
     /// @notice Approve a spender to transfer a specific
@@ -91,7 +112,14 @@ contract Approve2 {
         address spender,
         uint256 amount
     ) external {
-        allowance[msg.sender][token][spender] = amount;
+        assembly {
+            mstore(0x00, caller())
+            mstore(0x20, and(token, _BITMASK_ADDRESS))
+            mstore(0x40, and(spender, _BITMASK_ADDRESS))
+            sstore(keccak256(0x00, 0x60), amount)
+
+            mstore(0x40, 0)
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -135,11 +163,8 @@ contract Approve2 {
             token := and(token, _BITMASK_ADDRESS)
 
             // Load and increment the nonce.
-            mstore(0x00, owner)
-            mstore(0x20, nonces.slot)
-            let nonceSlot := keccak256(0x00, 0x40)
-            let nonce := sload(nonceSlot)
-            sstore(nonceSlot, add(nonce, 1))
+            let nonce := sload(owner)
+            sstore(owner, add(nonce, 1))
 
             // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
             mstore(0x00, 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9)
@@ -193,13 +218,10 @@ contract Approve2 {
             }
 
             // Set the allowance of the spender to the given amount.
-            mstore(0x20, allowance.slot)
-            mstore(0x00, recoveredAddress)
-            mstore(0x20, keccak256(0x00, 0x40))
-            mstore(0x00, token)
-            mstore(0x20, keccak256(0x00, 0x40))
-            mstore(0x00, spender)
-            sstore(keccak256(0x00, 0x40), amount)
+            mstore(0x00, owner)
+            mstore(0x20, token)
+            mstore(0x40, spender)
+            sstore(keccak256(0x00, 0x60), amount)
 
             mstore(0x40, 0)
         }
@@ -237,11 +259,8 @@ contract Approve2 {
             spender := and(spender, _BITMASK_ADDRESS)
 
             // Load and increment the nonce.
-            mstore(0x00, owner)
-            mstore(0x20, nonces.slot)
-            let nonceSlot := keccak256(0x00, 0x40)
-            let nonce := sload(nonceSlot)
-            sstore(nonceSlot, add(nonce, 1))
+            let nonce := sload(owner)
+            sstore(owner, add(nonce, 1))
 
             // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
             mstore(0x00, 0x8b2a9c07938b6d62909dc00103ea4e71485caf5019e7fa95b0a87e13825663b0)
@@ -294,10 +313,8 @@ contract Approve2 {
             }
 
             // Set isOperator for the spender to true.
-            mstore(0x20, isOperator.slot)
             mstore(0x00, owner)
-            mstore(0x20, keccak256(0x00, 0x40))
-            mstore(0x00, spender)
+            mstore(0x20, spender)
             sstore(keccak256(0x00, 0x40), 1)
 
             mstore(0x40, 0)
@@ -327,14 +344,11 @@ contract Approve2 {
             from := and(from, _BITMASK_ADDRESS)
             token := and(token, _BITMASK_ADDRESS)
 
-            mstore(0x20, allowance.slot)
             mstore(0x00, from)
-            mstore(0x20, keccak256(0x00, 0x40))
-            mstore(0x00, token)
-            mstore(0x20, keccak256(0x00, 0x40))
-            mstore(0x00, caller())
+            mstore(0x20, token)
+            mstore(0x40, caller())
 
-            let allowedSlot := keccak256(0x00, 0x40) // Saves gas for limited approvals.
+            let allowedSlot := keccak256(0x00, 0x60) // Saves gas for limited approvals.
             let allowed := sload(allowedSlot)
 
             // If the from address has set an unlimited appro val, we'll go straight to the transfer.
@@ -347,10 +361,9 @@ contract Approve2 {
                 default {
                     // Otherwise, check if msg.sender is an operator for the
                     // from address, otherwise we'll revert and block the transfer.
-                    mstore(0x20, isOperator.slot)
                     mstore(0x00, from)
-                    mstore(0x20, keccak256(0x00, 0x40))
-                    mstore(0x00, caller())
+                    mstore(0x20, caller())
+
                     if iszero(sload(keccak256(0x00, 0x40))) {
                         mstore(0x00, hex"08c379a0") // Function selector of the error method.
                         mstore(0x04, 0x20) // Offset of the error string.
@@ -417,11 +430,8 @@ contract Approve2 {
             if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
                 revert(0, 0)
             }
-            mstore(0x00, caller())
-            mstore(0x20, nonces.slot)
-            let nonceSlot := keccak256(0x00, 0x40)
-            sstore(nonceSlot, add(sload(nonceSlot), noncesToInvalidate))
-            
+            sstore(caller(), add(sload(caller()), noncesToInvalidate))
+
             // Each index should correspond to an index in the other array.
             if iszero(eq(tokens.length, spenders.length)) {
                 mstore(0x00, hex"08c379a0") // Function selector of the error method.
@@ -433,34 +443,28 @@ contract Approve2 {
 
             // Revoke allowances for each pair of spenders and tokens.
             for {
+                let tokensOffset := tokens.offset
+                let spendersOffset := spenders.offset
                 let end := add(spenders.offset, shl(5, spenders.length))
-                let i := spenders.offset
-                let j := tokens.offset
-                mstore(0x20, allowance.slot)
                 mstore(0x00, caller())
-                let h := keccak256(0x00, 0x40)
-            } iszero(eq(i, end)) {
-                j := add(j, 0x20)
-                i := add(i, 0x20)
+            } iszero(eq(spendersOffset, end)) {
+                tokensOffset := add(tokensOffset, 0x20)
+                spendersOffset := add(spendersOffset, 0x20)
             } {
-                mstore(0x20, h)
-                calldatacopy(0x00, j, 0x20)
-                mstore(0x20, keccak256(0x00, 0x40))
-                calldatacopy(0x00, i, 0x20)
-                sstore(keccak256(0x00, 0x40), 0)
+                calldatacopy(0x20, tokensOffset, 0x20)
+                calldatacopy(0x40, spendersOffset, 0x20)
+                sstore(keccak256(0x00, 0x60), 0)
             }
 
             // Revoke allowances for each pair of spenders and tokens.
             for {
                 let end := add(operators.offset, shl(5, operators.length))
-                let i := operators.offset 
-                mstore(0x20, isOperator.slot)
+                let operatorsOffset := operators.offset 
                 mstore(0x00, caller())
-                mstore(0x20, keccak256(0x00, 0x40))
-            } iszero(eq(i, end)) {
-                i := add(i, 0x20)
+            } iszero(eq(operatorsOffset, end)) {
+                operatorsOffset := add(operatorsOffset, 0x20)
             } {
-                calldatacopy(0x00, i, 0x20)
+                calldatacopy(0x20, operatorsOffset, 0x20)
                 sstore(keccak256(0x00, 0x40), 0)   
             }
         }
