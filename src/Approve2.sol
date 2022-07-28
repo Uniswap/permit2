@@ -45,10 +45,8 @@ contract Approve2 {
     /// @param token The token to get the domain separator for.
     /// @dev For calls to permitAll, the address of
     /// the Approve2 contract will be used the token.
-    function DOMAIN_SEPARATOR(address token) public view returns (bytes32 result) {
+    function DOMAIN_SEPARATOR(address token) external view returns (bytes32 result) {
         assembly {
-            let m0x40 := mload(0x40)
-            let m0x80 := mload(0x80)
             // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
             mstore(0x00, 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f)
             // keccak256("Approve2")
@@ -58,9 +56,8 @@ contract Approve2 {
             mstore(0x60, chainid())
             mstore(0x80, and(token, _BITMASK_ADDRESS))
             result := keccak256(0x00, 0xa0)
-            mstore(0x80, m0x80)
-            mstore(0x60, 0)
-            mstore(0x40, m0x40)
+
+            mstore(0x40, 0)
         }
     }
 
@@ -123,11 +120,6 @@ contract Approve2 {
         bytes32 s
     ) external {
         assembly {
-            // Cache the reserved memory slots.
-            let m0x40 := mload(0x40)
-            let m0x80 := mload(0x80)
-            let m0xa0 := mload(0xa0)
-
             // Ensure the signature's deadline has not already passed.
             if lt(deadline, timestamp()) {
                 mstore(0x00, hex"08c379a0") // Function selector of the error method.
@@ -209,10 +201,7 @@ contract Approve2 {
             mstore(0x00, spender)
             sstore(keccak256(0x00, 0x40), amount)
 
-            // Restore the reserved memory slots.
-            mstore(0xa0, m0xa0)
-            mstore(0x80, m0x80)
-            mstore(0x40, m0x40)
+            mstore(0x40, 0)
         }
     }
 
@@ -234,11 +223,6 @@ contract Approve2 {
         bytes32 s
     ) external {
         assembly {
-            // Cache the reserved memory slots.
-            let m0x40 := mload(0x40)
-            let m0x80 := mload(0x80)
-            let m0xa0 := mload(0xa0)
-
             // Ensure the signature's deadline has not already passed.
             if lt(deadline, timestamp()) {
                 mstore(0x00, hex"08c379a0") // Function selector of the error method.
@@ -316,10 +300,7 @@ contract Approve2 {
             mstore(0x00, spender)
             sstore(keccak256(0x00, 0x40), 1)
 
-            // Restore the reserved memory slots.
-            mstore(0xa0, m0xa0)
-            mstore(0x80, m0x80)
-            mstore(0x40, m0x40)
+            mstore(0x40, 0)
         }
     }
 
@@ -407,8 +388,7 @@ contract Approve2 {
                 revert(0x00, 0x64) // Revert with (offset, size).
             }
 
-            mstore(0x60, 0) // Restore the zero slot to zero.
-            mstore(0x40, memPointer) // Restore the memPointer.
+            mstore(0x40, 0)
         }
     }
 
