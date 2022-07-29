@@ -5,18 +5,28 @@ isOperator: public(HashMap[address, HashMap[address, bool]])
 allowance: public(HashMap[address, HashMap[address, HashMap[address, uint256]]])
 
 @external
-def invalidateNonces(noncesToInvalidate: uint256):
-    assert noncesToInvalidate < 2 ** 16
+def transferFrom(token: address, owner: address, to: address, amount: uint256):
+    allowed: uint256 = self.allowance[owner][token][msg.sender]
 
-    self.nonces[msg.sender] += noncesToInvalidate
+    if allowed != MAX_UINT256:
+        if allowed >= amount:
+            # todo: vyper has safe math right?
+            self.allowance[owner][token][msg.sender] = allowed - amount
+        else:
+            assert self.isOperator[owner][msg.sender], "APPROVE_ALL_REQUIRED"
 
-@external
-def setOperator(operator: address, approved: bool):
-    self.isOperator[msg.sender][operator] = approved
+    response: Bytes[32] = raw_call(
+        token,
+        concat(
+            method_id("transferFrom(address,address,uint256)"),
+            convert(owner, bytes32),
+            convert(to, bytes32),
+            convert(amount, bytes32),
+        ),
+        max_outsize=32,
+    )
 
-@external
-def approve(token: address, spender: address, amount: uint256):
-    self.allowance[msg.sender][token][spender] = amount
+    if len(response) > 0: assert convert(response, bool), "TRANSFER_FROM_FAILED"
 
 @internal
 def computeDomainSeperator(token: address) -> bytes32:
@@ -29,10 +39,6 @@ def computeDomainSeperator(token: address) -> bytes32:
             convert(token, bytes32)
         )
     )
-
-@external
-def DOMAIN_SEPARATOR(token: address) -> bytes32:
-    return self.computeDomainSeperator(token)
 
 @external
 def permit(token: address, owner: address, spender: address, amount: uint256, expiry: uint256, v: uint8, r: bytes32, s: bytes32):
@@ -66,25 +72,19 @@ def permit(token: address, owner: address, spender: address, amount: uint256, ex
     self.nonces[owner] = nonce + 1
 
 @external
-def transferFrom(token: address, owner: address, to: address, amount: uint256):
-    allowed: uint256 = self.allowance[owner][token][msg.sender]
+def invalidateNonces(noncesToInvalidate: uint256):
+    assert noncesToInvalidate < 2 ** 16
 
-    if allowed != MAX_UINT256:
-        if allowed >= amount:
-            # todo: vyper has safe math right?
-            self.allowance[owner][token][msg.sender] = allowed - amount
-        else:
-            assert self.isOperator[owner][msg.sender], "APPROVE_ALL_REQUIRED"
+    self.nonces[msg.sender] += noncesToInvalidate
 
-    response: Bytes[32] = raw_call(
-        token,
-        concat(
-            method_id("transferFrom(address,address,uint256)"),
-            convert(owner, bytes32),
-            convert(to, bytes32),
-            convert(amount, bytes32),
-        ),
-        max_outsize=32,
-    )
+@external
+def setOperator(operator: address, approved: bool):
+    self.isOperator[msg.sender][operator] = approved
 
-    if len(response) > 0: assert convert(response, bool), "TRANSFER_FROM_FAILED"
+@external
+def approve(token: address, spender: address, amount: uint256):
+    self.allowance[msg.sender][token][spender] = amount
+
+@external
+def DOMAIN_SEPARATOR(token: address) -> bytes32:
+    return self.computeDomainSeperator(token)
