@@ -65,23 +65,6 @@ def permit(token: address, owner: address, spender: address, amount: uint256, ex
     self.allowance[owner][token][spender] = amount
     self.nonces[owner] = nonce + 1
 
-@internal
-def erc20_safe_transferFrom(token: address, sender: address, receiver: address, amount: uint256):
-    # Used only to send tokens that are not the type managed by this Vault.
-    # HACK: Used to handle non-compliant tokens like USDT
-    response: Bytes[32] = raw_call(
-        token,
-        concat(
-            method_id("transferFrom(address,address,uint256)"),
-            convert(sender, bytes32),
-            convert(receiver, bytes32),
-            convert(amount, bytes32),
-        ),
-        max_outsize=32,
-    )
-    if len(response) > 0:
-        assert convert(response, bool), "TRANSFER_FROM_FAILED"
-
 @external
 def transferFrom(token: address, owner: address, to: address, amount: uint256):
     allowed: uint256 = self.allowance[owner][token][msg.sender]
@@ -93,4 +76,15 @@ def transferFrom(token: address, owner: address, to: address, amount: uint256):
         else:
             assert self.isOperator[owner][msg.sender], "APPROVE_ALL_REQUIRED"
 
-    self.erc20_safe_transferFrom(token, owner, to, amount)
+    response: Bytes[32] = raw_call(
+        token,
+        concat(
+            method_id("transferFrom(address,address,uint256)"),
+            convert(owner, bytes32),
+            convert(to, bytes32),
+            convert(amount, bytes32),
+        ),
+        max_outsize=32,
+    )
+
+    if len(response) > 0: assert convert(response, bool), "TRANSFER_FROM_FAILED"
