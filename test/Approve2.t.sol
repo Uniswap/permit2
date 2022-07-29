@@ -23,11 +23,25 @@ contract Approve2Test is DSTestPlus {
     uint256 immutable PK;
     address immutable PK_OWNER;
 
-    Approve2 immutable approve2 = new Approve2();
+    Approve2 immutable approve2 = Approve2(deployContract("Approve2"));
 
     MockERC20 immutable token = new MockERC20("Mock Token", "MOCK", 18);
 
     MockNonPermitERC20 immutable nonPermitToken = new MockNonPermitERC20("Mock NonPermit Token", "MOCK", 18);
+
+    function deployContract(string memory fileName) public returns (address deployedAddress) {
+        string[] memory cmds = new string[](2);
+        cmds[0] = "vyper";
+        cmds[1] = string.concat("src/", fileName, ".vy");
+
+        bytes memory bytecode = hevm.ffi(cmds);
+
+        assembly {
+            deployedAddress := create(0, add(bytecode, 32), mload(bytecode))
+        }
+
+        require(deployedAddress != address(0), "DEPLOYMENT_FAILED");
+    }
 
     constructor() {
         PK = 0xBEEF;
