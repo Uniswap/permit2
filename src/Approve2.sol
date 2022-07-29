@@ -11,8 +11,6 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 contract Approve2 {
     using SafeTransferLib for ERC20;
 
-    uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
-
     uint256 private constant _UINT16_MAX = (1 << 16) - 1;
 
     /*//////////////////////////////////////////////////////////////
@@ -24,7 +22,8 @@ contract Approve2 {
     /// @param owner The owner of the nonces.
     function nonces(address owner) external view returns (uint256 result) {
         assembly {
-            result := sload(and(owner, _BITMASK_ADDRESS))
+            mstore(0x00, owner)
+            result := sload(keccak256(0x00, 0x20))
         }
     }
 
@@ -38,7 +37,9 @@ contract Approve2 {
             if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
                 revert(0, 0)
             }
-            sstore(caller(), add(sload(caller()), noncesToInvalidate))
+            mstore(0x00, caller())
+            let nonceSlot := keccak256(0x00, 0x20)
+            sstore(nonceSlot, add(sload(nonceSlot), noncesToInvalidate))
         }
     }
 
@@ -56,7 +57,7 @@ contract Approve2 {
             // keccak256("1")
             mstore(0x40, 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6)
             mstore(0x60, chainid())
-            mstore(0x80, and(token, _BITMASK_ADDRESS))
+            mstore(0x80, token)
             result := keccak256(0x00, 0xa0)
 
             mstore(0x40, 0)
@@ -71,8 +72,8 @@ contract Approve2 {
     /// are approved to spend any amount of any token the user has approved.
     function isOperator(address owner, address operator) external view returns (bool result) {
         assembly {
-            mstore(0x00, and(owner, _BITMASK_ADDRESS))
-            mstore(0x20, and(operator, _BITMASK_ADDRESS))
+            mstore(0x00, owner)
+            mstore(0x20, operator)
             result := sload(keccak256(0x00, 0x40))
         }
     }
@@ -81,9 +82,9 @@ contract Approve2 {
     /// are approved to spend the amount of that token the user has approved.
     function allowance(address owner, ERC20 token, address spender) external view returns (uint256 result) {
         assembly {
-            mstore(0x00, and(owner, _BITMASK_ADDRESS))
-            mstore(0x20, and(token, _BITMASK_ADDRESS))
-            mstore(0x40, and(spender, _BITMASK_ADDRESS))
+            mstore(0x00, owner)
+            mstore(0x20, token)
+            mstore(0x40, spender)
             result := sload(keccak256(0x00, 0x60))
 
             mstore(0x40, 0)
@@ -96,8 +97,8 @@ contract Approve2 {
     /// @param approved Whether the operator is approved.
     function setOperator(address operator, bool approved) external {
         assembly {
-            mstore(0x00, and(caller(), _BITMASK_ADDRESS))
-            mstore(0x20, and(operator, _BITMASK_ADDRESS))
+            mstore(0x00, caller())
+            mstore(0x20, operator)
             sstore(keccak256(0x00, 0x40), approved)
         }
     }
@@ -114,8 +115,8 @@ contract Approve2 {
     ) external {
         assembly {
             mstore(0x00, caller())
-            mstore(0x20, and(token, _BITMASK_ADDRESS))
-            mstore(0x40, and(spender, _BITMASK_ADDRESS))
+            mstore(0x20, token)
+            mstore(0x40, spender)
             sstore(keccak256(0x00, 0x60), amount)
 
             mstore(0x40, 0)
@@ -157,14 +158,11 @@ contract Approve2 {
                 revert(0x00, 0x64) // Revert with (offset, size).
             }
 
-            // Mask the input addresses to clear the upper 96 bits.
-            owner := and(owner, _BITMASK_ADDRESS)
-            spender := and(spender, _BITMASK_ADDRESS)
-            token := and(token, _BITMASK_ADDRESS)
-
             // Load and increment the nonce.
-            let nonce := sload(owner)
-            sstore(owner, add(nonce, 1))
+            mstore(0x00, owner)
+            let nonceSlot := keccak256(0x00, 0x20)
+            let nonce := sload(nonceSlot)
+            sstore(nonceSlot, add(nonce, 1))
 
             // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
             mstore(0x00, 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9)
@@ -254,13 +252,11 @@ contract Approve2 {
                 revert(0x00, 0x64) // Revert with (offset, size).
             }
 
-            // Mask the input addresses to clear the upper 96 bits.
-            owner := and(owner, _BITMASK_ADDRESS)
-            spender := and(spender, _BITMASK_ADDRESS)
-
             // Load and increment the nonce.
-            let nonce := sload(owner)
-            sstore(owner, add(nonce, 1))
+            mstore(0x00, owner)
+            let nonceSlot := keccak256(0x00, 0x20)
+            let nonce := sload(nonceSlot)
+            sstore(nonceSlot, add(nonce, 1))
 
             // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
             mstore(0x00, 0x8b2a9c07938b6d62909dc00103ea4e71485caf5019e7fa95b0a87e13825663b0)
@@ -339,11 +335,6 @@ contract Approve2 {
         uint256 amount
     ) external {
         assembly {
-            // Mask the input addresses to clear the upper 96 bits.
-            to := and(to, _BITMASK_ADDRESS)
-            from := and(from, _BITMASK_ADDRESS)
-            token := and(token, _BITMASK_ADDRESS)
-
             mstore(0x00, from)
             mstore(0x20, token)
             mstore(0x40, caller())
@@ -373,9 +364,6 @@ contract Approve2 {
                     }
                 }
             }
-
-            // We'll write our calldata to this slot below, but restore it later.
-            let memPointer := mload(0x40)
 
             // Write the abi-encoded calldata into memory, beginning with the function selector.
             mstore(0x00, 0x23b872dd)
@@ -430,7 +418,10 @@ contract Approve2 {
             if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
                 revert(0, 0)
             }
-            sstore(caller(), add(sload(caller()), noncesToInvalidate))
+            // Load and increment the nonce.
+            mstore(0x00, caller())
+            let nonceSlot := keccak256(0x00, 0x20)
+            sstore(nonceSlot, add(sload(nonceSlot), noncesToInvalidate))
 
             // Each index should correspond to an index in the other array.
             if iszero(eq(tokens.length, spenders.length)) {
