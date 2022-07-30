@@ -188,7 +188,7 @@ contract Approve2 {
             mstore(0x40, h)
 
             mstore(0x00, keccak256(0x1e, 0x42))
-            mstore(0x20, and(v, 0xff))
+            mstore(0x20, v)
             mstore(0x40, r)
             mstore(0x60, s)
 
@@ -281,7 +281,7 @@ contract Approve2 {
             mstore(0x40, h)
 
             mstore(0x00, keccak256(0x1e, 0x42))
-            mstore(0x20, and(v, 0xff))
+            mstore(0x20, v)
             mstore(0x40, r)
             mstore(0x60, s)
 
