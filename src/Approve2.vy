@@ -9,7 +9,7 @@ def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
 
     if allowed != max_value(uint256): self.allowance[owner][token][msg.sender] = allowed - amount
 
-    token.transferFrom(owner, to, amount, default_return_value=True) # use skip_contract_check?
+    token.transferFrom(owner, to, amount, default_return_value=True, skip_contract_check=True)
 
 @external
 def permit(token: ERC20, owner: address, spender: address, amount: uint256, expiry: uint256, v: uint8, r: bytes32, s: bytes32):
