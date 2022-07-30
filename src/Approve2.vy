@@ -28,6 +28,7 @@ def transferFrom(token: address, owner: address, to: address, amount: uint256):
 
     if len(response) > 0: assert convert(response, bool), "TRANSFER_FROM_FAILED"
 
+@view
 @internal
 def computeDomainSeperator(token: address) -> bytes32:
     return keccak256(
@@ -63,9 +64,12 @@ def permit(token: address, owner: address, spender: address, amount: uint256, ex
         )
     )
 
-    recoveredAddress: address = ecrecover(digest, convert(v, uint256), convert(r, uint256), convert(s, uint256))
+    recoveredAddress: address = ecrecover(digest,
+        convert(v, uint256),
+        convert(r, uint256),
+        convert(s, uint256)
+    )
 
-    #  assert receiver not in [self, ZERO_ADDRESS]
     assert recoveredAddress != ZERO_ADDRESS and recoveredAddress == owner, "INVALID_SIGNER"
 
     self.allowance[owner][token][spender] = amount
@@ -85,6 +89,7 @@ def setOperator(operator: address, approved: bool):
 def approve(token: address, spender: address, amount: uint256):
     self.allowance[msg.sender][token][spender] = amount
 
+@view
 @external
 def DOMAIN_SEPARATOR(token: address) -> bytes32:
     return self.computeDomainSeperator(token)
