@@ -92,10 +92,12 @@ contract Approve2 {
         bytes32 r,
         bytes32 s
     ) external {
-        unchecked {
-            // Ensure the signature's deadline has not already passed.
-            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+        // Ensure the signature's deadline has not already passed.
+        require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
 
+        // Unchecked because the only math done is incrementing
+        // the owner's nonce which cannot realistically overflow.
+        unchecked {
             // Recover the signer address from the signature.
             address recoveredAddress = ecrecover(
                 keccak256(
@@ -144,15 +146,13 @@ contract Approve2 {
         address to,
         uint256 amount
     ) external {
-        unchecked {
-            uint256 allowed = allowance[from][token][msg.sender]; // Saves gas for limited approvals.
+        uint256 allowed = allowance[from][token][msg.sender]; // Saves gas for limited approvals.
 
-            // If the from address has set an unlimited approval, we'll go straight to the transfer.
-            if (allowed != type(uint256).max) allowance[from][token][msg.sender] = allowed - amount;
+        // If the from address has set an unlimited approval, we'll go straight to the transfer.
+        if (allowed != type(uint256).max) allowance[from][token][msg.sender] = allowed - amount;
 
-            // Transfer the tokens from the from address to the recipient.
-            token.safeTransferFrom(from, to, amount);
-        }
+        // Transfer the tokens from the from address to the recipient.
+        token.safeTransferFrom(from, to, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -172,14 +172,16 @@ contract Approve2 {
         address[] calldata spenders,
         uint256 noncesToInvalidate
     ) external {
+        // Will revert if trying to invalidate
+        // more than type(uint16).max nonces.
+        invalidateNonces(noncesToInvalidate);
+
+        // Each index should correspond to an index in the other array.
+        require(tokens.length == spenders.length, "LENGTH_MISMATCH");
+
+        // Unchecked because counter overflow is impossible
+        // in any environment with reasonable gas limits.
         unchecked {
-            // Will revert if trying to invalidate
-            // more than type(uint16).max nonces.
-            invalidateNonces(noncesToInvalidate);
-
-            // Each index should correspond to an index in the other array.
-            require(tokens.length == spenders.length, "LENGTH_MISMATCH");
-
             // Revoke allowances for each pair of spenders and tokens.
             for (uint256 i = 0; i < spenders.length; ++i) {
                 delete allowance[msg.sender][tokens[i]][spenders[i]];
