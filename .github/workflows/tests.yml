@@ -13,6 +13,14 @@ jobs:
         with:
           version: nightly
 
+      - name: Set up python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install vyper
+        run: pip install vyper
+
       - name: Install dependencies
         run: forge install
 
