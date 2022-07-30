@@ -1,16 +1,16 @@
 from vyper.interfaces import ERC20
 
 nonces: public(HashMap[address, uint256])
-allowance: public(HashMap[address, HashMap[address, HashMap[address, uint256]]])
+allowance: public(HashMap[address, HashMap[ERC20, HashMap[address, uint256]]])
 
 @external
-def transferFrom(token: address, owner: address, to: address, amount: uint256):
+def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
     allowed: uint256 = self.allowance[owner][token][msg.sender]
 
     if allowed != max_value(uint256): self.allowance[owner][token][msg.sender] = allowed - amount
 
     response: Bytes[32] = raw_call(
-        token,
+        token.address,
         concat(
             method_id("transferFrom(address,address,uint256)"),
             convert(owner, bytes32),
@@ -23,7 +23,7 @@ def transferFrom(token: address, owner: address, to: address, amount: uint256):
     if len(response) > 0: assert convert(response, bool), "TRANSFER_FROM_FAILED"
 
 @external
-def permit(token: address, owner: address, spender: address, amount: uint256, expiry: uint256, v: uint8, r: bytes32, s: bytes32):
+def permit(token: ERC20, owner: address, spender: address, amount: uint256, expiry: uint256, v: uint8, r: bytes32, s: bytes32):
     assert expiry >= block.timestamp, "PERMIT_DEADLINE_EXPIRED"
 
     nonce: uint256 = self.nonces[owner]
@@ -63,22 +63,22 @@ def invalidateNonces(noncesToInvalidate: uint256):
     self.nonces[msg.sender] += noncesToInvalidate
 
 @external
-def approve(token: address, spender: address, amount: uint256):
+def approve(token: ERC20, spender: address, amount: uint256):
     self.allowance[msg.sender][token][spender] = amount
 
 @view
 @external
-def DOMAIN_SEPARATOR(token: address) -> bytes32:
+def DOMAIN_SEPARATOR(token: ERC20) -> bytes32:
     return self.computeDomainSeperator(token)
 
 @view
 @internal
-def computeDomainSeperator(token: address) -> bytes32:
+def computeDomainSeperator(token: ERC20) -> bytes32:
     return keccak256(
         concat(
             keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
-            keccak256(convert("Yearn Vault", Bytes[11])),
-            keccak256(convert("1", Bytes[28])),
+            keccak256(convert("Yearn Vault", Bytes[11])), # todo rename
+            keccak256(convert("1", Bytes[28])), # todo why so many bytes
             convert(chain.id, bytes32),
             convert(token, bytes32)
         )
