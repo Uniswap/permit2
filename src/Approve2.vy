@@ -7,7 +7,7 @@ allowance: public(HashMap[address, HashMap[address, HashMap[address, uint256]]])
 def transferFrom(token: address, owner: address, to: address, amount: uint256):
     allowed: uint256 = self.allowance[owner][token][msg.sender]
 
-    if allowed != MAX_UINT256: self.allowance[owner][token][msg.sender] = allowed - amount
+    if allowed != max_value(uint256): self.allowance[owner][token][msg.sender] = allowed - amount
 
     response: Bytes[32] = raw_call(
         token,
@@ -51,7 +51,7 @@ def permit(token: address, owner: address, spender: address, amount: uint256, ex
         convert(s, uint256)
     )
 
-    assert recoveredAddress != ZERO_ADDRESS and recoveredAddress == owner, "INVALID_SIGNER"
+    assert recoveredAddress != empty(address) and recoveredAddress == owner, "INVALID_SIGNER"
 
     self.allowance[owner][token][spender] = amount
     self.nonces[owner] = unsafe_add(nonce, 1)
