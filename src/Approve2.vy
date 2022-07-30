@@ -7,7 +7,6 @@
     next generation token approval/meta-tx system.
 """
 
-# TODO Run vyper in CI, make sure to compile docs.
 # TODO Add the lockdown feature to the contract.
 
 from vyper.interfaces import ERC20

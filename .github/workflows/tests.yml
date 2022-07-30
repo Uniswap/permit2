@@ -18,8 +18,11 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install vyper
+      - name: Install Vyper
         run: pip install vyper
+
+      - name: Build Vyper docs
+        run: vyper -f devdoc src/*.vy
 
       - name: Install dependencies
         run: forge install
