@@ -198,14 +198,12 @@ contract Approve2 {
                     0x01, // Address of `ecrecover`.
                     0x00, // Start of input.
                     0x80, // Size of input.
-                    0x40, // Start of output.
+                    0x00, // Start of output.
                     0x20 // Size of output.
                 )
             )
-            // Restore the zero slot.
-            mstore(0x60, 0)
             // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
-            let recoveredAddress := mload(sub(0x60, returndatasize()))
+            let recoveredAddress := mul(mload(0x00), eq(returndatasize(), 0x20))
             // Ensure the signature is valid and the signer is the owner.
             if or(iszero(recoveredAddress), iszero(eq(recoveredAddress, owner))) {
                 mstore(0x00, hex"08c379a0") // Function selector of the error method.
@@ -291,14 +289,12 @@ contract Approve2 {
                     0x01, // Address of `ecrecover`.
                     0x00, // Start of input.
                     0x80, // Size of input.
-                    0x40, // Start of output.
+                    0x00, // Start of output.
                     0x20 // Size of output.
                 )
             )
-            // Restore the zero slot.
-            mstore(0x60, 0)
             // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
-            let recoveredAddress := mload(sub(0x60, returndatasize()))
+            let recoveredAddress := mul(mload(0x00), eq(returndatasize(), 0x20))
             // Ensure the signature is valid and the signer is the owner.
             if or(iszero(recoveredAddress), iszero(eq(recoveredAddress, owner))) {
                 mstore(0x00, hex"08c379a0") // Function selector of the error method.
