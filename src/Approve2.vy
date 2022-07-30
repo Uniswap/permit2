@@ -11,7 +11,7 @@ def transferFrom(token: address, owner: address, to: address, amount: uint256):
     if allowed != MAX_UINT256:
         if allowed >= amount:
             # todo: vyper has safe math right?
-            self.allowance[owner][token][msg.sender] = allowed - amount
+            self.allowance[owner][token][msg.sender] = unsafe_sub(allowed, amount)
         else:
             assert self.isOperator[owner][msg.sender], "APPROVE_ALL_REQUIRED"
 
