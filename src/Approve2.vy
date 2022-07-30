@@ -114,7 +114,7 @@ def invalidateNonces(noncesToInvalidate: uint256):
     @param noncesToInvalidate The number of nonces to invalidate.
     """
 
-    assert noncesToInvalidate < 2 ** 16 # TODO do we need to extract this into a constant?
+    assert noncesToInvalidate < 2 ** 16 # TODO Do we need to extract this into a constant?
 
     self.nonces[msg.sender] += noncesToInvalidate
 
