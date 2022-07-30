@@ -1,19 +1,13 @@
 from vyper.interfaces import ERC20
 
 nonces: public(HashMap[address, uint256])
-isOperator: public(HashMap[address, HashMap[address, bool]])
 allowance: public(HashMap[address, HashMap[address, HashMap[address, uint256]]])
 
 @external
 def transferFrom(token: address, owner: address, to: address, amount: uint256):
     allowed: uint256 = self.allowance[owner][token][msg.sender]
 
-    if allowed != MAX_UINT256:
-        if allowed >= amount:
-            # todo: vyper has safe math right?
-            self.allowance[owner][token][msg.sender] = unsafe_sub(allowed, amount)
-        else:
-            assert self.isOperator[owner][msg.sender], "APPROVE_ALL_REQUIRED"
+    if allowed != MAX_UINT256: self.allowance[owner][token][msg.sender] = allowed - amount
 
     response: Bytes[32] = raw_call(
         token,
@@ -67,10 +61,6 @@ def invalidateNonces(noncesToInvalidate: uint256):
     assert noncesToInvalidate < 2 ** 16
 
     self.nonces[msg.sender] += noncesToInvalidate
-
-@external
-def setOperator(operator: address, approved: bool):
-    self.isOperator[msg.sender][operator] = approved
 
 @external
 def approve(token: address, spender: address, amount: uint256):
