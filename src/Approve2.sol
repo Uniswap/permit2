@@ -27,7 +27,12 @@ contract Approve2 {
         // ensure no one accidentally invalidates all their nonces.
         require(noncesToInvalidate <= type(uint16).max);
 
-        nonces[msg.sender] += noncesToInvalidate;
+        // Unchecked because counter overflow should
+        // be impossible on any reasonable timescale
+        // given the cap on noncesToInvalidate above.
+        unchecked {
+            nonces[msg.sender] += noncesToInvalidate;
+        }
     }
 
     /// @notice The EIP-712 "domain separator" the contract
