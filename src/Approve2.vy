@@ -9,18 +9,7 @@ def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
 
     if allowed != max_value(uint256): self.allowance[owner][token][msg.sender] = allowed - amount
 
-    response: Bytes[32] = raw_call(
-        token.address,
-        concat(
-            method_id("transferFrom(address,address,uint256)"),
-            convert(owner, bytes32),
-            convert(to, bytes32),
-            convert(amount, bytes32),
-        ),
-        max_outsize=32,
-    )
-
-    if len(response) > 0: assert convert(response, bool), "TRANSFER_FROM_FAILED"
+    token.transferFrom(owner, to, amount, default_return_value=True) # use skip_contract_check?
 
 @external
 def permit(token: ERC20, owner: address, spender: address, amount: uint256, expiry: uint256, v: uint8, r: bytes32, s: bytes32):
