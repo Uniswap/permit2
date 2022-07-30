@@ -29,6 +29,7 @@ contract Approve2Test is DSTestPlus {
 
     MockNonPermitERC20 immutable nonPermitToken = new MockNonPermitERC20("Mock NonPermit Token", "MOCK", 18);
 
+    // TODO: Make this a lib in solmate?
     function deployContract(string memory fileName) public returns (address deployedAddress) {
         string[] memory cmds = new string[](2);
         cmds[0] = "vyper";

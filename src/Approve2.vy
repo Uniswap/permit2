@@ -1,13 +1,28 @@
+"""
+@title Approve2
+@license MIT
+@author transmissions11 <t11s@paradigm.xyz>
+@notice
+    Backwards compatible, low-overhead,
+    next generation token approval/meta-tx system.
+"""
+
+# TODO Run vyper in CI, make sure to compile docs.
+# TODO Add the lockdown feature to the contract.
+
 from vyper.interfaces import ERC20
 
 ################################################################
 #                           STORAGE                            #
 ################################################################
 
+# Maps addresses to their current nonces. Used to prevent replay
+# attacks and allow invalidating active permits via invalidateNonce.
 nonces: public(HashMap[address, uint256])
 
+# Maps users to tokens to spender addresses and how much they are
+# approved to spend the amount of that token the user has approved.
 allowance: public(HashMap[address, HashMap[ERC20, HashMap[address, uint256]]])
-
 
 ################################################################
 #                      TRANSFERFROM LOGIC                      #
@@ -15,6 +30,18 @@ allowance: public(HashMap[address, HashMap[ERC20, HashMap[address, uint256]]])
 
 @external
 def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
+    """
+    @notice
+        Transfer approved tokens from one address to another.
+    @dev
+        Requires either the from address to have approved at least the desired amount of
+        tokens or msg.sender to be approved to manage all of the from addresses's tokens.
+    @param token The token to transfer.
+    @param owner The address to transfer from.
+    @param to The address to transfer to.
+    @param amount The amount of tokens to transfer.
+    """
+
     allowed: uint256 = self.allowance[owner][token][msg.sender]
 
     if allowed != max_value(uint256): self.allowance[owner][token][msg.sender] = allowed - amount
@@ -26,8 +53,23 @@ def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
 ################################################################
 
 @external
-def permit(token: ERC20, owner: address, spender: address, amount: uint256, expiry: uint256, v: uint8, r: bytes32, s: bytes32):
-    assert expiry >= block.timestamp, "PERMIT_DEADLINE_EXPIRED"
+def permit(token: ERC20, owner: address, spender: address, amount: uint256, deadline: uint256, v: uint8, r: bytes32, s: bytes32):
+    """
+    @notice
+        Permit a user to spend an amount of another user's approved
+        amount of the given token via the owner's EIP-712 signature.
+    @dev May fail if the nonce was invalidated by invalidateNonce.
+    @param token The token to permit spending.
+    @param owner The user to permit spending from.
+    @param spender The user to permit spending to.
+    @param amount The amount to permit spending.
+    @param deadline The timestamp after which the signature is no longer valid.
+    @param v Must produce valid secp256k1 signature from the owner along with r and s.
+    @param r Must produce valid secp256k1 signature from the owner along with v and s.
+    @param s Must produce valid secp256k1 signature from the owner along with r and v.
+    """
+
+    assert deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED"
 
     nonce: uint256 = self.nonces[owner]
 
@@ -42,7 +84,7 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, expi
                     convert(spender, bytes32),
                     convert(amount, bytes32),
                     convert(nonce, bytes32),
-                    convert(expiry, bytes32),
+                    convert(deadline, bytes32),
                 )
             )
         )
@@ -65,7 +107,14 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, expi
 
 @external
 def invalidateNonces(noncesToInvalidate: uint256):
-    assert noncesToInvalidate < 2 ** 16 # todo do we need to extract this into a constant?
+    """
+    @notice
+        Invalidate a specific number of nonces. Can be used
+        to invalidate in-flight permits before they are executed.
+    @param noncesToInvalidate The number of nonces to invalidate.
+    """
+
+    assert noncesToInvalidate < 2 ** 16 # TODO do we need to extract this into a constant?
 
     self.nonces[msg.sender] += noncesToInvalidate
 
@@ -75,6 +124,15 @@ def invalidateNonces(noncesToInvalidate: uint256):
 
 @external
 def approve(token: ERC20, spender: address, amount: uint256):
+    """
+    @notice
+        Manually approve a spender to transfer a specific
+        amount of a specific ERC20 token from the sender.
+    @param token The token to approve.
+    @param spender The spender address to approve.
+    @param amount The amount of the token to approve.
+    """
+
     self.allowance[msg.sender][token][spender] = amount
 
 ################################################################
@@ -84,6 +142,12 @@ def approve(token: ERC20, spender: address, amount: uint256):
 @view
 @external
 def DOMAIN_SEPARATOR(token: ERC20) -> bytes32:
+    """
+    @notice
+        The EIP-712 "domain separator" the contract
+        will use when validating signatures for a given token.
+    @param token The token to get the domain separator for.
+    """
     return self.computeDomainSeperator(token)
 
 @view

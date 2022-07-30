@@ -1,4 +1,5 @@
 [profile.default]
+ffi = true
 solc = "0.8.15"
 bytecode_hash = "none"
 optimizer_runs = 1000000

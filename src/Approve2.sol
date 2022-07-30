@@ -33,8 +33,6 @@ contract Approve2 {
     /// @notice The EIP-712 "domain separator" the contract
     /// will use when validating signatures for a given token.
     /// @param token The token to get the domain separator for.
-    /// @dev For calls to permitAll, the address of
-    /// the Approve2 contract will be used the token.
     function DOMAIN_SEPARATOR(address token) public view returns (bytes32) {
         return
             keccak256(
