@@ -52,21 +52,9 @@ contract Approve2 {
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Maps user addresses to "operator" addresses and whether they are
-    /// are approved to spend any amount of any token the user has approved.
-    mapping(address => mapping(address => bool)) public isOperator;
-
     /// @notice Maps users to tokens to spender addresses and how much they
     /// are approved to spend the amount of that token the user has approved.
     mapping(address => mapping(ERC20 => mapping(address => uint256))) public allowance;
-
-    /// @notice Set whether an spender address is approved
-    /// to transfer any one of the sender's approved tokens.
-    /// @param operator The operator address to approve or unapprove.
-    /// @param approved Whether the operator is approved.
-    function setOperator(address operator, bool approved) external {
-        isOperator[msg.sender][operator] = approved;
-    }
 
     /// @notice Approve a spender to transfer a specific
     /// amount of a specific ERC20 token from the sender.
@@ -141,57 +129,6 @@ contract Approve2 {
         }
     }
 
-    /// @notice Permit a user to spend any amount of any of another
-    /// user's approved tokens via the owner's EIP-712 signature.
-    /// @param owner The user to permit spending from.
-    /// @param spender The user to permit spending to.
-    /// @param deadline The timestamp after which the signature is no longer valid.
-    /// @param v Must produce valid secp256k1 signature from the owner along with r and s.
-    /// @param r Must produce valid secp256k1 signature from the owner along with v and s.
-    /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
-    /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permitAll(
-        address owner,
-        address spender,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        unchecked {
-            // Ensure the signature's deadline has not already passed.
-            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
-
-            // Recover the signer address from the signature.
-            address recoveredAddress = ecrecover(
-                keccak256(
-                    abi.encodePacked(
-                        "\x19\x01",
-                        DOMAIN_SEPARATOR(address(this)),
-                        keccak256(
-                            abi.encode(
-                                keccak256("PermitAll(address owner,address spender,uint256 nonce,uint256 deadline)"),
-                                owner,
-                                spender,
-                                nonces[owner]++,
-                                deadline
-                            )
-                        )
-                    )
-                ),
-                v,
-                r,
-                s
-            );
-
-            // Ensure the signature is valid and the signer is the owner.
-            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
-
-            // Set isOperator for the spender to true.
-            isOperator[owner][spender] = true;
-        }
-    }
-
     /*//////////////////////////////////////////////////////////////
                              TRANSFER LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -213,16 +150,7 @@ contract Approve2 {
             uint256 allowed = allowance[from][token][msg.sender]; // Saves gas for limited approvals.
 
             // If the from address has set an unlimited approval, we'll go straight to the transfer.
-            if (allowed != type(uint256).max) {
-                if (allowed >= amount) {
-                    // If msg.sender has enough approved to them, decrement their allowance.
-                    allowance[from][token][msg.sender] = allowed - amount;
-                } else {
-                    // Otherwise, check if msg.sender is an operator for the
-                    // from address, otherwise we'll revert and block the transfer.
-                    require(isOperator[from][msg.sender], "APPROVE_ALL_REQUIRED");
-                }
-            }
+            if (allowed != type(uint256).max) allowance[from][token][msg.sender] = allowed - amount;
 
             // Transfer the tokens from the from address to the recipient.
             token.safeTransferFrom(from, to, amount);
@@ -235,17 +163,15 @@ contract Approve2 {
 
     // TODO: Bench if a struct for token-spender pairs is cheaper.
 
-    /// @notice Enables performing a "lockdown" of the sender's Approve2 identity
-    /// by batch revoking approvals, unapproving operators, and invalidating nonces.
+    /// @notice Enables performing a "lockdown" of the sender's Approve2
+    /// identity by batch revoking approvals and invalidating nonces.
     /// @param tokens An array of tokens who's corresponding spenders should have their
     /// approvals revoked. Each index should correspond to an index in the spenders array.
     /// @param spenders An array of addresses to revoke approvals from.
     /// Each index should correspond to an index in the tokens array.
-    /// @param operators An array of addresses to revoke operator approval from.
     function lockdown(
         ERC20[] calldata tokens,
         address[] calldata spenders,
-        address[] calldata operators,
         uint256 noncesToInvalidate
     ) external {
         unchecked {
@@ -259,11 +185,6 @@ contract Approve2 {
             // Revoke allowances for each pair of spenders and tokens.
             for (uint256 i = 0; i < spenders.length; ++i) {
                 delete allowance[msg.sender][tokens[i]][spenders[i]];
-            }
-
-            // Revoke each of the sender's provided operator's powers.
-            for (uint256 i = 0; i < operators.length; ++i) {
-                delete isOperator[msg.sender][operators[i]];
             }
         }
     }

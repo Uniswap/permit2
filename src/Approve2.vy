@@ -1,7 +1,17 @@
 from vyper.interfaces import ERC20
 
+################################################################
+#                           STORAGE                            #
+################################################################
+
 nonces: public(HashMap[address, uint256])
+
 allowance: public(HashMap[address, HashMap[ERC20, HashMap[address, uint256]]])
+
+
+################################################################
+#                      TRANSFERFROM LOGIC                      #
+################################################################
 
 @external
 def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
@@ -10,6 +20,10 @@ def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
     if allowed != max_value(uint256): self.allowance[owner][token][msg.sender] = allowed - amount
 
     token.transferFrom(owner, to, amount, default_return_value=True, skip_contract_check=True)
+
+################################################################
+#                         PERMIT LOGIC                         #
+################################################################
 
 @external
 def permit(token: ERC20, owner: address, spender: address, amount: uint256, expiry: uint256, v: uint8, r: bytes32, s: bytes32):
@@ -45,15 +59,27 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, expi
     self.allowance[owner][token][spender] = amount
     self.nonces[owner] = unsafe_add(nonce, 1)
 
+################################################################
+#                   NONCE INVALIDATION LOGIC                   #
+################################################################
+
 @external
 def invalidateNonces(noncesToInvalidate: uint256):
-    assert noncesToInvalidate < 2 ** 16
+    assert noncesToInvalidate < 2 ** 16 # todo do we need to extract this into a constant?
 
     self.nonces[msg.sender] += noncesToInvalidate
+
+################################################################
+#                    MANUAL APPROVAL LOGIC                     #
+################################################################
 
 @external
 def approve(token: ERC20, spender: address, amount: uint256):
     self.allowance[msg.sender][token][spender] = amount
+
+################################################################
+#                    DOMAIN SEPERATOR LOGIC                    #
+################################################################
 
 @view
 @external
@@ -66,8 +92,8 @@ def computeDomainSeperator(token: ERC20) -> bytes32:
     return keccak256(
         concat(
             keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
-            keccak256(convert("Yearn Vault", Bytes[11])), # todo rename
-            keccak256(convert("1", Bytes[28])), # todo why so many bytes
+            keccak256(convert("Approve2", Bytes[8])),
+            keccak256(convert("1", Bytes[1])),
             convert(chain.id, bytes32),
             convert(token, bytes32)
         )
