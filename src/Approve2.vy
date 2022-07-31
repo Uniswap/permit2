@@ -158,6 +158,7 @@ def DOMAIN_SEPARATOR(token: ERC20) -> bytes32:
 @view
 @internal
 def computeDomainSeperator(token: ERC20) -> bytes32:
+    # TODO: I don't think concat is abi encode compliant.
     return keccak256(
         concat(
             keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
