@@ -29,6 +29,7 @@ allowance: public(HashMap[address, HashMap[ERC20, HashMap[address, uint256]]])
 
 @external
 def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
+
     """
     @notice
         Transfer approved tokens from one address to another.
@@ -53,6 +54,7 @@ def transferFrom(token: ERC20, owner: address, to: address, amount: uint256):
 
 @external
 def permit(token: ERC20, owner: address, spender: address, amount: uint256, deadline: uint256, v: uint8, r: bytes32, s: bytes32):
+
     """
     @notice
         Permit a user to spend an amount of another user's approved
@@ -106,6 +108,7 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, dead
 
 @external
 def invalidateNonces(noncesToInvalidate: uint256):
+
     """
     @notice
         Invalidate a specific number of nonces. Can be used
@@ -123,6 +126,7 @@ def invalidateNonces(noncesToInvalidate: uint256):
 
 @external
 def approve(token: ERC20, spender: address, amount: uint256):
+
     """
     @notice
         Manually approve a spender to transfer a specific
@@ -141,12 +145,14 @@ def approve(token: ERC20, spender: address, amount: uint256):
 @view
 @external
 def DOMAIN_SEPARATOR(token: ERC20) -> bytes32:
+
     """
     @notice
         The EIP-712 "domain separator" the contract
         will use when validating signatures for a given token.
     @param token The token to get the domain separator for.
     """
+
     return self.computeDomainSeperator(token)
 
 @view
