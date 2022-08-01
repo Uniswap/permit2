@@ -1,3 +1,5 @@
+# @version 0.3.4
+
 """
 @title Approve2
 @license MIT
@@ -7,9 +9,10 @@
     next generation token approval/meta-tx system.
 """
 
-# TODO Add the lockdown feature to the contract.
-
 from vyper.interfaces import ERC20
+
+# TODO: Hevm equivalence seems to not be working...? Is it storage layout or what?
+# For reference, can test individual funcs with --sig "invalidateNonces(uint256)"
 
 ################################################################
 #                           STORAGE                            #
@@ -97,10 +100,36 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, dead
         convert(s, uint256)
     )
 
+    # TODO: Would a seperate assert be cheaper?
     assert recoveredAddress != empty(address) and recoveredAddress == owner, "INVALID_SIGNER"
 
     self.allowance[owner][token][spender] = amount
     self.nonces[owner] = unsafe_add(nonce, 1)
+
+################################################################
+#                        LOCKDOWN LOGIC                        #
+################################################################
+
+struct Approval:
+    token: ERC20
+    spender: address
+
+# TODO Test gas and if it works with non dyamic arrays.
+@external
+def lockdown(approvalsToRevoke: DynArray[Approval, 500], noncesToInvalidate: uint256):
+
+    """
+    @notice
+        Enables performing a "lockdown" of the sender's Approve2
+        identity by batch revoking approvals and invalidating nonces.
+    @param approvalsToRevoke An array of approvals to revoke.
+    @param noncesToInvalidate The number of nonces to invalidate.
+    """
+    # TODO Can we optimize the loop?
+    for approval in approvalsToRevoke: self.allowance[msg.sender][approval.token][approval.spender] = 0
+
+    # TODO Needs a 2**16 check.
+    self.nonces[msg.sender] += noncesToInvalidate # TODO This can be made unsafe, overflow unlikely.
 
 ################################################################
 #                   NONCE INVALIDATION LOGIC                   #
@@ -118,7 +147,7 @@ def invalidateNonces(noncesToInvalidate: uint256):
 
     assert noncesToInvalidate < 2 ** 16 # TODO Do we need to extract this into a constant?
 
-    self.nonces[msg.sender] += noncesToInvalidate
+    self.nonces[msg.sender] += noncesToInvalidate # TODO This can be made unsafe, overflow unlikely.
 
 ################################################################
 #                    MANUAL APPROVAL LOGIC                     #
@@ -159,6 +188,8 @@ def DOMAIN_SEPARATOR(token: ERC20) -> bytes32:
 @internal
 def computeDomainSeperator(token: ERC20) -> bytes32:
     # TODO: I don't think concat is abi encode compliant.
+    # TODO: See https://github.com/curvefi/curve-crypto-contract/blob/d7d04cd9ae038970e40be850df99de8c1ff7241b/contracts/CurveTokenV5.vy#L71
+    # TODO: Would making these hashes constant be cheaper? The compiler should hopefully do this for us?
     return keccak256(
         concat(
             keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),

@@ -11,7 +11,7 @@ import {Approve2Lib} from "../src/Approve2Lib.sol";
 
 import {MockNonPermitERC20} from "./mocks/MockNonPermitERC20.sol";
 
-// TODO: Fuzzing.
+// TODO: Fuzzing and coverage of Approve2.sol and Approve2.vy.
 // TODO: Test and bench functions like lockdown and invalidateNonces.
 
 contract Approve2Test is DSTestPlus {
@@ -132,6 +132,20 @@ contract Approve2Test is DSTestPlus {
         );
 
         Approve2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+    }
+
+    function testInvalidateNonces() public {
+        assertEq(approve2.nonces(address(this)), 0);
+
+        approve2.invalidateNonces(10);
+
+        assertEq(approve2.nonces(address(this)), 10);
+    }
+
+    function testLockdown() public {
+        Approve2.Approval[] memory approvals = new Approve2.Approval[](500);
+
+        approve2.lockdown(approvals, 10);
     }
 
     /*//////////////////////////////////////////////////////////////
