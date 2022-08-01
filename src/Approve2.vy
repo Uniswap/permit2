@@ -100,8 +100,9 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, dead
         convert(s, uint256)
     )
 
-    # TODO: Would a seperate assert be cheaper?
-    assert recoveredAddress != empty(address) and recoveredAddress == owner, "INVALID_SIGNER"
+
+    assert recoveredAddress != empty(address)
+    assert recoveredAddress == owner, "INVALID_SIGNER"
 
     self.allowance[owner][token][spender] = amount
     self.nonces[owner] = unsafe_add(nonce, 1)
