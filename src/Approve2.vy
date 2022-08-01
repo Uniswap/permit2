@@ -193,8 +193,8 @@ def computeDomainSeperator(token: ERC20) -> bytes32:
     return keccak256(
         concat(
             keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
-            keccak256(convert("Approve2", Bytes[8])),
-            keccak256(convert("1", Bytes[1])),
+            keccak256("Approve2"),
+            keccak256("1"),
             convert(chain.id, bytes32),
             convert(token, bytes32)
         )
