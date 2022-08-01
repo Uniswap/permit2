@@ -433,8 +433,8 @@ contract Approve2 {
                 tokensOffset := add(tokensOffset, 0x20)
                 spendersOffset := add(spendersOffset, 0x20)
             } {
-                calldatacopy(0x20, tokensOffset, 0x20)
-                calldatacopy(0x40, spendersOffset, 0x20)
+                mstore(0x20, calldataload(tokensOffset))
+                mstore(0x40, calldataload(spendersOffset))
                 sstore(keccak256(0x00, 0x60), 0)
             }
 
@@ -446,7 +446,7 @@ contract Approve2 {
             } iszero(eq(operatorsOffset, end)) {
                 operatorsOffset := add(operatorsOffset, 0x20)
             } {
-                calldatacopy(0x20, operatorsOffset, 0x20)
+                mstore(0x20, calldataload(operatorsOffset))
                 sstore(keccak256(0x00, 0x40), 0)   
             }
         }

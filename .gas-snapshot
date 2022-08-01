@@ -1,4 +1,4 @@
-Approve2Test:testLockdown() (gas: 255678)
+Approve2Test:testLockdown() (gas: 252678)
 Approve2Test:testOZSafePermit() (gas: 23395)
 Approve2Test:testOZSafePermitPlusOZSafeTransferFrom() (gas: 129117)
 Approve2Test:testOZSafeTransferFrom() (gas: 39332)
