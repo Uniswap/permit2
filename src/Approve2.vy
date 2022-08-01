@@ -75,6 +75,8 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, dead
 
     assert deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED"
 
+    assert owner != empty(address), "INVALID_OWNER"
+
     nonce: uint256 = self.nonces[owner]
 
     digest: bytes32 = keccak256(
@@ -100,8 +102,6 @@ def permit(token: ERC20, owner: address, spender: address, amount: uint256, dead
         convert(s, uint256)
     )
 
-
-    assert recoveredAddress != empty(address)
     assert recoveredAddress == owner, "INVALID_SIGNER"
 
     self.allowance[owner][token][spender] = amount
