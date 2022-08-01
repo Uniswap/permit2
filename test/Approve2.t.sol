@@ -116,6 +116,23 @@ contract Approve2Test is DSTestPlus {
         Approve2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
+    function testInvalidateNonces() public {
+        assertEq(approve2.nonces(address(this)), 0);
+
+        approve2.invalidateNonces(10);
+
+        assertEq(approve2.nonces(address(this)), 10);
+    }
+
+    function testLockdown() public {
+        address[] memory tokens = new address[](500);
+        address[] memory spenders = new address[](500);
+        address[] memory operators = new address[](0);
+        uint256 noncesToInvalidate = 10;
+        
+        approve2.lockdown(tokens, spenders, operators, noncesToInvalidate);
+    }
+
     /*//////////////////////////////////////////////////////////////
                      BASIC TRANSFERFROM2 BENCHMARKS
     //////////////////////////////////////////////////////////////*/
@@ -260,13 +277,5 @@ contract Approve2Test is DSTestPlus {
         Approve2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
 
         stopMeasuringGas();
-    }
-
-    function testLockdown() public {
-        address[] memory tokens = new address[](500);
-        address[] memory spenders = new address[](500);
-        address[] memory operators = new address[](0);
-        uint256 noncesToInvalidate = 10;
-        approve2.lockdown(tokens, spenders, operators, noncesToInvalidate);
     }
 }
