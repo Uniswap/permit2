@@ -1,16 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-
 /// @title Approve2
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Backwards compatible, low-overhead,
 /// next generation token approval/meta-tx system.
 contract Approve2 {
-    using SafeTransferLib for ERC20;
-
     uint256 private constant _UINT16_MAX = (1 << 16) - 1;
 
     /*//////////////////////////////////////////////////////////////
@@ -80,7 +75,7 @@ contract Approve2 {
 
     /// @notice Maps users to tokens to spender addresses and how much they
     /// are approved to spend the amount of that token the user has approved.
-    function allowance(address owner, ERC20 token, address spender) external view returns (uint256 result) {
+    function allowance(address owner, address token, address spender) external view returns (uint256 result) {
         assembly {
             mstore(0x00, owner)
             mstore(0x20, token)
@@ -104,12 +99,12 @@ contract Approve2 {
     }
 
     /// @notice Approve a spender to transfer a specific
-    /// amount of a specific ERC20 token from the sender.
+    /// amount of a specific address token from the sender.
     /// @param token The token to approve.
     /// @param spender The spender address to approve.
     /// @param amount The amount of the token to approve.
     function approve(
-        ERC20 token,
+        address token,
         address spender,
         uint256 amount
     ) external {
@@ -139,7 +134,7 @@ contract Approve2 {
     /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
     function permit(
-        ERC20 token,
+        address token,
         address owner,
         address spender,
         uint256 amount,
@@ -325,7 +320,7 @@ contract Approve2 {
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(
-        ERC20 token,
+        address token,
         address from,
         address to,
         uint256 amount
@@ -403,7 +398,7 @@ contract Approve2 {
     /// Each index should correspond to an index in the tokens array.
     /// @param operators An array of addresses to revoke operator approval from.
     function lockdown(
-        ERC20[] calldata tokens,
+        address[] calldata tokens,
         address[] calldata spenders,
         address[] calldata operators,
         uint256 noncesToInvalidate
