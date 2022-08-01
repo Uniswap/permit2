@@ -161,9 +161,7 @@ contract Approve2 {
 
             // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
             mstore(0x00, 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9)
-            mstore(0x20, owner)
-            mstore(0x40, spender)
-            mstore(0x60, amount)
+            calldatacopy(0x20, 0x24, 0x60) // Copy `owner`, `spender`, `amount`.
             mstore(0x80, nonce)
             mstore(0xa0, deadline)
             
@@ -183,10 +181,8 @@ contract Approve2 {
             mstore(0x40, h)
 
             mstore(0x00, keccak256(0x1e, 0x42))
-            mstore(0x20, v)
-            mstore(0x40, r)
-            mstore(0x60, s)
-
+            calldatacopy(0x20, 0xa4, 0x60) // Copy `v`, `r`, `s`.
+            
             pop(
                 staticcall(
                     gas(), // Amount of gas left for the transaction.
@@ -215,6 +211,8 @@ contract Approve2 {
             sstore(keccak256(0x00, 0x60), amount)
 
             mstore(0x40, 0)
+
+            let unused := add(v, add(r, s)) // Silence warnings.
         }
     }
 
@@ -246,14 +244,14 @@ contract Approve2 {
             }
 
             // Load and increment the nonce.
-            mstore(0x00, owner)
-            let nonceSlot := keccak256(0x00, 0x20)
+            mstore(0x20, owner)
+            let nonceSlot := keccak256(0x20, 0x20)
             let nonce := sload(nonceSlot)
             sstore(nonceSlot, add(nonce, 1))
 
             // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
             mstore(0x00, 0x8b2a9c07938b6d62909dc00103ea4e71485caf5019e7fa95b0a87e13825663b0)
-            mstore(0x20, owner)
+            // Skip `mstore(0x20, owner)`, as it has already been stored.
             mstore(0x40, spender)
             mstore(0x60, nonce)
             mstore(0x80, deadline)
@@ -274,9 +272,7 @@ contract Approve2 {
             mstore(0x40, h)
 
             mstore(0x00, keccak256(0x1e, 0x42))
-            mstore(0x20, v)
-            mstore(0x40, r)
-            mstore(0x60, s)
+            calldatacopy(0x20, 0x64, 0x60) // Copy `v`, `r`, `s`.
 
             pop(
                 staticcall(
@@ -305,6 +301,8 @@ contract Approve2 {
             sstore(keccak256(0x00, 0x40), 1)
 
             mstore(0x40, 0)
+
+            let unused := add(v, add(r, s)) // Silence warnings.
         }
     }
 
@@ -358,9 +356,7 @@ contract Approve2 {
 
             // Write the abi-encoded calldata into memory, beginning with the function selector.
             mstore(0x00, 0x23b872dd)
-            mstore(0x20, from) // Append the "from" argument.
-            mstore(0x40, to) // Append the "to" argument.
-            mstore(0x60, amount) // Append the "amount" argument.
+            calldatacopy(0x20, 0x24, 0x60) // Copy `from`, `to`, `amount`.
 
             if iszero(
                 and(
@@ -381,6 +377,8 @@ contract Approve2 {
             }
 
             mstore(0x40, 0)
+
+            let unused := to // Silence warnings.
         }
     }
 
@@ -438,7 +436,7 @@ contract Approve2 {
                 sstore(keccak256(0x00, 0x60), 0)
             }
 
-            // Revoke allowances for each pair of spenders and tokens.
+            // Revoke each operator.
             for {
                 let end := add(operators.offset, shl(5, operators.length))
                 let operatorsOffset := operators.offset 
