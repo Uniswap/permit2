@@ -29,7 +29,7 @@ contract Approve2 {
         assembly {
             // Limit how quickly users can invalidate their nonces to
             // ensure no one accidentally invalidates all their nonces.
-            if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
+            if iszero(lt(noncesToInvalidate, _UINT16_MAX)) {
                 revert(0, 0)
             }
             mstore(0x00, caller())
@@ -406,7 +406,7 @@ contract Approve2 {
         assembly {
             // Limit how quickly users can invalidate their nonces to
             // ensure no one accidentally invalidates all their nonces.
-            if iszero(gt(noncesToInvalidate, _UINT16_MAX)) {
+            if iszero(lt(noncesToInvalidate, _UINT16_MAX)) {
                 revert(0, 0)
             }
             // Load and increment the nonce.

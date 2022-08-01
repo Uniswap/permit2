@@ -261,4 +261,12 @@ contract Approve2Test is DSTestPlus {
 
         stopMeasuringGas();
     }
+
+    function testLockdown() public {
+        address[] memory tokens = new address[](500);
+        address[] memory spenders = new address[](500);
+        address[] memory operators = new address[](0);
+        uint256 noncesToInvalidate = 10;
+        approve2.lockdown(tokens, spenders, operators, noncesToInvalidate);
+    }
 }
