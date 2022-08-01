@@ -187,15 +187,12 @@ def DOMAIN_SEPARATOR(token: ERC20) -> bytes32:
 @view
 @internal
 def computeDomainSeperator(token: ERC20) -> bytes32:
-    # TODO: I don't think concat is abi encode compliant.
-    # TODO: See https://github.com/curvefi/curve-crypto-contract/blob/d7d04cd9ae038970e40be850df99de8c1ff7241b/contracts/CurveTokenV5.vy#L71
-    # TODO: Would making these hashes constant be cheaper? The compiler should hopefully do this for us?
     return keccak256(
-        concat(
+        _abi_encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256("Approve2"),
             keccak256("1"),
-            convert(chain.id, bytes32),
-            convert(token, bytes32)
+            chain.id,
+            token
         )
     )
