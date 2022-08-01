@@ -192,7 +192,7 @@ def computeDomainSeperator(token: ERC20) -> bytes32:
     # TODO: Would making these hashes constant be cheaper? The compiler should hopefully do this for us?
     return keccak256(
         concat(
-            keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256("Approve2"),
             keccak256("1"),
             convert(chain.id, bytes32),
