@@ -80,7 +80,7 @@ abstract contract SignatureTransfer {
         }
     }
 
-    function _permitBatchTransferFrom(
+    function permitBatchTransferFrom(
         PermitBatch calldata permit,
         address[] calldata to,
         uint256[] calldata amounts,
