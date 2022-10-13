@@ -34,7 +34,7 @@ enum SigType {
     UNORDERED
 }
 
-contract Permit2 is SignatureTransfer {
+contract Permit2 is SignatureTransfer, AllowanceTransfer {
     error NonceUsed();
 
     mapping(address => uint256) public nonces;

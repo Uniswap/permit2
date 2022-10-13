@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
-import {Approve2} from "./Approve2.sol";
+import {Permit2} from "./Permit2.sol";
 
 // TODO: Clobber slots instead of using the free memory pointer.
 

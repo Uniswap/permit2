@@ -6,7 +6,7 @@ import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/
 import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
-import {Approve2} from "../src/Approve2.sol";
+import {Approve2} from "../src/Permit2.sol";
 import {Approve2Lib} from "../src/Approve2Lib.sol";
 
 import {MockNonPermitERC20} from "./mocks/MockNonPermitERC20.sol";

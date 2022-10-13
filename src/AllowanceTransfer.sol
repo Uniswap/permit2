@@ -4,68 +4,23 @@ pragma solidity 0.8.16;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
-/// @title Approve2
+/// @title AllowanceTransfer
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Backwards compatible, low-overhead,
 /// next generation token approval/meta-tx system.
-contract Approve2 {
+contract AllowanceTransfer {
     using SafeTransferLib for ERC20;
 
-    /*//////////////////////////////////////////////////////////////
-                          EIP-712 STORAGE/LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Maps addresses to their current nonces. Used to prevent replay
-    /// attacks and allow invalidating in-flight permits via invalidateNonce.
-    mapping(address => uint256) public nonces;
-
-    /// @notice Invalidate a specific number of nonces. Can be used
-    /// to invalidate in-flight permits before they are executed.
-    /// @param noncesToInvalidate The number of nonces to invalidate.
-    function invalidateNonces(uint256 noncesToInvalidate) public {
-        // Limit how quickly users can invalidate their nonces to
-        // ensure no one accidentally invalidates all their nonces.
-        require(noncesToInvalidate <= type(uint16).max);
-
-        nonces[msg.sender] += noncesToInvalidate;
-    }
-
-    /// @notice The EIP-712 "domain separator" the contract
-    /// will use when validating signatures for a given token.
-    /// @param token The token to get the domain separator for.
-    /// @dev For calls to permitAll, the address of
-    /// the Approve2 contract will be used the token.
-    function DOMAIN_SEPARATOR(address token) public view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("Approve2"),
-                keccak256("1"),
-                block.chainid,
-                token // We use the token's address for easy frontend compatibility.
-            )
-        );
-    }
+    function DOMAIN_SEPARATOR() public view virtual returns (bytes32);
+    function _useNonce(address from, uint256 nonce) internal virtual;
 
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Maps user addresses to "operator" addresses and whether they are
-    /// are approved to spend any amount of any token the user has approved.
-    mapping(address => mapping(address => bool)) public isOperator;
-
     /// @notice Maps users to tokens to spender addresses and how much they
     /// are approved to spend the amount of that token the user has approved.
     mapping(address => mapping(ERC20 => mapping(address => uint256))) public allowance;
-
-    /// @notice Set whether an spender address is approved
-    /// to transfer any one of the sender's approved tokens.
-    /// @param operator The operator address to approve or unapprove.
-    /// @param approved Whether the operator is approved.
-    function setOperator(address operator, bool approved) external {
-        isOperator[msg.sender][operator] = approved;
-    }
 
     /// @notice Approve a spender to transfer a specific
     /// amount of a specific ERC20 token from the sender.
@@ -76,7 +31,7 @@ contract Approve2 {
         allowance[msg.sender][token][spender] = amount;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /*/////////////////////////////////////////////////////f/////////
                               PERMIT LOGIC
     //////////////////////////////////////////////////////////////*/
 
@@ -138,50 +93,6 @@ contract Approve2 {
         }
     }
 
-    /// @notice Permit a user to spend any amount of any of another
-    /// user's approved tokens via the owner's EIP-712 signature.
-    /// @param owner The user to permit spending from.
-    /// @param spender The user to permit spending to.
-    /// @param deadline The timestamp after which the signature is no longer valid.
-    /// @param v Must produce valid secp256k1 signature from the owner along with r and s.
-    /// @param r Must produce valid secp256k1 signature from the owner along with v and s.
-    /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
-    /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permitAll(address owner, address spender, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
-        unchecked {
-            // Ensure the signature's deadline has not already passed.
-            require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
-
-            // Recover the signer address from the signature.
-            address recoveredAddress = ecrecover(
-                keccak256(
-                    abi.encodePacked(
-                        "\x19\x01",
-                        DOMAIN_SEPARATOR(address(this)),
-                        keccak256(
-                            abi.encode(
-                                keccak256("PermitAll(address owner,address spender,uint256 nonce,uint256 deadline)"),
-                                owner,
-                                spender,
-                                nonces[owner]++,
-                                deadline
-                            )
-                        )
-                    )
-                ),
-                v,
-                r,
-                s
-            );
-
-            // Ensure the signature is valid and the signer is the owner.
-            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
-
-            // Set isOperator for the spender to true.
-            isOperator[owner][spender] = true;
-        }
-    }
-
     /*//////////////////////////////////////////////////////////////
                              TRANSFER LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -220,7 +131,7 @@ contract Approve2 {
 
     // TODO: Bench if a struct for token-spender pairs is cheaper.
 
-    /// @notice Enables performing a "lockdown" of the sender's Approve2 identity
+    /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
     /// by batch revoking approvals, unapproving operators, and invalidating nonces.
     /// @param tokens An array of tokens who's corresponding spenders should have their
     /// approvals revoked. Each index should correspond to an index in the spenders array.
