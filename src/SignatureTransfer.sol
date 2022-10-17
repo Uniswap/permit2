@@ -4,6 +4,7 @@ pragma solidity ^0.8.16;
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit, Signature, PermitBatch, SigType} from "./Permit2.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import "forge-std/console2.sol";
 
 abstract contract SignatureTransfer {
     error NotSpender();
@@ -138,10 +139,10 @@ abstract contract SignatureTransfer {
         internal
         view
     {
-        bool invalidMultiAddrTransfer = to.length != permit.tokens.length || amounts.length != permit.tokens.length;
-        bool invalidSingleAddrTransfer = to.length == 1 && amounts.length != permit.tokens.length;
+        bool validMultiAddr = to.length == permit.tokens.length && amounts.length == permit.tokens.length;
+        bool validSingleAddr = to.length == 1 && amounts.length == permit.tokens.length;
 
-        if (invalidMultiAddrTransfer || invalidSingleAddrTransfer) {
+        if (!(validMultiAddr || validSingleAddr)) {
             revert LengthMismatch();
         }
 
