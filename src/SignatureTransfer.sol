@@ -10,6 +10,7 @@ abstract contract SignatureTransfer {
     error DeadlinePassed();
     error InvalidAmount();
     error InvalidSignature();
+    error LengthMismatch();
 
     /// @dev sigType field distinguishes between using unordered nonces or ordered nonces for replay protection
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
@@ -31,13 +32,7 @@ abstract contract SignatureTransfer {
         public
         returns (address signer)
     {
-        // TODO potentially use sep validation for amounts, test gas
-        uint256[] memory amounts = new uint256[](1);
-        uint256[] memory maxAmounts = new uint256[](1);
-
-        amounts[0] = amount;
-        maxAmounts[0] = permit.maxAmount;
-        _validatePermit(permit.spender, permit.deadline, maxAmounts, amounts);
+        _validatePermit(permit.spender, permit.deadline, permit.maxAmount, amount);
 
         signer = ecrecover(
             keccak256(
@@ -86,7 +81,7 @@ abstract contract SignatureTransfer {
         uint256[] calldata amounts,
         Signature calldata sig
     ) public returns (address signer) {
-        _validatePermit(permit.spender, permit.deadline, permit.maxAmounts, amounts);
+        _validateBatchPermit(permit, to, amounts);
 
         signer = ecrecover(
             keccak256(
@@ -125,20 +120,48 @@ abstract contract SignatureTransfer {
         if (to.length == 1) {
             // send all tokens to the same recipient address if only one is specified
             // address recipient = to[0];
-            for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                ERC20(permit.tokens[i]).transferFrom(signer, to[0], amounts[i]);
+            unchecked {
+                for (uint256 i = 0; i < permit.tokens.length; ++i) {
+                    ERC20(permit.tokens[i]).transferFrom(signer, to[0], amounts[i]);
+                }
             }
         } else {
-            for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                ERC20(permit.tokens[i]).transferFrom(signer, to[i], amounts[i]);
+            unchecked {
+                for (uint256 i = 0; i < permit.tokens.length; ++i) {
+                    ERC20(permit.tokens[i]).transferFrom(signer, to[i], amounts[i]);
+                }
             }
         }
     }
 
-    function _validatePermit(address spender, uint256 deadline, uint256[] memory maxAmounts, uint256[] memory amounts)
+    function _validateBatchPermit(PermitBatch memory permit, address[] memory to, uint256[] memory amounts)
         internal
         view
     {
+        bool invalidMultiAddrTransfer = to.length != permit.tokens.length && amounts.length != permit.tokens.length;
+        bool invalidSingleAddrTransfer = to.length == 1 && amounts.length != permit.tokens.length;
+
+        if (invalidMultiAddrTransfer || invalidSingleAddrTransfer) {
+            revert LengthMismatch();
+        }
+
+        if (msg.sender != permit.spender) {
+            revert NotSpender();
+        }
+        if (block.timestamp > permit.deadline) {
+            revert DeadlinePassed();
+        }
+
+        unchecked {
+            for (uint256 i = 0; i < amounts.length; ++i) {
+                if (amounts[i] > permit.maxAmounts[i]) {
+                    revert InvalidAmount();
+                }
+            }
+        }
+    }
+
+    function _validatePermit(address spender, uint256 deadline, uint256 maxAmount, uint256 amount) internal view {
         if (msg.sender != spender) {
             revert NotSpender();
         }
@@ -146,10 +169,8 @@ abstract contract SignatureTransfer {
             revert DeadlinePassed();
         }
 
-        for (uint256 i = 0; i < amounts.length; ++i) {
-            if (amounts[i] > maxAmounts[i]) {
-                revert InvalidAmount();
-            }
+        if (amount > maxAmount) {
+            revert InvalidAmount();
         }
     }
 }
