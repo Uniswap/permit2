@@ -1,6 +1,10 @@
 name: Gas
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   tests:
@@ -12,9 +16,6 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Install dependencies
-        run: forge install
 
       - name: Check gas snapshots
         run: forge snapshot --check
