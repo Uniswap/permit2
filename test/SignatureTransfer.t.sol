@@ -10,7 +10,6 @@ import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {Permit2, Permit, PermitBatch, SigType, Signature} from "../src/Permit2.sol";
 import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 
-// forge test --match-contract SignatureTransfer
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     using AddressBuilder for address[];
     using AmountBuilder for uint256[];
