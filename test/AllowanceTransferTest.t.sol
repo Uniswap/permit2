@@ -1,4 +1,4 @@
-pragma solidity ^0.8.16;
+pragma solidity 0.8.17;
 
 import "forge-std/Test.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
@@ -18,6 +18,4 @@ contract AllowanceTransferTest is Test, TokenProvider, GasSnapshot {
         setTestTokens(from);
         setTestTokenApprovals(vm, from, address(permit2));
     }
-
-    function testAllowancePermit() public {}
 }

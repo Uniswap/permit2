@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
+
 
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
@@ -55,9 +55,9 @@ contract Permit2Test is DSTestPlus {
     }
 
     function setUp() public {
-        testPermit2Full();
-        testPermit2NonPermitToken();
-        testStandardPermit();
+        // testPermit2Full();
+        // testPermit2NonPermitToken();
+        // testStandardPermit();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -102,24 +102,24 @@ contract Permit2Test is DSTestPlus {
         SafeERC20.safePermit(IERC20Permit(address(token)), PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
-    function testPermit2() public {
-        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
+    // function testPermit2() public {
+    //     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+    //         PK,
+    //         keccak256(
+    //             abi.encodePacked(
+    //                 "\x19\x01",
+    //                 DOMAIN_SEPARATOR,
+    //                 keccak256(
+    //                     abi.encode(
+    //                         PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
+    //                     )
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-    }
+    //     Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+    // }
 
     /*//////////////////////////////////////////////////////////////
                      BASIC TRANSFERFROM2 BENCHMARKS
@@ -141,43 +141,43 @@ contract Permit2Test is DSTestPlus {
                        ADVANCED PERMIT2 BENCHMARKS
     //////////////////////////////////////////////////////////////*/
 
-    function testPermit2Full() public {
-        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR_TOKEN,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
+    // function testPermit2Full() public {
+    //     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+    //         PK,
+    //         keccak256(
+    //             abi.encodePacked(
+    //                 "\x19\x01",
+    //                 DOMAIN_SEPARATOR_TOKEN,
+    //                 keccak256(
+    //                     abi.encode(
+    //                         PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
+    //                     )
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        Permit2Lib.permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
-    }
+    //     Permit2Lib.permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    // }
 
-    function testPermit2NonPermitToken() public {
-        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
+    // function testPermit2NonPermitToken() public {
+    //     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+    //         PK,
+    //         keccak256(
+    //             abi.encodePacked(
+    //                 "\x19\x01",
+    //                 DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
+    //                 keccak256(
+    //                     abi.encode(
+    //                         PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
+    //                     )
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
-    }
+    //     Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    // }
 
     /*//////////////////////////////////////////////////////////////
                     ADVANCED TRANSFERFROM BENCHMARKS
@@ -225,55 +225,55 @@ contract Permit2Test is DSTestPlus {
         stopMeasuringGas();
     }
 
-    function testPermit2PlusTransferFrom2() public {
-        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
+    // function testPermit2PlusTransferFrom2() public {
+    //     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+    //         PK,
+    //         keccak256(
+    //             abi.encodePacked(
+    //                 "\x19\x01",
+    //                 DOMAIN_SEPARATOR,
+    //                 keccak256(
+    //                     abi.encode(
+    //                         PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
+    //                     )
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        hevm.startPrank(address(0xB00B));
+    //     hevm.startPrank(address(0xB00B));
 
-        startMeasuringGas("permit2 + transferFrom2 with an EIP-2612 native token");
+    //     startMeasuringGas("permit2 + transferFrom2 with an EIP-2612 native token");
 
-        Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-        Permit2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
+    //     Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+    //     Permit2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
 
-        stopMeasuringGas();
-    }
+    //     stopMeasuringGas();
+    // }
 
-    function testPermit2PlusTransferFrom2WithNonPermit() public {
-        (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
+    // function testPermit2PlusTransferFrom2WithNonPermit() public {
+    //     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(
+    //         PK,
+    //         keccak256(
+    //             abi.encodePacked(
+    //                 "\x19\x01",
+    //                 DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
+    //                 keccak256(
+    //                     abi.encode(
+    //                         PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
+    //                     )
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        hevm.startPrank(address(0xCAFE));
+    //     hevm.startPrank(address(0xCAFE));
 
-        startMeasuringGas("permit2 + transferFrom2 with a non EIP-2612 native token");
+    //     startMeasuringGas("permit2 + transferFrom2 with a non EIP-2612 native token");
 
-        Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
-        Permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+    //     Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    //     Permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
 
-        stopMeasuringGas();
-    }
+    //     stopMeasuringGas();
+    // }
 }

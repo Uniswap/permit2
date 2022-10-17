@@ -1,9 +1,12 @@
-pragma solidity 0.8.17;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
 
 import {Vm} from "forge-std/Vm.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Signature, Permit, SigType, PermitBatch} from "../../src/Permit2Utils.sol";
+
+
 
 contract PermitSignature {
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
@@ -74,8 +77,8 @@ contract PermitSignature {
             token: token0,
             spender: address(this),
             maxAmount: 10 ** 18,
-            deadline: block.timestamp + 100,
             nonce: nonce,
+            deadline: block.timestamp + 100,
             witness: 0x0
         });
     }
@@ -94,8 +97,8 @@ contract PermitSignature {
             tokens: tokens,
             spender: address(this),
             maxAmounts: maxAmounts,
-            deadline: block.timestamp + 100,
             nonce: nonce,
+            deadline: block.timestamp + 100,
             witness: 0x0
         });
     }

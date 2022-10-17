@@ -1,4 +1,5 @@
-pragma solidity ^0.8.16;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -9,6 +10,7 @@ import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {Permit, PermitBatch, SigType, Signature} from "../src/Permit2Utils.sol";
+import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 
 // forge test --match-contract SignatureTransfer
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
@@ -142,5 +144,92 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         assertEq(token0.balanceOf(address(this)), startBalanceTo + defaultAmount);
         // should not effect address0
         assertEq(token0.balanceOf(address0), startBalanceAddr0);
+    }
+    function testNonceBatchTransferMultiAddr() public {
+        uint256 nonce = 0;
+        // signed spender is address(this)
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce, SigType.ORDERED);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+
+        uint256 startBalanceFrom0 = token0.balanceOf(from);
+        uint256 startBalanceFrom1 = token1.balanceOf(from);
+        uint256 startBalanceTo0 = token0.balanceOf(address(this));
+        uint256 startBalanceTo1 = token1.balanceOf(address2);
+
+        address[] memory to = AddressBuilder.fill(1, address(this)).push(address2);
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+        permit2.permitBatchTransferFrom(permit, to, amounts, sig);
+
+        assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
+        assertEq(token0.balanceOf(address(this)), startBalanceTo0 + defaultAmount);
+
+        assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
+        assertEq(token1.balanceOf(address2), startBalanceTo1 + defaultAmount);
+    }
+
+    function testNonceBatchTransferSingleAddr() public {
+        uint256 nonce = 0;
+
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce, SigType.ORDERED);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+
+        uint256 startBalanceFrom0 = token0.balanceOf(from);
+        uint256 startBalanceFrom1 = token1.balanceOf(from);
+        uint256 startBalanceTo0 = token0.balanceOf(address(this));
+        uint256 startBalanceTo1 = token1.balanceOf(address(this));
+
+        address[] memory to = AddressBuilder.fill(1, address(this));
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+        permit2.permitBatchTransferFrom(permit, to, amounts, sig);
+
+        assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
+        assertEq(token0.balanceOf(address(this)), startBalanceTo0 + defaultAmount);
+
+        assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
+        assertEq(token1.balanceOf(address(this)), startBalanceTo1 + defaultAmount);
+    }
+
+    function testNonceBatchTransferInvalidSingleAddr() public {
+        uint256 nonce = 0;
+
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce, SigType.ORDERED);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+
+        address[] memory to = AddressBuilder.fill(1, address(this));
+        uint256[] memory amounts = AmountBuilder.fill(1, defaultAmount);
+
+        vm.expectRevert(SignatureTransfer.LengthMismatch.selector);
+        permit2.permitBatchTransferFrom(permit, to, amounts, sig);
+    }
+
+    function testNonceBatchTransferInvalidMultiAmt() public {
+        uint256 nonce = 0;
+
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce, SigType.ORDERED);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+
+        address[] memory to = AddressBuilder.fill(2, address(this));
+        uint256[] memory amounts = AmountBuilder.fill(3, defaultAmount);
+
+        vm.expectRevert(SignatureTransfer.LengthMismatch.selector);
+        permit2.permitBatchTransferFrom(permit, to, amounts, sig);
+    }
+
+    function testNonceBatchTransferInvalidMultiAddr() public {
+        uint256 nonce = 0;
+
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce, SigType.ORDERED);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+
+        address[] memory to = AddressBuilder.fill(3, address(this));
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+
+        vm.expectRevert(SignatureTransfer.LengthMismatch.selector);
+        permit2.permitBatchTransferFrom(permit, to, amounts, sig);
     }
 }

@@ -3,28 +3,21 @@ pragma solidity 0.8.17;
 
 import {SignatureTransfer} from "./SignatureTransfer.sol";
 import {AllowanceTransfer} from "./AllowanceTransfer.sol";
+import {DomainSeparator} from "./base/DomainSeparator.sol";
 
-contract Permit2 is SignatureTransfer, AllowanceTransfer {
+contract Permit2 is SignatureTransfer, AllowanceTransfer, DomainSeparator {
     error NonceUsed();
 
     mapping(address => uint256) public nonces;
     mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
-    // TODO caching optimization w/chainId check
-    function DOMAIN_SEPARATOR() public view override (SignatureTransfer, AllowanceTransfer) returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("Permit2"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )
-        );
+    /// @notice returns the domain separator for the current chain
+    function DOMAIN_SEPARATOR() public view override (SignatureTransfer,AllowanceTransfer) returns (bytes32) {
+        return _domainSeparatorV4();
     }
 
     /// @notice Checks whether a nonce is taken. Then sets an increasing nonce on the from address.
-    function _useNonce(address from, uint256 nonce) internal override (SignatureTransfer, AllowanceTransfer) {
+    function _useNonce(address from, uint256 nonce) internal override (SignatureTransfer, AllowanceTransfer)  {
         if (nonce > nonces[from]) {
             revert NonceUsed();
         }
