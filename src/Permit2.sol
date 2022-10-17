@@ -2,6 +2,7 @@
 pragma solidity ^0.8.16;
 
 import {SignatureTransfer} from "./SignatureTransfer.sol";
+import {AllowanceTransfer} from "./AllowanceTransfer.sol";
 
 struct Permit {
     SigType sigType;
@@ -41,7 +42,7 @@ contract Permit2 is SignatureTransfer, AllowanceTransfer {
     mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
     // TODO caching optimization w/chainId check
-    function DOMAIN_SEPARATOR() public view override returns (bytes32) {
+    function DOMAIN_SEPARATOR() public view override (SignatureTransfer, AllowanceTransfer) returns (bytes32) {
         return keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -53,8 +54,12 @@ contract Permit2 is SignatureTransfer, AllowanceTransfer {
         );
     }
 
+    function increaseNonce(address from) internal override returns (uint256) {
+        return nonces[from]++;
+    }
+
     /// @notice Checks whether a nonce is taken. Then sets an increasing nonce on the from address.
-    function _useNonce(address from, uint256 nonce) internal override {
+    function _useNonce(address from, uint256 nonce) internal override (SignatureTransfer, AllowanceTransfer) {
         if (nonce > nonces[from]) {
             revert NonceUsed();
         }
@@ -80,7 +85,7 @@ contract Permit2 is SignatureTransfer, AllowanceTransfer {
     }
 
     /// @notice Invalidates the specified number of nonces.
-    function invalidateNonces(uint256 amount) public {
+    function invalidateNonces(uint256 amount) public override {
         nonces[msg.sender] += amount;
     }
 

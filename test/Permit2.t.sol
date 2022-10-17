@@ -6,12 +6,11 @@ import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/
 import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
-import {Approve2} from "../src/Permit2.sol";
-import {Approve2Lib} from "../src/Approve2Lib.sol";
-
+import {Permit2} from "../src/Permit2.sol";
+import {Permit2Lib} from "../src/Permit2Lib.sol";
 import {MockNonPermitERC20} from "./mocks/MockNonPermitERC20.sol";
 
-contract Approve2Test is DSTestPlus {
+contract Permit2Test is DSTestPlus {
     bytes32 constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
@@ -23,7 +22,7 @@ contract Approve2Test is DSTestPlus {
     uint256 immutable PK;
     address immutable PK_OWNER;
 
-    Approve2 immutable approve2 = new Approve2();
+    Permit2 immutable permit2 = new Permit2();
 
     MockERC20 immutable token = new MockERC20("Mock Token", "MOCK", 18);
 
@@ -35,24 +34,24 @@ contract Approve2Test is DSTestPlus {
 
         DOMAIN_SEPARATOR = token.DOMAIN_SEPARATOR();
 
-        DOMAIN_SEPARATOR_TOKEN = approve2.DOMAIN_SEPARATOR(address(token));
-        DOMAIN_SEPARATOR_NON_PERMIT_TOKEN = approve2.DOMAIN_SEPARATOR(address(nonPermitToken));
+        DOMAIN_SEPARATOR_TOKEN = permit2.DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR_NON_PERMIT_TOKEN = permit2.DOMAIN_SEPARATOR();
 
         token.mint(address(this), type(uint128).max);
         token.approve(address(this), type(uint128).max);
-        token.approve(address(approve2), type(uint128).max);
+        token.approve(address(permit2), type(uint128).max);
 
         token.mint(PK_OWNER, type(uint128).max);
         hevm.prank(PK_OWNER);
-        token.approve(address(approve2), type(uint128).max);
+        token.approve(address(permit2), type(uint128).max);
 
         nonPermitToken.mint(address(this), type(uint128).max);
         nonPermitToken.approve(address(this), type(uint128).max);
-        nonPermitToken.approve(address(approve2), type(uint128).max);
+        nonPermitToken.approve(address(permit2), type(uint128).max);
 
         nonPermitToken.mint(PK_OWNER, type(uint128).max);
         hevm.prank(PK_OWNER);
-        nonPermitToken.approve(address(approve2), type(uint128).max);
+        nonPermitToken.approve(address(permit2), type(uint128).max);
     }
 
     function setUp() public {
@@ -119,7 +118,7 @@ contract Approve2Test is DSTestPlus {
             )
         );
 
-        Approve2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -135,7 +134,7 @@ contract Approve2Test is DSTestPlus {
     }
 
     function testTransferFrom2() public {
-        Approve2Lib.transferFrom2(token, address(this), address(0xB00B), 1e18);
+        Permit2Lib.transferFrom2(token, address(this), address(0xB00B), 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -151,14 +150,14 @@ contract Approve2Test is DSTestPlus {
                     DOMAIN_SEPARATOR_TOKEN,
                     keccak256(
                         abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
                         )
                     )
                 )
             )
         );
 
-        Approve2Lib.permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.permit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
     function testPermit2NonPermitToken() public {
@@ -170,14 +169,14 @@ contract Approve2Test is DSTestPlus {
                     DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
                     keccak256(
                         abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
                         )
                     )
                 )
             )
         );
 
-        Approve2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -187,13 +186,13 @@ contract Approve2Test is DSTestPlus {
     function testTransferFrom2Full() public {
         hevm.startPrank(address(0xCAFE));
 
-        Approve2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
+        Permit2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
     }
 
     function testTransferFrom2NonPermitToken() public {
         hevm.startPrank(address(0xCAFE));
 
-        Approve2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+        Permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -246,8 +245,8 @@ contract Approve2Test is DSTestPlus {
 
         startMeasuringGas("permit2 + transferFrom2 with an EIP-2612 native token");
 
-        Approve2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-        Approve2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
+        Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
 
         stopMeasuringGas();
     }
@@ -261,7 +260,7 @@ contract Approve2Test is DSTestPlus {
                     DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
                     keccak256(
                         abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, permit2.nonces(PK_OWNER), block.timestamp
                         )
                     )
                 )
@@ -272,8 +271,8 @@ contract Approve2Test is DSTestPlus {
 
         startMeasuringGas("permit2 + transferFrom2 with a non EIP-2612 native token");
 
-        Approve2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
-        Approve2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+        Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
 
         stopMeasuringGas();
     }

@@ -8,11 +8,13 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Backwards compatible, low-overhead,
 /// next generation token approval/meta-tx system.
-contract AllowanceTransfer {
+abstract contract AllowanceTransfer {
     using SafeTransferLib for ERC20;
 
     function DOMAIN_SEPARATOR() public view virtual returns (bytes32);
     function _useNonce(address from, uint256 nonce) internal virtual;
+    function increaseNonce(address owner) internal virtual returns (uint256 nonce);
+    function invalidateNonces(uint256 amount) public virtual;
 
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
@@ -65,7 +67,7 @@ contract AllowanceTransfer {
                 keccak256(
                     abi.encodePacked(
                         "\x19\x01",
-                        DOMAIN_SEPARATOR(address(token)),
+                        DOMAIN_SEPARATOR(),
                         keccak256(
                             abi.encode(
                                 keccak256(
@@ -74,7 +76,7 @@ contract AllowanceTransfer {
                                 owner,
                                 spender,
                                 amount,
-                                nonces[owner]++,
+                                increaseNonce(owner),
                                 deadline
                             )
                         )
@@ -113,10 +115,6 @@ contract AllowanceTransfer {
                 if (allowed >= amount) {
                     // If msg.sender has enough approved to them, decrement their allowance.
                     allowance[from][token][msg.sender] = allowed - amount;
-                } else {
-                    // Otherwise, check if msg.sender is an operator for the
-                    // from address, otherwise we'll revert and block the transfer.
-                    require(isOperator[from][msg.sender], "APPROVE_ALL_REQUIRED");
                 }
             }
 
@@ -132,18 +130,12 @@ contract AllowanceTransfer {
     // TODO: Bench if a struct for token-spender pairs is cheaper.
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
-    /// by batch revoking approvals, unapproving operators, and invalidating nonces.
+    /// by batch revoking approvals, and invalidating nonces.
     /// @param tokens An array of tokens who's corresponding spenders should have their
     /// approvals revoked. Each index should correspond to an index in the spenders array.
     /// @param spenders An array of addresses to revoke approvals from.
     /// Each index should correspond to an index in the tokens array.
-    /// @param operators An array of addresses to revoke operator approval from.
-    function lockdown(
-        ERC20[] calldata tokens,
-        address[] calldata spenders,
-        address[] calldata operators,
-        uint256 noncesToInvalidate
-    ) external {
+    function lockdown(ERC20[] calldata tokens, address[] calldata spenders, uint256 noncesToInvalidate) external {
         unchecked {
             // Will revert if trying to invalidate
             // more than type(uint16).max nonces.
@@ -155,11 +147,6 @@ contract AllowanceTransfer {
             // Revoke allowances for each pair of spenders and tokens.
             for (uint256 i = 0; i < spenders.length; ++i) {
                 delete allowance[msg.sender][tokens[i]][spenders[i]];
-            }
-
-            // Revoke each of the sender's provided operator's powers.
-            for (uint256 i = 0; i < operators.length; ++i) {
-                delete isOperator[msg.sender][operators[i]];
             }
         }
     }
