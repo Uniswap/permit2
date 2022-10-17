@@ -8,8 +8,8 @@ struct Permit {
     address token;
     address spender;
     uint256 maxAmount;
-    uint256 deadline;
     uint256 nonce;
+    uint256 deadline;
     bytes32 witness;
 }
 
@@ -18,8 +18,8 @@ struct PermitBatch {
     address[] tokens;
     address spender;
     uint256[] maxAmounts;
-    uint256 deadline;
     uint256 nonce;
+    uint256 deadline;
     bytes32 witness;
 }
 

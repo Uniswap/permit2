@@ -74,8 +74,8 @@ contract PermitSignature {
             token: token0,
             spender: address(this),
             maxAmount: 10 ** 18,
-            deadline: block.timestamp + 100,
             nonce: nonce,
+            deadline: block.timestamp + 100,
             witness: 0x0
         });
     }
@@ -94,8 +94,8 @@ contract PermitSignature {
             tokens: tokens,
             spender: address(this),
             maxAmounts: maxAmounts,
-            deadline: block.timestamp + 100,
             nonce: nonce,
+            deadline: block.timestamp + 100,
             witness: 0x0
         });
     }
