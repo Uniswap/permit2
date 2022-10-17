@@ -138,7 +138,7 @@ abstract contract SignatureTransfer {
         internal
         view
     {
-        bool invalidMultiAddrTransfer = to.length != permit.tokens.length && amounts.length != permit.tokens.length;
+        bool invalidMultiAddrTransfer = to.length != permit.tokens.length || amounts.length != permit.tokens.length;
         bool invalidSingleAddrTransfer = to.length == 1 && amounts.length != permit.tokens.length;
 
         if (invalidMultiAddrTransfer || invalidSingleAddrTransfer) {
