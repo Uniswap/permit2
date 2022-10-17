@@ -1,4 +1,4 @@
-name: Tests
+name: Test
 
 on: [push, pull_request]
 
@@ -6,7 +6,7 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -18,9 +18,6 @@ jobs:
 
       - name: Check contract sizes
         run: forge build --sizes
-
-      - name: Check gas snapshots
-        run: forge snapshot --check
 
       - name: Run tests
         run: forge test

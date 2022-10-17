@@ -32,12 +32,7 @@ library Approve2Lib {
     /// @param from The user to transfer from.
     /// @param to The user to transfer to.
     /// @param amount The amount to transfer.
-    function transferFrom2(
-        ERC20 token,
-        address from,
-        address to,
-        uint256 amount
-    ) internal {
+    function transferFrom2(ERC20 token, address from, address to, uint256 amount) internal {
         assembly {
             /*//////////////////////////////////////////////////////////////
                               ATTEMPT SAFE TRANSFER FROM
@@ -128,15 +123,16 @@ library Approve2Lib {
             // with the function selector for EIP-2612 DOMAIN_SEPARATOR.
             mstore(freeMemoryPointer, 0x3644e51500000000000000000000000000000000000000000000000000000000)
 
-            let success := and(
-                // Should resolve false if it returned <32 bytes or its first word is 0.
-                and(iszero(iszero(mload(0))), gt(returndatasize(), 31)),
-                // We use 4 because our calldata is just a single 4 byte function selector.
-                // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-                // Counterintuitively, this call must be positioned second to the and() call in the
-                // surrounding and() call or else returndatasize() will be zero during the computation.
-                call(gas(), token, 0, freeMemoryPointer, 4, 0, 32)
-            )
+            let success :=
+                and(
+                    // Should resolve false if it returned <32 bytes or its first word is 0.
+                    and(iszero(iszero(mload(0))), gt(returndatasize(), 31)),
+                    // We use 4 because our calldata is just a single 4 byte function selector.
+                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
+                    // Counterintuitively, this call must be positioned second to the and() call in the
+                    // surrounding and() call or else returndatasize() will be zero during the computation.
+                    call(gas(), token, 0, freeMemoryPointer, 4, 0, 32)
+                )
 
             // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
             if success {

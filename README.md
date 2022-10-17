@@ -1,4 +1,4 @@
-# _approve2_
+# permit2
 
 Backwards compatible, low-overhead, next generation token approval/meta-tx system.
 
@@ -9,8 +9,14 @@ You will need a copy of [Foundry](https://github.com/foundry-rs/foundry) install
 ### Setup
 
 ```sh
-git clone https://github.com/paradigmxyz/approve2.git
+git clone https://github.com/Uniswap/approve2.git
 cd approve2
+```
+
+### Lint
+
+```sh
+forge fmt [--check]
 ```
 
 ### Run Tests
