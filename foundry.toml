@@ -1,5 +1,5 @@
 [profile.default]
-solc = "0.8.15"
+solc = "0.8.17"
 bytecode_hash = "none"
 optimizer_runs = 1000000
 

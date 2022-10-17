@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.17;
 
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -73,7 +73,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )
@@ -90,7 +92,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )
@@ -107,7 +111,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )
@@ -144,7 +150,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR_TOKEN,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )
@@ -161,7 +169,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )
@@ -198,7 +208,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )
@@ -222,7 +234,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )
@@ -246,7 +260,9 @@ contract Approve2Test is DSTestPlus {
                     "\x19\x01",
                     DOMAIN_SEPARATOR_NON_PERMIT_TOKEN,
                     keccak256(
-                        abi.encode(PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp)
+                        abi.encode(
+                            PERMIT_TYPEHASH, PK_OWNER, address(0xCAFE), 1e18, approve2.nonces(PK_OWNER), block.timestamp
+                        )
                     )
                 )
             )

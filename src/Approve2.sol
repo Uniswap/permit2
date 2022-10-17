@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.17;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
@@ -36,16 +36,15 @@ contract Approve2 {
     /// @dev For calls to permitAll, the address of
     /// the Approve2 contract will be used the token.
     function DOMAIN_SEPARATOR(address token) public view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                    keccak256("Approve2"),
-                    keccak256("1"),
-                    block.chainid,
-                    token // We use the token's address for easy frontend compatibility.
-                )
-            );
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("Approve2"),
+                keccak256("1"),
+                block.chainid,
+                token // We use the token's address for easy frontend compatibility.
+            )
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -73,11 +72,7 @@ contract Approve2 {
     /// @param token The token to approve.
     /// @param spender The spender address to approve.
     /// @param amount The amount of the token to approve.
-    function approve(
-        ERC20 token,
-        address spender,
-        uint256 amount
-    ) external {
+    function approve(ERC20 token, address spender, uint256 amount) external {
         allowance[msg.sender][token][spender] = amount;
     }
 
@@ -118,7 +113,9 @@ contract Approve2 {
                         DOMAIN_SEPARATOR(address(token)),
                         keccak256(
                             abi.encode(
-                                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                                keccak256(
+                                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                                ),
                                 owner,
                                 spender,
                                 amount,
@@ -150,14 +147,7 @@ contract Approve2 {
     /// @param r Must produce valid secp256k1 signature from the owner along with v and s.
     /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permitAll(
-        address owner,
-        address spender,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
+    function permitAll(address owner, address spender, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
         unchecked {
             // Ensure the signature's deadline has not already passed.
             require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
@@ -203,12 +193,7 @@ contract Approve2 {
     /// @param amount The amount of tokens to transfer.
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
-    function transferFrom(
-        ERC20 token,
-        address from,
-        address to,
-        uint256 amount
-    ) external {
+    function transferFrom(ERC20 token, address from, address to, uint256 amount) external {
         unchecked {
             uint256 allowed = allowance[from][token][msg.sender]; // Saves gas for limited approvals.
 
