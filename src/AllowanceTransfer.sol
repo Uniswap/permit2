@@ -47,12 +47,12 @@ abstract contract AllowanceTransfer {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permit(Permit calldata permitData, address owner, Signature calldata sig)
+    function permit(Permit calldata permit, address owner, Signature calldata sig)
         external
         returns (address signer)
     {
         // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > permitData.deadline) {
+        if (block.timestamp > permit.deadline) {
             revert DeadlinePassed();
         }
 
@@ -65,12 +65,12 @@ abstract contract AllowanceTransfer {
                     keccak256(
                         abi.encode(
                             _PERMIT_TYPEHASH,
-                            permitData.token,
-                            permitData.spender,
-                            permitData.maxAmount,
-                            permitData.nonce,
-                            permitData.deadline,
-                            permitData.witness
+                            permit.token,
+                            permit.spender,
+                            permit.maxAmount,
+                            permit.nonce,
+                            permit.deadline,
+                            permit.witness
                         )
                     )
                 )
@@ -84,14 +84,14 @@ abstract contract AllowanceTransfer {
             revert InvalidSignature();
         }
 
-        if (permitData.sigType == SigType.ORDERED) {
-            _useNonce(signer, permitData.nonce);
-        } else if (permitData.sigType == SigType.UNORDERED) {
-            _useUnorderedNonce(signer, permitData.nonce);
+        if (permit.sigType == SigType.ORDERED) {
+            _useNonce(signer, permit.nonce);
+        } else if (permit.sigType == SigType.UNORDERED) {
+            _useUnorderedNonce(signer, permit.nonce);
         }fo
 
         // Set the allowance of the spender to the given amount.
-        allowance[signer][permitData.token][permitData.spender] = permitData.maxAmount;
+        allowance[signer][permit.token][permit.spender] = permit.maxAmount;
     }
 
     /*//////////////////////////////////////////////////////////////

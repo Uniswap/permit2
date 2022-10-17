@@ -25,7 +25,7 @@ abstract contract SignatureTransfer {
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
     /// Can use ordered or unordered nonces for replay protection.
-    function permitTransferFrom(Permit calldata permitData, address to, uint256 amount, Signature calldata sig)
+    function permitTransferFrom(Permit calldata permit, address to, uint256 amount, Signature calldata sig)
         public
         returns (address signer)
     {
@@ -34,8 +34,8 @@ abstract contract SignatureTransfer {
         uint256[] memory maxAmounts = new uint256[](1);
 
         amounts[0] = amount;
-        maxAmounts[0] = permitData.maxAmount;
-        _validatePermit(permitData.spender, permitData.deadline, maxAmounts, amounts);
+        maxAmounts[0] = permit.maxAmount;
+        _validatePermit(permit.spender, permit.deadline, maxAmounts, amounts);
 
         signer = ecrecover(
             keccak256(
@@ -45,13 +45,13 @@ abstract contract SignatureTransfer {
                     keccak256(
                         abi.encode(
                             _PERMIT_TRANSFER_TYPEHASH,
-                            permitData.sigType,
-                            permitData.token,
-                            permitData.spender,
-                            permitData.maxAmount,
-                            permitData.nonce,
-                            permitData.deadline,
-                            permitData.witness
+                            permit.sigType,
+                            permit.token,
+                            permit.spender,
+                            permit.maxAmount,
+                            permit.nonce,
+                            permit.deadline,
+                            permit.witness
                         )
                     )
                 )
@@ -65,26 +65,26 @@ abstract contract SignatureTransfer {
             revert InvalidSignature();
         }
 
-        if (permitData.sigType == SigType.ORDERED) {
-            _useNonce(signer, permitData.nonce);
-        } else if (permitData.sigType == SigType.UNORDERED) {
-            _useUnorderedNonce(signer, permitData.nonce);
+        if (permit.sigType == SigType.ORDERED) {
+            _useNonce(signer, permit.nonce);
+        } else if (permit.sigType == SigType.UNORDERED) {
+            _useUnorderedNonce(signer, permit.nonce);
         }
 
         if (to == address(0)) {
-            ERC20(permitData.token).transferFrom(signer, permitData.spender, amount);
+            ERC20(permit.token).transferFrom(signer, permit.spender, amount);
         } else {
-            ERC20(permitData.token).transferFrom(signer, to, amount);
+            ERC20(permit.token).transferFrom(signer, to, amount);
         }
     }
 
     function permitBatchTransferFrom(
-        PermitBatch calldata permitData,
+        PermitBatch calldata permit,
         address[] calldata to,
         uint256[] calldata amounts,
         Signature calldata sig
     ) public returns (address signer) {
-        _validatePermit(permitData.spender, permitData.deadline, permitData.maxAmounts, amounts);
+        _validatePermit(permit.spender, permit.deadline, permit.maxAmounts, amounts);
 
         signer = ecrecover(
             keccak256(
@@ -94,13 +94,13 @@ abstract contract SignatureTransfer {
                     keccak256(
                         abi.encode(
                             _PERMIT_BATCH_TRANSFER_TYPEHASH,
-                            permitData.sigType,
-                            keccak256(abi.encodePacked(permitData.tokens)),
-                            permitData.spender,
-                            keccak256(abi.encodePacked(permitData.maxAmounts)),
-                            permitData.nonce,
-                            permitData.deadline,
-                            permitData.witness
+                            permit.sigType,
+                            keccak256(abi.encodePacked(permit.tokens)),
+                            permit.spender,
+                            keccak256(abi.encodePacked(permit.maxAmounts)),
+                            permit.nonce,
+                            permit.deadline,
+                            permit.witness
                         )
                     )
                 )
@@ -114,21 +114,21 @@ abstract contract SignatureTransfer {
             revert InvalidSignature();
         }
 
-        if (permitData.sigType == SigType.ORDERED) {
-            _useNonce(signer, permitData.nonce);
-        } else if (permitData.sigType == SigType.UNORDERED) {
-            _useUnorderedNonce(signer, permitData.nonce);
+        if (permit.sigType == SigType.ORDERED) {
+            _useNonce(signer, permit.nonce);
+        } else if (permit.sigType == SigType.UNORDERED) {
+            _useUnorderedNonce(signer, permit.nonce);
         }
 
         if (to.length == 1) {
             // send all tokens to the same recipient address if only one is specified
             // address recipient = to[0];
-            for (uint256 i = 0; i < permitData.tokens.length; ++i) {
-                ERC20(permitData.tokens[i]).transferFrom(signer, to[0], amounts[i]);
+            for (uint256 i = 0; i < permit.tokens.length; ++i) {
+                ERC20(permit.tokens[i]).transferFrom(signer, to[0], amounts[i]);
             }
         } else {
-            for (uint256 i = 0; i < permitData.tokens.length; ++i) {
-                ERC20(permitData.tokens[i]).transferFrom(signer, to[i], amounts[i]);
+            for (uint256 i = 0; i < permit.tokens.length; ++i) {
+                ERC20(permit.tokens[i]).transferFrom(signer, to[i], amounts[i]);
             }
         }
     }
