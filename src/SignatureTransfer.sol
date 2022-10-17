@@ -171,7 +171,7 @@ abstract contract SignatureTransfer {
             if (signer.code.length == 0) {
                 revert NotAContract();
             }
-            bytes4 magicValue = IERC1271(signer).isValidSignature(hash, '');
+            bytes4 magicValue = IERC1271(signer).isValidSignature(hash, "");
             if (magicValue != IERC1271.isValidSignature.selector) {
                 revert InvalidContractSignature();
             }
