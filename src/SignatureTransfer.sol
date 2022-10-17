@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit, Signature, PermitBatch, SigType} from "./Permit2.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {IERC1271} from "./IERC1271.sol";
 
 abstract contract SignatureTransfer {
     error NotSpender();
@@ -11,6 +12,8 @@ abstract contract SignatureTransfer {
     error InvalidAmount();
     error InvalidSignature();
     error LengthMismatch();
+    error NotAContract();
+    error InvalidContractSignature();
 
     /// @dev sigType field distinguishes between using unordered nonces or ordered nonces for replay protection
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
@@ -34,7 +37,7 @@ abstract contract SignatureTransfer {
     {
         _validatePermit(permit.spender, permit.deadline, permit.maxAmount, amount);
 
-        signer = ecrecover(
+        signer = validateSignature(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -53,14 +56,8 @@ abstract contract SignatureTransfer {
                     )
                 )
             ),
-            sig.v,
-            sig.r,
-            sig.s
+            sig
         );
-
-        if (signer == address(0)) {
-            revert InvalidSignature();
-        }
 
         if (permit.sigType == SigType.ORDERED) {
             _useNonce(signer, permit.nonce);
@@ -83,7 +80,7 @@ abstract contract SignatureTransfer {
     ) public returns (address signer) {
         _validateBatchPermit(permit, to, amounts);
 
-        signer = ecrecover(
+        signer = validateSignature(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -102,14 +99,8 @@ abstract contract SignatureTransfer {
                     )
                 )
             ),
-            sig.v,
-            sig.r,
-            sig.s
+            sig
         );
-
-        if (signer == address(0)) {
-            revert InvalidSignature();
-        }
 
         if (permit.sigType == SigType.ORDERED) {
             _useNonce(signer, permit.nonce);
@@ -171,6 +162,24 @@ abstract contract SignatureTransfer {
 
         if (amount > maxAmount) {
             revert InvalidAmount();
+        }
+    }
+
+    function validateSignature(bytes32 hash, Signature calldata sig) private view returns (address signer) {
+        if (sig.v == type(uint8).max) {
+            signer = address(bytes20(sig.r));
+            if (signer.code.length == 0) {
+                revert NotAContract();
+            }
+            bytes4 magicValue = IERC1271(signer).isValidSignature(hash, '');
+            if (magicValue != IERC1271.isValidSignature.selector) {
+                revert InvalidContractSignature();
+            }
+        } else {
+            signer = ecrecover(hash, sig.v, sig.r, sig.s);
+            if (signer == address(0)) {
+                revert InvalidSignature();
+            }
         }
     }
 }
