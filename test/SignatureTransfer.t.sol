@@ -6,8 +6,9 @@ import {TokenProvider} from "./utils/TokenProvider.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
-import {Permit2, Permit, PermitBatch, SigType, Signature} from "../src/Permit2.sol";
+import {Permit2} from "../src/Permit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
+import {Permit, PermitBatch, SigType, Signature} from "../src/Permit2Utils.sol";
 
 // forge test --match-contract SignatureTransfer
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider {

@@ -4,37 +4,6 @@ pragma solidity ^0.8.16;
 import {SignatureTransfer} from "./SignatureTransfer.sol";
 import {AllowanceTransfer} from "./AllowanceTransfer.sol";
 
-struct Permit {
-    SigType sigType;
-    address token;
-    address spender;
-    uint256 maxAmount;
-    uint256 deadline;
-    uint256 nonce;
-    bytes32 witness;
-}
-
-struct PermitBatch {
-    SigType sigType;
-    address[] tokens;
-    address spender;
-    uint256[] maxAmounts;
-    uint256 deadline;
-    uint256 nonce;
-    bytes32 witness;
-}
-
-struct Signature {
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-}
-
-enum SigType {
-    ORDERED,
-    UNORDERED
-}
-
 contract Permit2 is SignatureTransfer, AllowanceTransfer {
     error NonceUsed();
 
@@ -54,10 +23,6 @@ contract Permit2 is SignatureTransfer, AllowanceTransfer {
         );
     }
 
-    function increaseNonce(address from) internal override returns (uint256) {
-        return nonces[from]++;
-    }
-
     /// @notice Checks whether a nonce is taken. Then sets an increasing nonce on the from address.
     function _useNonce(address from, uint256 nonce) internal override (SignatureTransfer, AllowanceTransfer) {
         if (nonce > nonces[from]) {
@@ -67,7 +32,7 @@ contract Permit2 is SignatureTransfer, AllowanceTransfer {
     }
 
     /// @notice Checks whether a nonce is taken. Then sets the bit at the bitPos in the bitmap at the wordPos.
-    function _useUnorderedNonce(address from, uint256 nonce) internal override {
+    function _useUnorderedNonce(address from, uint256 nonce) internal override (SignatureTransfer, AllowanceTransfer) {
         (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
         if ((bitmap >> bitPos) & 1 == 1) {
@@ -90,7 +55,7 @@ contract Permit2 is SignatureTransfer, AllowanceTransfer {
     }
 
     /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
-    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public {
+    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public override {
         nonceBitmap[msg.sender][wordPos] |= mask;
     }
 }
