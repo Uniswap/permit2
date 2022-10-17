@@ -16,13 +16,16 @@ abstract contract AllowanceTransfer {
     function increaseNonce(address owner) internal virtual returns (uint256 nonce);
     function invalidateNonces(uint256 amount) public virtual;
 
+    bytes32 public constant _PERMIT_TYPEHASH =
+        keccak256("Permit(address token,address spender,uint256 amount,uint256 nonce,uint256 deadline,bytes32 witness)");
+
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Maps users to tokens to spender addresses and how much they
     /// are approved to spend the amount of that token the user has approved.
-    mapping(address => mapping(ERC20 => mapping(address => uint256))) public allowance;
+    mapping(address => mapping(address => mapping(address => uint256))) public allowance;
 
     /// @notice Approve a spender to transfer a specific
     /// amount of a specific ERC20 token from the sender.
@@ -49,11 +52,12 @@ abstract contract AllowanceTransfer {
     /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
     function permit(
-        ERC20 token,
+        address token,
         address owner,
         address spender,
         uint256 amount,
         uint256 deadline,
+        bytes32 witness,
         uint8 v,
         bytes32 r,
         bytes32 s
@@ -69,16 +73,7 @@ abstract contract AllowanceTransfer {
                         "\x19\x01",
                         DOMAIN_SEPARATOR(),
                         keccak256(
-                            abi.encode(
-                                keccak256(
-                                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                                ),
-                                owner,
-                                spender,
-                                amount,
-                                increaseNonce(owner),
-                                deadline
-                            )
+                            abi.encode(PERMIT_TYPEHASH, token, spender, amount, increaseNonce(owner), deadline, witness)
                         )
                     )
                 ),
