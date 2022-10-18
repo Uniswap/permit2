@@ -20,7 +20,7 @@ library Permit2Lib {
     bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
     /// @dev The address of the Permit2 contract the library will use.
-    bytes32 internal constant Permit2_ADDRESS = 0x000000000000000000000000ce71065d4017f316ec606fe4422e11eb2c47c246;
+    bytes32 internal constant PERMIT2_ADDRESS = 0x000000000000000000000000ce71065d4017f316ec606fe4422e11eb2c47c246;
 
     /*//////////////////////////////////////////////////////////////
                              TRANSFER LOGIC
@@ -76,7 +76,7 @@ library Permit2Lib {
 
                 // We use 0 and 28 because our calldata begins with the last 4 bytes of the first slot.
                 // We use 132 because the length of our generated calldata totals up like so: 4 + 32 * 4.
-                if iszero(call(gas(), Permit2_ADDRESS, 0, 28, 132, 0, 0)) {
+                if iszero(call(gas(), PERMIT2_ADDRESS, 0, 28, 132, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
@@ -208,7 +208,7 @@ library Permit2Lib {
                 mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
 
                 // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
-                if iszero(call(gas(), Permit2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
+                if iszero(call(gas(), PERMIT2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
