@@ -2,13 +2,20 @@
 pragma solidity 0.8.17;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {Permit, Signature, PermitBatch, SigType, InvalidSignature, DeadlinePassed, LengthMismatch} from "./Permit2Utils.sol";
+import {
+    Permit,
+    Signature,
+    PermitBatch,
+    SigType,
+    InvalidSignature,
+    DeadlinePassed,
+    LengthMismatch
+} from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 abstract contract SignatureTransfer {
     error NotSpender();
     error InvalidAmount();
-
 
     /// @dev sigType field distinguishes between using unordered nonces or ordered nonces for replay protection
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
@@ -30,9 +37,7 @@ abstract contract SignatureTransfer {
         public
         returns (address signer)
     {
-
         _validatePermit(permitData.spender, permitData.deadline, permitData.maxAmount, amount);
-
 
         signer = ecrecover(
             keccak256(
@@ -81,9 +86,7 @@ abstract contract SignatureTransfer {
         uint256[] calldata amounts,
         Signature calldata sig
     ) public returns (address signer) {
-
         _validateBatchPermit(permitData, to, amounts);
-
 
         signer = ecrecover(
             keccak256(
@@ -164,7 +167,6 @@ abstract contract SignatureTransfer {
     }
 
     function _validatePermit(address spender, uint256 deadline, uint256 maxAmount, uint256 amount) internal view {
-
         if (msg.sender != spender) {
             revert NotSpender();
         }
@@ -173,7 +175,6 @@ abstract contract SignatureTransfer {
         }
         if (amount > maxAmount) {
             revert InvalidAmount();
-
         }
     }
 }

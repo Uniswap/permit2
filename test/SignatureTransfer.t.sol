@@ -147,6 +147,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         // should not effect address0
         assertEq(token0.balanceOf(address0), startBalanceAddr0);
     }
+
     function testNonceBatchTransferMultiAddr() public {
         uint256 nonce = 0;
         // signed spender is address(this)

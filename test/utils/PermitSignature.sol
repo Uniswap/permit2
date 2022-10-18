@@ -19,6 +19,7 @@ contract PermitSignature {
     bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
         "PermitBatchTransferFrom(uint8 sigType,address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
+
     function getPermitSignature(Vm vm, Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
         internal
         returns (Signature memory sig)

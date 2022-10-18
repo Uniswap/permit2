@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 contract MockNonPermitERC20 is MockERC20 {

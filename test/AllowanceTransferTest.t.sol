@@ -35,7 +35,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
         permit2.permit(permit, from, sig);
 
-        uint256 allowance = permit2.allowance(from, address(token0),address(this));
+        uint256 allowance = permit2.allowance(from, address(token0), address(this));
         assertEq(allowance, defaultAmount);
     }
 
@@ -48,10 +48,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
-        
+
         permit2.permit(permit, from, sig);
 
-        uint256 allowance = permit2.allowance(from, address(token0),address(this));
+        uint256 allowance = permit2.allowance(from, address(token0), address(this));
         assertEq(allowance, defaultAmount);
 
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
@@ -66,7 +66,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
         permit2.permit(permit, from, sig);
 
-        uint256 allowance = permit2.allowance(from, address(token0),address(this));
+        uint256 allowance = permit2.allowance(from, address(token0), address(this));
         assertEq(allowance, defaultAmount);
     }
 
@@ -79,10 +79,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
-        
+
         permit2.permit(permit, from, sig);
 
-        uint256 allowance = permit2.allowance(from, address(token0),address(this));
+        uint256 allowance = permit2.allowance(from, address(token0), address(this));
         assertEq(allowance, defaultAmount);
 
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
@@ -94,7 +94,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         uint256 nonce = 0;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
         Signature memory sig = getPermitSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
-        
+
         vm.expectRevert(InvalidSignature.selector);
         permit.spender = address0;
         permit2.permit(permit, from, sig);
@@ -104,7 +104,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         uint256 nonce = 0;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
         Signature memory sig = getPermitSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
-        
+
         vm.warp(block.timestamp + 101);
         vm.expectRevert(DeadlinePassed.selector);
         permit2.permit(permit, from, sig);
@@ -114,7 +114,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         uint256 nonce = 0;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
         Signature memory sig = getPermitSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
-        
+
         vm.warp(block.timestamp + 101);
         vm.expectRevert(DeadlinePassed.selector);
         permit2.permit(permit, from, sig);

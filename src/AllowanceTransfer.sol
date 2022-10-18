@@ -21,7 +21,7 @@ abstract contract AllowanceTransfer {
     function _useUnorderedNonce(address from, uint256 nonce) internal virtual;
     function invalidateNonces(uint256 amount) public virtual;
     function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public virtual;
-    
+
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/

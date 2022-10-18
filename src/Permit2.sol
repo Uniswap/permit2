@@ -12,12 +12,12 @@ contract Permit2 is SignatureTransfer, AllowanceTransfer, DomainSeparator {
     mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
     /// @notice returns the domain separator for the current chain
-    function DOMAIN_SEPARATOR() public view override (SignatureTransfer,AllowanceTransfer) returns (bytes32) {
+    function DOMAIN_SEPARATOR() public view override (SignatureTransfer, AllowanceTransfer) returns (bytes32) {
         return _domainSeparatorV4();
     }
 
     /// @notice Checks whether a nonce is taken. Then sets an increasing nonce on the from address.
-    function _useNonce(address from, uint256 nonce) internal override (SignatureTransfer, AllowanceTransfer)  {
+    function _useNonce(address from, uint256 nonce) internal override (SignatureTransfer, AllowanceTransfer) {
         if (nonce > nonces[from]) {
             revert NonceUsed();
         }
