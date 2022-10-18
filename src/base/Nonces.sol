@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
+
 import {NonceUsed} from "../Permit2Utils.sol";
 
 contract Nonces {
-
     mapping(address => uint256) public nonces;
     mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 

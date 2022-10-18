@@ -3,7 +3,15 @@ pragma solidity 0.8.17;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {Permit, Signature, PermitBatch, SigType, InvalidSignature, DeadlinePassed, LengthMismatch} from "./Permit2Utils.sol";
+import {
+    Permit,
+    Signature,
+    PermitBatch,
+    SigType,
+    InvalidSignature,
+    DeadlinePassed,
+    LengthMismatch
+} from "./Permit2Utils.sol";
 import {Nonces} from "./base/Nonces.sol";
 import {DomainSeparator} from "./base/DomainSeparator.sol";
 

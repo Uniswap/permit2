@@ -132,36 +132,7 @@ abstract contract AllowanceTransfer is Nonces, DomainSeparator {
     /// approvals revoked. Each index should correspond to an index in the spenders array.
     /// @param spenders An array of addresses to revoke approvals from.
     /// Each index should correspond to an index in the tokens array.
-    /// @param noncesToInvalidate The amount to increase the nonce mapping with.
-    /// @dev Overloaded function. This invalidates unordered nonces.
-    function lockdown(address[] calldata tokens, address[] calldata spenders, uint256 noncesToInvalidate) external {
-        invalidateNonces(noncesToInvalidate);
-
-        // Each index should correspond to an index in the other array.
-        if (tokens.length != spenders.length) {
-            revert LengthMismatch();
-        }
-
-        // Revoke allowances for each pair of spenders and tokens.
-        unchecked {
-            for (uint256 i = 0; i < spenders.length; ++i) {
-                delete allowance[msg.sender][tokens[i]][spenders[i]];
-            }
-        }
-    }
-
-    /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
-    /// by batch revoking approvals, and invalidating the unordered nonces.
-    /// @param tokens An array of tokens who's corresponding spenders should have their
-    /// approvals revoked. Each index should correspond to an index in the spenders array.
-    /// @param spenders An array of addresses to revoke approvals from.
-    /// Each index should correspond to an index in the tokens array.
-    /// @param wordPos The word position of the nonceBitmap to index.
-    /// @param mask The mask used to flip bits in the bitmap, erasing any orders that use those bits as the nonce randomness.
-    /// @dev Overloaded function. This invalidates unordered nonces.
-    function lockdown(address[] calldata tokens, address[] calldata spenders, uint248 wordPos, uint256 mask) external {
-        invalidateUnorderedNonces(wordPos, mask);
-
+    function lockdown(address[] calldata tokens, address[] calldata spenders) external {
         // Each index should correspond to an index in the other array.
         if (tokens.length != spenders.length) {
             revert LengthMismatch();
