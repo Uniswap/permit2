@@ -2,18 +2,12 @@
 pragma solidity 0.8.17;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {
-    Permit,
-    Signature,
-    PermitBatch,
-    SigType,
-    InvalidSignature,
-    DeadlinePassed,
-    LengthMismatch
-} from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {Permit, Signature, PermitBatch, SigType, InvalidSignature, DeadlinePassed, LengthMismatch} from "./Permit2Utils.sol";
+import {Nonces} from "./base/Nonces.sol";
+import {DomainSeparator} from "./base/DomainSeparator.sol";
 
-abstract contract SignatureTransfer {
+abstract contract SignatureTransfer is Nonces, DomainSeparator {
     error NotSpender();
     error InvalidAmount();
 
@@ -25,10 +19,6 @@ abstract contract SignatureTransfer {
     bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
         "PermitBatchTransferFrom(uint8 sigType,address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
-
-    function DOMAIN_SEPARATOR() public view virtual returns (bytes32);
-    function _useNonce(address from, uint256 nonce) internal virtual;
-    function _useUnorderedNonce(address from, uint256 nonce) internal virtual;
 
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
