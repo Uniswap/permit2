@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
+import {NonceUsed} from "../Permit2Utils.sol";
 
 contract Nonces {
-    error NonceUsed();
 
     mapping(address => uint256) public nonces;
     mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
     /// @notice Checks whether a nonce is taken. Then sets an increasing nonce on the from address.
     function _useNonce(address from, uint256 nonce) internal {
-        if (nonce > nonces[from]) {
+        if (nonce < nonces[from]) {
             revert NonceUsed();
         }
-        nonces[from] = nonce;
+        unchecked {
+            nonces[from] = nonce + 1;
+        }
     }
 
     /// @notice Checks whether a nonce is taken. Then sets the bit at the bitPos in the bitmap at the wordPos.
