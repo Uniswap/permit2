@@ -4,23 +4,19 @@ pragma solidity ^0.8.17;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {Permit, Signature, SigType, DeadlinePassed, InvalidSignature, LengthMismatch} from "./Permit2Utils.sol";
+import {Nonces} from "./base/Nonces.sol";
+import {DomainSeparator} from "./base/DomainSeparator.sol";
 
 /// @title AllowanceTransfer
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Backwards compatible, low-overhead,
 /// next generation token approval/meta-tx system.
-abstract contract AllowanceTransfer {
+abstract contract AllowanceTransfer is Nonces, DomainSeparator {
     using SafeTransferLib for ERC20;
 
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(uint8 sigType,address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
-
-    function DOMAIN_SEPARATOR() public view virtual returns (bytes32);
-    function _useNonce(address from, uint256 nonce) internal virtual;
-    function _useUnorderedNonce(address from, uint256 nonce) internal virtual;
-    function invalidateNonces(uint256 amount) public virtual;
-    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public virtual;
 
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
