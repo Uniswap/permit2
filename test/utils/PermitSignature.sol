@@ -5,19 +5,48 @@ import {Vm} from "forge-std/Vm.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Signature, Permit, SigType, PermitBatch} from "../../src/Permit2Utils.sol";
-
-
+import {Permit2} from "../../src/Permit2.sol";
 
 contract PermitSignature {
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
         "PermitTransferFrom(uint8 sigType,address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
 
+    bytes32 public constant _PERMIT_TYPEHASH = keccak256(
+        "Permit(uint8 sigType,address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
+    );
+
     bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
         "PermitBatchTransferFrom(uint8 sigType,address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
-
     function getPermitSignature(Vm vm, Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
+        internal
+        returns (Signature memory sig)
+    {
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        _PERMIT_TYPEHASH,
+                        permit.sigType,
+                        permit.token,
+                        permit.spender,
+                        permit.maxAmount,
+                        permit.nonce,
+                        permit.deadline,
+                        permit.witness
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        sig = Signature(v, r, s);
+    }
+
+    function getPermitTransferSignature(Vm vm, Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
         internal
         returns (Signature memory sig)
     {

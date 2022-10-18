@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {Permit, Signature, SigType, DeadlinePassed, InvalidSignature} from "./Permit2Utils.sol";
+import {Permit, Signature, SigType, DeadlinePassed, InvalidSignature, LengthMismatch} from "./Permit2Utils.sol";
 
 /// @title AllowanceTransfer
 /// @author transmissions11 <t11s@paradigm.xyz>
@@ -21,14 +21,13 @@ abstract contract AllowanceTransfer {
     function _useUnorderedNonce(address from, uint256 nonce) internal virtual;
     function invalidateNonces(uint256 amount) public virtual;
     function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public virtual;
+    
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Maps users to tokens to spender addresses and how much they
     /// are approved to spend the amount of that token the user has approved.
-    // owner - token - spender - amount
-    // owner - token - spender - bitmap (amount, nonce)
     mapping(address => mapping(address => mapping(address => uint256))) public allowance;
 
     /// @notice Approve a spender to transfer a specific
@@ -65,6 +64,7 @@ abstract contract AllowanceTransfer {
                     keccak256(
                         abi.encode(
                             _PERMIT_TYPEHASH,
+                            permitData.sigType,
                             permitData.token,
                             permitData.spender,
                             permitData.maxAmount,
@@ -142,7 +142,9 @@ abstract contract AllowanceTransfer {
         invalidateNonces(noncesToInvalidate);
 
         // Each index should correspond to an index in the other array.
-        require(tokens.length == spenders.length, "LENGTH_MISMATCH");
+        if (tokens.length != spenders.length) {
+            revert LengthMismatch();
+        }
 
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
@@ -165,7 +167,9 @@ abstract contract AllowanceTransfer {
         invalidateUnorderedNonces(wordPos, mask);
 
         // Each index should correspond to an index in the other array.
-        require(tokens.length == spenders.length, "LENGTH_MISMATCH");
+        if (tokens.length != spenders.length) {
+            revert LengthMismatch();
+        }
 
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {

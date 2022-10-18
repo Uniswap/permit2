@@ -33,3 +33,4 @@ enum SigType {
 
 error InvalidSignature();
 error DeadlinePassed();
+error LengthMismatch();

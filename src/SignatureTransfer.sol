@@ -2,13 +2,12 @@
 pragma solidity 0.8.17;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {Permit, Signature, PermitBatch, SigType, InvalidSignature, DeadlinePassed} from "./Permit2Utils.sol";
+import {Permit, Signature, PermitBatch, SigType, InvalidSignature, DeadlinePassed, LengthMismatch} from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 abstract contract SignatureTransfer {
     error NotSpender();
     error InvalidAmount();
-    error LengthMismatch();
 
 
     /// @dev sigType field distinguishes between using unordered nonces or ordered nonces for replay protection
