@@ -4,17 +4,16 @@ pragma solidity ^0.8.17;
 import {Vm} from "forge-std/Vm.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {Signature, Permit, SigType, PermitBatch} from "../../src/Permit2Utils.sol";
+import {Signature, Permit, PermitTransfer, SigType, PermitBatch} from "../../src/Permit2Utils.sol";
 import {Permit2} from "../../src/Permit2.sol";
+import {AllowanceMath} from "../../src/AllowanceMath.sol";
 
 contract PermitSignature {
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
         "PermitTransferFrom(uint8 sigType,address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
-
-    bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(uint8 sigType,address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
-    );
+    bytes32 public constant _PERMIT_TYPEHASH =
+        keccak256("Permit(address token,address spender,uint256 allowed,uint256 deadline,bytes32 witness)");
 
     bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
         "PermitBatchTransferFrom(uint8 sigType,address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
@@ -30,14 +29,7 @@ contract PermitSignature {
                 domainSeparator,
                 keccak256(
                     abi.encode(
-                        _PERMIT_TYPEHASH,
-                        permit.sigType,
-                        permit.token,
-                        permit.spender,
-                        permit.maxAmount,
-                        permit.nonce,
-                        permit.deadline,
-                        permit.witness
+                        _PERMIT_TYPEHASH, permit.token, permit.spender, permit.allowed, permit.deadline, permit.witness
                     )
                 )
             )
@@ -47,10 +39,12 @@ contract PermitSignature {
         sig = Signature(v, r, s);
     }
 
-    function getPermitTransferSignature(Vm vm, Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (Signature memory sig)
-    {
+    function getPermitTransferSignature(
+        Vm vm,
+        PermitTransfer memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (Signature memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -101,8 +95,28 @@ contract PermitSignature {
         sig = Signature(v, r, s);
     }
 
-    function defaultERC20Permit(address token0, uint256 nonce, SigType sigType) internal view returns (Permit memory) {
+    function defaultERC20PermitAllowance(address token0, uint160 amount, uint32 nonce)
+        internal
+        view
+        returns (Permit memory)
+    {
+        uint256 allowed = AllowanceMath.pack(amount, uint64(block.timestamp + 1000), nonce);
         return Permit({
+            token: token0,
+            spender: address(this),
+            allowed: allowed,
+            deadline: block.timestamp + 100,
+            witness: 0x0
+        });
+    }
+
+    // TODO rename
+    function defaultERC20Permit(address token0, uint256 nonce, SigType sigType)
+        internal
+        view
+        returns (PermitTransfer memory)
+    {
+        return PermitTransfer({
             sigType: sigType,
             token: token0,
             spender: address(this),

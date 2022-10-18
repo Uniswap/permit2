@@ -3,36 +3,54 @@ pragma solidity ^0.8.17;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {Permit, Signature, SigType, DeadlinePassed, InvalidSignature, LengthMismatch} from "./Permit2Utils.sol";
+import {
+    PermitTransfer,
+    Permit,
+    Signature,
+    SigType,
+    DeadlinePassed,
+    InvalidSignature,
+    LengthMismatch,
+    InvalidNonce,
+    InsufficentAllowance
+} from "./Permit2Utils.sol";
 import {Nonces} from "./base/Nonces.sol";
 import {DomainSeparator} from "./base/DomainSeparator.sol";
+import {AllowanceMath} from "./AllowanceMath.sol";
 
 /// @title AllowanceTransfer
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Backwards compatible, low-overhead,
 /// next generation token approval/meta-tx system.
-abstract contract AllowanceTransfer is Nonces, DomainSeparator {
+abstract contract AllowanceTransfer is DomainSeparator {
     using SafeTransferLib for ERC20;
+    using AllowanceMath for uint256;
 
-    bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(uint8 sigType,address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
-    );
+    bytes32 public constant _PERMIT_TYPEHASH =
+        keccak256("Permit(address token,address spender,uint256 allowed,uint256 deadline,bytes32 witness)");
 
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Maps users to tokens to spender addresses and how much they
-    /// are approved to spend the amount of that token the user has approved.
+    /// @notice Maps users to tokens to spender addresses and information about the approval on the token.
+    /// @dev The saved word saves the allowed amount, the timestamp for a given allowed amount, and the nonce.
     mapping(address => mapping(address => mapping(address => uint256))) public allowance;
 
     /// @notice Approve a spender to transfer a specific
     /// amount of a specific ERC20 token from the sender.
     /// @param token The token to approve.
     /// @param spender The spender address to approve.
-    /// @param amount The amount of the token to approve.
-    function approve(address token, address spender, uint256 amount) external {
-        allowance[msg.sender][token][spender] = amount;
+    /// @param allowed A uint256 of packed information to store the amount and the timestamp.
+    /// @dev The word usually holds a nonce, which will stay unchanged in approve.
+    function approve(address token, address spender, uint256 allowed) external {
+        // If inputted nonce is less than current nonce, vulnerable to sig replays.
+        uint256 current = allowance[msg.sender][token][spender];
+        if (allowed.nonce() < current.nonce()) {
+            revert InvalidNonce();
+        }
+
+        allowance[msg.sender][token][spender] = allowed;
     }
 
     /*/////////////////////////////////////////////////////f/////////
@@ -42,12 +60,9 @@ abstract contract AllowanceTransfer is Nonces, DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permit(Permit calldata permitData, address owner, Signature calldata sig)
-        external
-        returns (address signer)
-    {
+    function permit(Permit calldata signed, address owner, Signature calldata sig) external returns (address signer) {
         // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > permitData.deadline) {
+        if (block.timestamp > signed.deadline) {
             revert DeadlinePassed();
         }
 
@@ -60,13 +75,11 @@ abstract contract AllowanceTransfer is Nonces, DomainSeparator {
                     keccak256(
                         abi.encode(
                             _PERMIT_TYPEHASH,
-                            permitData.sigType,
-                            permitData.token,
-                            permitData.spender,
-                            permitData.maxAmount,
-                            permitData.nonce,
-                            permitData.deadline,
-                            permitData.witness
+                            signed.token,
+                            signed.spender,
+                            signed.allowed,
+                            signed.deadline,
+                            signed.witness
                         )
                     )
                 )
@@ -80,14 +93,18 @@ abstract contract AllowanceTransfer is Nonces, DomainSeparator {
             revert InvalidSignature();
         }
 
-        if (permitData.sigType == SigType.ORDERED) {
-            _useNonce(signer, permitData.nonce);
-        } else if (permitData.sigType == SigType.UNORDERED) {
-            _useUnorderedNonce(signer, permitData.nonce);
+        uint256 current = allowance[signer][signed.token][signed.spender];
+        uint256 newNonce = signed.allowed.nonce();
+
+        // New nonce must be strictly greater than current nonce.
+        // But, limit how quickly users can invalidate their nonces to
+        // ensure no one accidentally invalidates all their nonces.
+        if (newNonce <= current.nonce() || newNonce > type(uint16).max) {
+            revert InvalidNonce();
         }
 
-        // Set the allowance of the spender to the given amount.
-        allowance[signer][permitData.token][permitData.spender] = permitData.maxAmount;
+        // Set the allowance and timestamp of the spender to the given amount.
+        allowance[signer][signed.token][signed.spender] = signed.allowed;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -101,21 +118,24 @@ abstract contract AllowanceTransfer is Nonces, DomainSeparator {
     /// @param amount The amount of tokens to transfer.
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
-    function transferFrom(address token, address from, address to, uint256 amount) external {
-        unchecked {
-            uint256 allowed = allowance[from][token][msg.sender]; // Saves gas for limited approvals.
+    function transferFrom(address token, address from, address to, uint160 amount) external {
+        uint256 allowed = allowance[from][token][msg.sender];
+        (uint160 allowedAmount, uint64 expiration,) = allowed.unpack();
 
-            // If the from address has set an unlimited approval, we'll go straight to the transfer.
-            if (allowed != type(uint256).max) {
-                if (allowed >= amount) {
-                    // If msg.sender has enough approved to them, decrement their allowance.
-                    allowance[from][token][msg.sender] = allowed - amount;
-                }
-            }
-
-            // Transfer the tokens from the from address to the recipient.
-            ERC20(token).safeTransferFrom(from, to, amount);
+        if (block.timestamp > expiration) {
+            revert DeadlinePassed();
         }
+
+        if (allowedAmount != type(uint160).max) {
+            if (allowedAmount < amount) {
+                revert InsufficentAllowance();
+            } else {
+                uint160 newAmount = allowedAmount - amount;
+                allowance[from][token][msg.sender] = allowed.setAmount(newAmount);
+            }
+        }
+        // Transfer the tokens from the from address to the recipient.
+        ERC20(token).safeTransferFrom(from, to, amount);
     }
 
     // TODO transferFromBatch

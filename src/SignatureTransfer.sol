@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {
-    Permit,
+    PermitTransfer,
     Signature,
     PermitBatch,
     SigType,
@@ -31,11 +31,11 @@ abstract contract SignatureTransfer is Nonces, DomainSeparator {
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
     /// Can use ordered or unordered nonces for replay protection.
-    function permitTransferFrom(Permit calldata permitData, address to, uint256 amount, Signature calldata sig)
+    function permitTransferFrom(PermitTransfer calldata signed, address to, uint256 amount, Signature calldata sig)
         public
         returns (address signer)
     {
-        _validatePermit(permitData.spender, permitData.deadline, permitData.maxAmount, amount);
+        _validatePermit(signed.spender, signed.deadline, signed.maxAmount, amount);
 
         signer = ecrecover(
             keccak256(
@@ -45,13 +45,13 @@ abstract contract SignatureTransfer is Nonces, DomainSeparator {
                     keccak256(
                         abi.encode(
                             _PERMIT_TRANSFER_TYPEHASH,
-                            permitData.sigType,
-                            permitData.token,
-                            permitData.spender,
-                            permitData.maxAmount,
-                            permitData.nonce,
-                            permitData.deadline,
-                            permitData.witness
+                            signed.sigType,
+                            signed.token,
+                            signed.spender,
+                            signed.maxAmount,
+                            signed.nonce,
+                            signed.deadline,
+                            signed.witness
                         )
                     )
                 )
@@ -65,26 +65,26 @@ abstract contract SignatureTransfer is Nonces, DomainSeparator {
             revert InvalidSignature();
         }
 
-        if (permitData.sigType == SigType.ORDERED) {
-            _useNonce(signer, permitData.nonce);
-        } else if (permitData.sigType == SigType.UNORDERED) {
-            _useUnorderedNonce(signer, permitData.nonce);
+        if (signed.sigType == SigType.ORDERED) {
+            _useNonce(signer, signed.nonce);
+        } else if (signed.sigType == SigType.UNORDERED) {
+            _useUnorderedNonce(signer, signed.nonce);
         }
 
         if (to == address(0)) {
-            ERC20(permitData.token).transferFrom(signer, permitData.spender, amount);
+            ERC20(signed.token).transferFrom(signer, signed.spender, amount);
         } else {
-            ERC20(permitData.token).transferFrom(signer, to, amount);
+            ERC20(signed.token).transferFrom(signer, to, amount);
         }
     }
 
     function permitBatchTransferFrom(
-        PermitBatch calldata permitData,
+        PermitBatch calldata signed,
         address[] calldata to,
         uint256[] calldata amounts,
         Signature calldata sig
     ) public returns (address signer) {
-        _validateBatchPermit(permitData, to, amounts);
+        _validateBatchPermit(signed, to, amounts);
 
         signer = ecrecover(
             keccak256(
@@ -94,13 +94,13 @@ abstract contract SignatureTransfer is Nonces, DomainSeparator {
                     keccak256(
                         abi.encode(
                             _PERMIT_BATCH_TRANSFER_TYPEHASH,
-                            permitData.sigType,
-                            keccak256(abi.encodePacked(permitData.tokens)),
-                            permitData.spender,
-                            keccak256(abi.encodePacked(permitData.maxAmounts)),
-                            permitData.nonce,
-                            permitData.deadline,
-                            permitData.witness
+                            signed.sigType,
+                            keccak256(abi.encodePacked(signed.tokens)),
+                            signed.spender,
+                            keccak256(abi.encodePacked(signed.maxAmounts)),
+                            signed.nonce,
+                            signed.deadline,
+                            signed.witness
                         )
                     )
                 )
@@ -114,50 +114,51 @@ abstract contract SignatureTransfer is Nonces, DomainSeparator {
             revert InvalidSignature();
         }
 
-        if (permitData.sigType == SigType.ORDERED) {
-            _useNonce(signer, permitData.nonce);
-        } else if (permitData.sigType == SigType.UNORDERED) {
-            _useUnorderedNonce(signer, permitData.nonce);
+        if (signed.sigType == SigType.ORDERED) {
+            _useNonce(signer, signed.nonce);
+        } else if (signed.sigType == SigType.UNORDERED) {
+            _useUnorderedNonce(signer, signed.nonce);
         }
 
         if (to.length == 1) {
             // send all tokens to the same recipient address if only one is specified
-            // address recipient = to[0];
+            address recipient = to[0];
             unchecked {
-                for (uint256 i = 0; i < permitData.tokens.length; ++i) {
-                    ERC20(permitData.tokens[i]).transferFrom(signer, to[0], amounts[i]);
+                for (uint256 i = 0; i < signed.tokens.length; ++i) {
+                    ERC20(signed.tokens[i]).transferFrom(signer, recipient, amounts[i]);
                 }
             }
         } else {
             unchecked {
-                for (uint256 i = 0; i < permitData.tokens.length; ++i) {
-                    ERC20(permitData.tokens[i]).transferFrom(signer, to[i], amounts[i]);
+                for (uint256 i = 0; i < signed.tokens.length; ++i) {
+                    ERC20(signed.tokens[i]).transferFrom(signer, to[i], amounts[i]);
                 }
             }
         }
     }
 
-    function _validateBatchPermit(PermitBatch memory permitData, address[] memory to, uint256[] memory amounts)
+    function _validateBatchPermit(PermitBatch memory signed, address[] memory to, uint256[] memory amounts)
         internal
         view
     {
-        bool validMultiAddr = to.length == permitData.tokens.length && amounts.length == permitData.tokens.length;
-        bool validSingleAddr = to.length == 1 && amounts.length == permitData.tokens.length;
+        uint256 validLength = signed.tokens.length;
+        bool validMultiAddr = to.length == validLength && amounts.length == validLength;
+        bool validSingleAddr = to.length == 1 && amounts.length == validLength;
 
         if (!(validMultiAddr || validSingleAddr)) {
             revert LengthMismatch();
         }
 
-        if (msg.sender != permitData.spender) {
+        if (msg.sender != signed.spender) {
             revert NotSpender();
         }
-        if (block.timestamp > permitData.deadline) {
+        if (block.timestamp > signed.deadline) {
             revert DeadlinePassed();
         }
 
         unchecked {
             for (uint256 i = 0; i < amounts.length; ++i) {
-                if (amounts[i] > permitData.maxAmounts[i]) {
+                if (amounts[i] > signed.maxAmounts[i]) {
                     revert InvalidAmount();
                 }
             }

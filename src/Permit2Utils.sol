@@ -1,6 +1,14 @@
 pragma solidity 0.8.17;
 
 struct Permit {
+    address token;
+    address spender;
+    uint256 allowed;
+    uint256 deadline;
+    bytes32 witness;
+}
+
+struct PermitTransfer {
     SigType sigType;
     address token;
     address spender;
@@ -34,4 +42,5 @@ enum SigType {
 error InvalidSignature();
 error DeadlinePassed();
 error LengthMismatch();
-error NonceUsed();
+error InvalidNonce();
+error InsufficentAllowance();
