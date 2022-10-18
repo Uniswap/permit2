@@ -2,10 +2,13 @@ pragma solidity 0.8.17;
 
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
-import {AllowanceMath} from "../src/AllowanceMath.sol";
+import {AllowanceMath} from "../src/libraries/AllowanceMath.sol";
+import {PackedAllowance} from "../src/Permit2Utils.sol";
 
 contract PackedAllowanceTest is Test {
     using AllowanceMath for uint256;
+
+    mapping(uint256 => PackedAllowance) public test;
 
     function testUnpackAllowanceTimestampEdges() public {
         uint256 word = 0x800000000000000100000000;
