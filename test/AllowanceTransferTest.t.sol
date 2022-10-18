@@ -80,9 +80,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         uint256 allowance = permit2.allowance(from, address(token0), address(this));
         assertEq(allowance, defaultAmount);
 
-        // permit2.transferFrom(address(token0), from, address0, defaultAmount);
-        // assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
-        // assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
+        permit2.transferFrom(address(token0), from, address0, defaultAmount);
+        assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
+        assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
     }
 
     function testSetAllowanceDirtyNonce() public {

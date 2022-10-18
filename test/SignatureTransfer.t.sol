@@ -123,7 +123,6 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
 
-
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
