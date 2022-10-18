@@ -22,7 +22,12 @@ forge fmt [--check]
 ### Run Tests
 
 ```sh
+# unit
 forge test
+
+# integration
+source .env
+FOUNDRY_PROFILE=integration forge test
 ```
 
 ### Update Gas Snapshots
