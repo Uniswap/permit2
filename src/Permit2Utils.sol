@@ -34,4 +34,4 @@ enum SigType {
 error InvalidSignature();
 error DeadlinePassed();
 error LengthMismatch();
-error NonceUsed();
+error InvalidNonce();

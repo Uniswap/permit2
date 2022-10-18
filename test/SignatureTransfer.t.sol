@@ -9,7 +9,7 @@ import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
-import {Permit, PermitBatch, SigType, Signature, LengthMismatch, NonceUsed} from "../src/Permit2Utils.sol";
+import {Permit, PermitBatch, SigType, Signature, LengthMismatch, InvalidNonce} from "../src/Permit2Utils.sol";
 import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 
 // forge test --match-contract SignatureTransfer
@@ -31,6 +31,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
 
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
+
+        initializeTokens();
 
         setTestTokens(from);
         setTestTokenApprovals(vm, from, address(permit2));
@@ -119,9 +121,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
 
         uint256 startBalanceFrom = token0.balanceOf(from);
-        console2.log(startBalanceFrom);
         uint256 startBalanceTo = token0.balanceOf(address2);
-        console2.log(startBalanceTo);
+
 
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
 
@@ -236,25 +237,25 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         permit2.permitBatchTransferFrom(permit, to, amounts, sig);
     }
 
-    function testUnorderedNonceUsed() public {
+    function testUnorderedInvalidNonce() public {
         uint256 nonce = 0;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.UNORDERED);
         Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
 
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
 
-        vm.expectRevert(NonceUsed.selector);
+        vm.expectRevert(InvalidNonce.selector);
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
     }
 
-    function testOrderedNonceUsed() public {
+    function testOrderedInvalidNonce() public {
         uint256 nonce = 0;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
         Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
 
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
 
-        vm.expectRevert(NonceUsed.selector);
+        vm.expectRevert(InvalidNonce.selector);
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
     }
 
@@ -268,7 +269,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
         sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
 
-        vm.expectRevert(NonceUsed.selector);
+        vm.expectRevert(InvalidNonce.selector);
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
     }
 
@@ -282,7 +283,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         permit = defaultERC20Permit(address(token0), nonce, SigType.UNORDERED);
         sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
 
-        vm.expectRevert(NonceUsed.selector);
+        vm.expectRevert(InvalidNonce.selector);
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
     }
 }
