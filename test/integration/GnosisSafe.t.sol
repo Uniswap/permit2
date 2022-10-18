@@ -67,7 +67,7 @@ contract GnosisSafeTest is Test {
             keccak256(abi.encodePacked(bytes1(0x19), bytes1(0x01), safe.domainSeparator(), safeMessageHash));
 
         // ensure revert
-        vm.expectRevert('Hash not approved');
+        vm.expectRevert("Hash not approved");
         sampleCaller.checkIsValidSignature(safe, dataHash);
 
         // manually set signedMessages[dataHash] to 1
