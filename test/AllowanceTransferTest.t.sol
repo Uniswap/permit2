@@ -36,10 +36,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     uint32 defaultNonce = 0;
     uint64 defaultExpiration = uint64(block.timestamp + 5);
 
-    bytes32 DOMAIN_SEPARATOR;
-
     // has some balance of token0
     address address3 = address(3);
+
+    bytes32 DOMAIN_SEPARATOR;
 
     function setUp() public {
         permit2 = new MockPermit2();
