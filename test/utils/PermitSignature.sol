@@ -70,7 +70,7 @@ contract PermitSignature {
         sig = Signature(v, r, s);
     }
 
-    function defaultERC20Permit(address token0, uint256 nonce, SigType sigType)
+    function defaultERC20PermitTransfer(address token0, uint256 nonce, SigType sigType)
         internal
         view
         returns (PermitTransfer memory)
