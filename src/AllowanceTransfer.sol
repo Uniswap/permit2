@@ -21,7 +21,7 @@ import "forge-std/console2.sol";
 /// TODO comments, headers, interface
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
-contract Permit2 is DomainSeparator {
+contract AllowanceTransfer is DomainSeparator {
     using SafeTransferLib for ERC20;
     using AllowanceMath for uint256;
 
