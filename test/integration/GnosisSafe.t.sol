@@ -34,8 +34,7 @@ contract GnosisSafeTest is Test {
     SampleCaller sampleCaller;
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.envString("FORK_URL"));
-        vm.selectFork(forkId);
+        vm.createSelectFork(vm.envString("FORK_URL"));
 
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
