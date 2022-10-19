@@ -17,14 +17,16 @@ contract TokenProvider {
     MockERC1155 nft3;
     MockERC1155 nft4;
 
-    function setTestTokens(address from) public {
+    function initializeTokens() public {
         token0 = new MockERC20("Test0", "TEST0", 18);
         token1 = new MockERC20("Test1", "TEST1", 18);
         nft1 = new MockERC721("TestNFT1", "NFT1");
         nft2 = new MockERC721("TestNFT2", "NFT2");
         nft3 = new MockERC1155();
         nft4 = new MockERC1155();
+    }
 
+    function setTestTokens(address from) public {
         token0.mint(from, MINT_AMOUNT_ERC20);
         token1.mint(from, MINT_AMOUNT_ERC20);
         // mint with id 1

@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Vm} from "forge-std/Vm.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
-import {Signature, Permit, SigType, PermitBatch} from "../../src/Permit2.sol";
+import {Signature, PermitTransfer, SigType, PermitBatch} from "../../src/base/Permit2Utils.sol";
 
 contract PermitSignature {
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
@@ -14,10 +14,12 @@ contract PermitSignature {
         "PermitBatchTransferFrom(uint8 sigType,address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
 
-    function getPermitSignature(Vm vm, Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (Signature memory sig)
-    {
+    function getPermitTransferSignature(
+        Vm vm,
+        PermitTransfer memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (Signature memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -68,8 +70,12 @@ contract PermitSignature {
         sig = Signature(v, r, s);
     }
 
-    function defaultERC20Permit(address token0, uint256 nonce, SigType sigType) internal view returns (Permit memory) {
-        return Permit({
+    function defaultERC20Permit(address token0, uint256 nonce, SigType sigType)
+        internal
+        view
+        returns (PermitTransfer memory)
+    {
+        return PermitTransfer({
             sigType: sigType,
             token: token0,
             spender: address(this),
