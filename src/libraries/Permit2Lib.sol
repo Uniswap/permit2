@@ -3,15 +3,15 @@ pragma solidity 0.8.17;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
-import {Approve2} from "./Approve2.sol";
+import {Permit2} from "../Permit2.sol";
 
 // TODO: Clobber slots instead of using the free memory pointer.
 
-/// @title Approve2Lib
+/// @title Permit2Lib
 /// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Enables efficient transfers and EIP-2612/DAI
-/// permits for any token by falling back to Approve2.
-library Approve2Lib {
+/// permits for any token by falling back to Permit2.
+library Permit2Lib {
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -19,8 +19,8 @@ library Approve2Lib {
     /// @dev The unique EIP-712 domain domain separator for the DAI token contract.
     bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
-    /// @dev The address of the Approve2 contract the library will use.
-    bytes32 internal constant APPROVE2_ADDRESS = 0x000000000000000000000000ce71065d4017f316ec606fe4422e11eb2c47c246;
+    /// @dev The address of the Permit2 contract the library will use.
+    bytes32 internal constant PERMIT2_ADDRESS = 0x000000000000000000000000ce71065d4017f316ec606fe4422e11eb2c47c246;
 
     /*//////////////////////////////////////////////////////////////
                              TRANSFER LOGIC
@@ -46,7 +46,7 @@ library Approve2Lib {
             mstore(64, to) // Append the "to" argument.
             mstore(96, amount) // Append the "amount" argument.
 
-            // If the call to transferFrom fails for any reason, try using Approve2.
+            // If the call to transferFrom fails for any reason, try using Permit2.
             if iszero(
                 and(
                     // Set success to whether the call reverted, if not we check it either
@@ -61,14 +61,14 @@ library Approve2Lib {
                 )
             ) {
                 /*//////////////////////////////////////////////////////////////
-                                      FALLBACK TO APPROVE2
+                                      FALLBACK TO Permit2
                 //////////////////////////////////////////////////////////////*/
 
                 // We'll write some calldata to this slot below, but restore it later.
                 let memSlot128 := mload(128)
 
                 // Write the abi-encoded calldata into memory, beginning with the function selector.
-                mstore(0, 0x15dacbea) // 0x15dacbea is the function selector for Approve2's transferFrom.
+                mstore(0, 0x15dacbea) // 0x15dacbea is the function selector for Permit2's transferFrom.
                 mstore(32, token) // Append the "token" argument.
                 mstore(64, from) // Append the "from" argument.
                 mstore(96, to) // Append the "to" argument.
@@ -76,7 +76,7 @@ library Approve2Lib {
 
                 // We use 0 and 28 because our calldata begins with the last 4 bytes of the first slot.
                 // We use 132 because the length of our generated calldata totals up like so: 4 + 32 * 4.
-                if iszero(call(gas(), APPROVE2_ADDRESS, 0, 28, 132, 0, 0)) {
+                if iszero(call(gas(), PERMIT2_ADDRESS, 0, 28, 132, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())
@@ -190,10 +190,10 @@ library Approve2Lib {
             }
 
             // If the initial DOMAIN_SEPARATOR call on the token failed or a
-            // subsequent call to permit failed, fall back to using Approve2.
+            // subsequent call to permit failed, fall back to using Permit2.
             if iszero(success) {
                 /*//////////////////////////////////////////////////////////////
-                                     APPROVE2 FALLBACK LOGIC
+                                     Permit2 FALLBACK LOGIC
                 //////////////////////////////////////////////////////////////*/
 
                 // Write the abi-encoded calldata into memory, beginning with the function selector.
@@ -208,7 +208,7 @@ library Approve2Lib {
                 mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
 
                 // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
-                if iszero(call(gas(), APPROVE2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
+                if iszero(call(gas(), PERMIT2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
                     // Bubble up any revert reasons returned.
                     returndatacopy(0, 0, returndatasize())
                     revert(0, returndatasize())

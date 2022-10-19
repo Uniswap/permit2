@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {Signature} from "../Permit2.sol";
+import {Signature} from "../Permit2Utils.sol";
 import {IERC1271} from "../interfaces/IERC1271.sol";
 
 library SignatureRecovery {
