@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 import {Vm} from "forge-std/Vm.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
-import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Signature, Permit, SigType, PermitBatch} from "../../src/Permit2.sol";
 
 contract PermitSignature {
