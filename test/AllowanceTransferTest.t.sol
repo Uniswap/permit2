@@ -11,7 +11,8 @@ import {
     InvalidSignature,
     SignatureExpired,
     InvalidNonce,
-    PackedAllowance
+    PackedAllowance,
+    ExcessiveInvalidation
 } from "../src/Permit2Utils.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 
@@ -201,5 +202,34 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
         vm.expectRevert(InvalidSignature.selector);
         permit2.permit(permit, from, sig);
+    }
+
+    function testInvalidateNonces() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        // just need to invalidate 1 nonce on from address
+        vm.prank(from);
+        permit2.invalidateNonces(address(token0), address(this), 1);
+        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce, 1);
+
+        vm.expectRevert(InvalidSignature.selector);
+        permit2.permit(permit, from, sig);
+    }
+
+    function testExcessiveInvalidation() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint32 numInvalidate = type(uint16).max;
+        vm.startPrank(from);
+        vm.expectRevert(ExcessiveInvalidation.selector);
+        permit2.invalidateNonces(address(token0), address(this), numInvalidate + 1);
+        vm.stopPrank();
+
+        permit2.permit(permit, from, sig);
+        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce, 1);
     }
 }

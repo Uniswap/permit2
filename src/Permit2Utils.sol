@@ -47,6 +47,7 @@ error SignatureExpired();
 error AllowanceExpired();
 error NotSpender();
 error InvalidAmount();
+error ExcessiveInvalidation();
 error SignedDetailsLengthMismatch();
 error AmountsLengthMismatch();
 error RecipientLengthMismatch();

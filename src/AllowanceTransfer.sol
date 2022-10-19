@@ -12,7 +12,8 @@ import {
     InvalidSignature,
     LengthMismatch,
     InvalidNonce,
-    InsufficentAllowance
+    InsufficentAllowance,
+    ExcessiveInvalidation
 } from "./Permit2Utils.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 import "forge-std/console2.sol";
@@ -159,5 +160,12 @@ contract AllowanceTransfer is DomainSeparator {
                 allowance[msg.sender][tokens[i]][spenders[i]].amount = 0;
             }
         }
+    }
+
+    function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
+        if (amountToInvalidate > type(uint16).max) {
+            revert ExcessiveInvalidation();
+        }
+        allowance[msg.sender][token][spender].nonce += amountToInvalidate;
     }
 }
