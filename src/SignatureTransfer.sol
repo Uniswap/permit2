@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {PermitTransfer, Signature, PermitBatch, SigType, InvalidNonce} from "./Permit2Utils.sol";
+import {
+    PermitTransfer,
+    PermitBatch,
+    Signature,
+    SigType,
+    InvalidNonce,
+    InvalidSignature,
+    LengthMismatch,
+    NotSpender,
+    InvalidAmount,
+    SignatureExpired
+} from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 
 contract SignatureTransfer is DomainSeparator {
-    error NotSpender();
-    error DeadlinePassed();
-    error InvalidAmount();
-    error InvalidSignature();
-    error LengthMismatch();
-
     /// @dev sigType field distinguishes between using unordered nonces or ordered nonces for replay protection
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
         "PermitTransferFrom(uint8 sigType,address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
@@ -20,6 +25,8 @@ contract SignatureTransfer is DomainSeparator {
     bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
         "PermitBatchTransferFrom(uint8 sigType,address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
+    mapping(address => uint256) public nonces;
+    mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
@@ -130,6 +137,19 @@ contract SignatureTransfer is DomainSeparator {
         }
     }
 
+    /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces.
+    /// @dev The first 248 bits of the nonce value is the index of the desired bitmap.
+    /// The last 8 bits of the nonce value is the position of the bit in the bitmap.
+    function bitmapPositions(uint256 nonce) public pure returns (uint248 wordPos, uint8 bitPos) {
+        wordPos = uint248(nonce >> 8);
+        bitPos = uint8(nonce & 255);
+    }
+
+    /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
+    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public {
+        nonceBitmap[msg.sender][wordPos] |= mask;
+    }
+
     function _validateBatchPermit(PermitBatch memory permit, address[] memory to, uint256[] memory amounts)
         internal
         view
@@ -145,7 +165,7 @@ contract SignatureTransfer is DomainSeparator {
             revert NotSpender();
         }
         if (block.timestamp > permit.deadline) {
-            revert DeadlinePassed();
+            revert SignatureExpired();
         }
 
         unchecked {
@@ -162,16 +182,13 @@ contract SignatureTransfer is DomainSeparator {
             revert NotSpender();
         }
         if (block.timestamp > deadline) {
-            revert DeadlinePassed();
+            revert SignatureExpired();
         }
 
         if (amount > maxAmount) {
             revert InvalidAmount();
         }
     }
-
-    mapping(address => uint256) public nonces;
-    mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
     /// @notice Checks whether a nonce is taken. Then sets an increasing nonce on the from address.
     function _useNonce(address from, uint256 nonce) internal {
@@ -191,18 +208,5 @@ contract SignatureTransfer is DomainSeparator {
             revert InvalidNonce();
         }
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
-    }
-
-    /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces.
-    /// @dev The first 248 bits of the nonce value is the index of the desired bitmap.
-    /// The last 8 bits of the nonce value is the position of the bit in the bitmap.
-    function bitmapPositions(uint256 nonce) public pure returns (uint248 wordPos, uint8 bitPos) {
-        wordPos = uint248(nonce >> 8);
-        bitPos = uint8(nonce & 255);
-    }
-
-    /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
-    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public {
-        nonceBitmap[msg.sender][wordPos] |= mask;
     }
 }

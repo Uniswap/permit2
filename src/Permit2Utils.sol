@@ -48,9 +48,10 @@ enum SigType {
 }
 
 error InvalidSignature();
-error DeadlinePassed();
 error LengthMismatch();
 error InvalidNonce();
 error InsufficentAllowance();
 error SignatureExpired();
 error AllowanceExpired();
+error NotSpender();
+error InvalidAmount();

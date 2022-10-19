@@ -65,7 +65,6 @@ contract AllowanceTransfer is DomainSeparator {
 
         // Use current nonce. Incremented below.
         uint32 nonce = allowance[owner][signed.token][signed.spender].nonce;
-        console2.log(nonce);
 
         // Recover the signer address from the signature.
         signer = ecrecover(
@@ -95,13 +94,12 @@ contract AllowanceTransfer is DomainSeparator {
         if (signer == address(0) || signer != owner) {
             revert InvalidSignature();
         }
-
+        // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
         uint64 expiration = signed.expiration == 0 ? uint64(block.timestamp) : signed.expiration;
-        PackedAllowance memory allowed =
-            PackedAllowance({amount: signed.amount, expiration: expiration, nonce: nonce + 1});
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
-        allowance[signer][signed.token][signed.spender] = allowed;
+        allowance[signer][signed.token][signed.spender] =
+            PackedAllowance({amount: signed.amount, expiration: expiration, nonce: nonce + 1});
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -127,7 +125,9 @@ contract AllowanceTransfer is DomainSeparator {
             if (amount > maxAmount) {
                 revert InsufficentAllowance();
             } else {
-                allowed.amount = maxAmount - amount;
+                unchecked {
+                    allowed.amount = maxAmount - amount;
+                }
                 allowance[from][token][msg.sender] = allowed;
             }
         }
