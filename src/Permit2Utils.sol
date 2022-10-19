@@ -11,7 +11,6 @@ struct Permit {
 }
 
 struct PermitTransfer {
-    SigType sigType;
     address token;
     address spender;
     uint256 maxAmount;
@@ -21,7 +20,6 @@ struct PermitTransfer {
 }
 
 struct PermitBatch {
-    SigType sigType;
     address[] tokens;
     address spender;
     uint256[] maxAmounts;
@@ -40,11 +38,6 @@ struct Signature {
     uint8 v;
     bytes32 r;
     bytes32 s;
-}
-
-enum SigType {
-    ORDERED,
-    UNORDERED
 }
 
 error InvalidSignature();
