@@ -29,6 +29,12 @@ struct PermitBatch {
     bytes32 witness;
 }
 
+struct PackedAllowance {
+    uint160 amount;
+    uint64 expiration;
+    uint32 nonce;
+}
+
 struct Signature {
     uint8 v;
     bytes32 r;

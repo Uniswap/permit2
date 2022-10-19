@@ -41,5 +41,4 @@ contract DomainSeparator {
     {
         return keccak256(abi.encode(typeHash, nameHash, versionHash, block.chainid, address(this)));
     }
-
 }

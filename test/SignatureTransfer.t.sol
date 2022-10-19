@@ -8,9 +8,7 @@ import {PermitSignature} from "./utils/PermitSignature.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {Permit2} from "../src/Permit2.sol";
-import {
-    PermitTransfer, PermitBatch, SigType, Signature, LengthMismatch, InvalidNonce
-} from "../src/base/Permit2Utils.sol";
+import {PermitTransfer, PermitBatch, SigType, Signature, LengthMismatch, InvalidNonce} from "../src/Permit2Utils.sol";
 import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 
 // forge test --match-contract SignatureTransfer

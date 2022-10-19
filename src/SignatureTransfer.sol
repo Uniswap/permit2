@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {PermitTransfer, Signature, PermitBatch, SigType, InvalidNonce} from "./base/Permit2Utils.sol";
+import {PermitTransfer, Signature, PermitBatch, SigType, InvalidNonce} from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {DomainSeparator} from "./base/DomainSeparator.sol";
+import {DomainSeparator} from "./DomainSeparator.sol";
 
 contract SignatureTransfer is DomainSeparator {
     error NotSpender();

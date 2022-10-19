@@ -30,9 +30,9 @@ contract TokenProvider {
         token0.mint(from, MINT_AMOUNT_ERC20);
         token1.mint(from, MINT_AMOUNT_ERC20);
         // mint with id 1
-        nft1.mint(from, 1);
-        // mint with id 2
-        nft2.mint(from, 2);
+        // nft1.mint(from, 1);
+        // // mint with id 2
+        // nft2.mint(from, 2);
         // mint 10 with id 1
         nft3.mint(from, 1, MINT_AMOUNT_ERC1155);
         // mint 10 with id 2
@@ -43,8 +43,8 @@ contract TokenProvider {
         vm.startPrank(owner);
         token0.approve(spender, type(uint256).max);
         token1.approve(spender, type(uint256).max);
-        nft1.approve(spender, 1);
-        nft2.approve(spender, 2);
+        // nft1.approve(spender, 1);
+        // nft2.approve(spender, 2);
         nft3.setApprovalForAll(spender, true);
         nft4.setApprovalForAll(spender, true);
         vm.stopPrank();
