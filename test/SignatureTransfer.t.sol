@@ -8,10 +8,18 @@ import {PermitSignature} from "./utils/PermitSignature.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {Permit2} from "../src/Permit2.sol";
-import {PermitTransfer, PermitBatch, Signature, LengthMismatch, InvalidNonce} from "../src/Permit2Utils.sol";
+import {
+    PermitTransfer,
+    PermitBatchTransfer,
+    Signature,
+    LengthMismatch,
+    InvalidNonce,
+    RecipientLengthMismatch,
+    AmountsLengthMismatch
+} from "../src/Permit2Utils.sol";
 import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 
-// forge test --match-contract SignatureTransfer
+// forge test --match-contract SignatureTransferf
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     using AddressBuilder for address[];
     using AmountBuilder for uint256[];
@@ -25,8 +33,11 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     address address0 = address(0x0);
     address address2 = address(0x2);
 
+    bytes32 DOMAIN_SEPARATOR;
+
     function setUp() public {
         permit2 = new Permit2();
+        DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
 
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
@@ -40,7 +51,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     function testPermitTransferFrom() public {
         uint256 nonce = 0;
         PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
-        Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
@@ -55,7 +66,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         uint256 nonce = 0;
         // signed spender is address(this)
         PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
-        Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceAddr0 = token0.balanceOf(address0);
@@ -73,7 +84,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     function testPermitTransferFromInvalidNonce() public {
         uint256 nonce = 0;
         PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
-        Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permitTransferFrom(permit, address2, defaultAmount, sig);
 
@@ -84,8 +95,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     function testPermitBatchTransferFrom() public {
         uint256 nonce = 0;
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
@@ -106,8 +117,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     function testPermitBatchTransferFromSingleRecipient() public {
         uint256 nonce = 0;
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(1, address(address2));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
@@ -129,8 +140,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         uint256 nonce = 0;
         // signed spender is address(this)
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom0 = token0.balanceOf(from);
         uint256 startBalanceFrom1 = token1.balanceOf(from);
@@ -152,8 +163,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom0 = token0.balanceOf(from);
         uint256 startBalanceFrom1 = token1.balanceOf(from);
@@ -175,41 +186,41 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(1, address(this));
         uint256[] memory amounts = AmountBuilder.fill(1, defaultAmount);
 
-        vm.expectRevert(LengthMismatch.selector);
+        vm.expectRevert(AmountsLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, to, amounts, sig);
     }
 
-    function testPermitBatchTransferInvalidMultiAmt() public {
+    function testPermitBatchTransferInvalidAmountsLength() public {
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(2, address(this));
         uint256[] memory amounts = AmountBuilder.fill(3, defaultAmount);
 
-        vm.expectRevert(LengthMismatch.selector);
+        vm.expectRevert(AmountsLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, to, amounts, sig);
     }
 
-    function testPermitBatchTransferInvalidMultiAddr() public {
+    function testPermitBatchTransferInvalidRecipientsLength() public {
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        Signature memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(3, address(this));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
 
-        vm.expectRevert(LengthMismatch.selector);
+        vm.expectRevert(RecipientLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, to, amounts, sig);
     }
 }
