@@ -35,7 +35,8 @@ abstract contract SignatureTransfer {
     {
         _validatePermit(permit.spender, permit.deadline, permit.maxAmount, amount);
 
-        signer = sig.recover(keccak256(
+        signer = sig.recover(
+            keccak256(
                 abi.encodePacked(
                     "\x19\x01",
                     DOMAIN_SEPARATOR(),
@@ -52,7 +53,8 @@ abstract contract SignatureTransfer {
                         )
                     )
                 )
-            ));
+            )
+        );
 
         if (permit.sigType == SigType.ORDERED) {
             _useNonce(signer, permit.nonce);
