@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Vm} from "forge-std/Vm.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
-import {Signature, Permit, PermitTransfer, PermitBatch} from "../../src/Permit2Utils.sol";
+import {Signature, Permit, PermitTransfer, PermitBatchTransfer} from "../../src/Permit2Utils.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit2} from "../../src/Permit2.sol";
 
@@ -62,7 +62,7 @@ contract PermitSignature {
                         _PERMIT_TRANSFER_TYPEHASH,
                         permit.token,
                         permit.spender,
-                        permit.maxAmount,
+                        permit.signedAmount,
                         permit.nonce,
                         permit.deadline,
                         permit.witness
@@ -75,10 +75,12 @@ contract PermitSignature {
         sig = Signature(v, r, s);
     }
 
-    function getPermitBatchSignature(Vm vm, PermitBatch memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (Signature memory sig)
-    {
+    function getPermitBatchSignature(
+        Vm vm,
+        PermitBatchTransfer memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (Signature memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -88,7 +90,7 @@ contract PermitSignature {
                         _PERMIT_BATCH_TRANSFER_TYPEHASH,
                         keccak256(abi.encodePacked(permit.tokens)),
                         permit.spender,
-                        keccak256(abi.encodePacked(permit.maxAmounts)),
+                        keccak256(abi.encodePacked(permit.signedAmounts)),
                         permit.nonce,
                         permit.deadline,
                         permit.witness
@@ -120,7 +122,7 @@ contract PermitSignature {
         return PermitTransfer({
             token: token0,
             spender: address(this),
-            maxAmount: 10 ** 18,
+            signedAmount: 10 ** 18,
             nonce: nonce,
             deadline: block.timestamp + 100,
             witness: 0x0
@@ -130,16 +132,16 @@ contract PermitSignature {
     function defaultERC20PermitMultiple(address[] memory tokens, uint256 nonce)
         internal
         view
-        returns (PermitBatch memory)
+        returns (PermitBatchTransfer memory)
     {
         uint256[] memory maxAmounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
             maxAmounts[i] = 10 ** 18;
         }
-        return PermitBatch({
+        return PermitBatchTransfer({
             tokens: tokens,
             spender: address(this),
-            maxAmounts: maxAmounts,
+            signedAmounts: maxAmounts,
             nonce: nonce,
             deadline: block.timestamp + 100,
             witness: 0x0
