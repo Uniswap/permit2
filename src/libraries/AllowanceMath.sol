@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import "forge-std/console2.sol";
 
 library AllowanceMath {
+    // TODO test struct
     // 160    | 64        | 32
     // amount | timestamp | nonce
 

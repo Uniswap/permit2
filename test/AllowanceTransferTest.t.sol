@@ -44,7 +44,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
 
-        // Use this address for clean writes in setUp so we can gas test dirty writes later.
+        // Use this address to gas test dirty writes later.
         fromPrivateKeyDirty = 0x56785678;
         fromDirty = vm.addr(fromPrivateKeyDirty);
 
@@ -57,14 +57,12 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         setTestTokenApprovals(vm, fromDirty, address(permit2));
 
         // dirty the nonce for fromDirty address
-        vm.prank(address(permit2));
         permit2.setAllowance(fromDirty, address(token0), address(this), 1);
 
         // ensure address3 has some balance of token0 for dirty sstore on transfer
         token0.mint(address3, defaultAmount);
     }
 
-    // test setting allowance
     function testSetAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
         Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
@@ -72,6 +70,16 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.permit(permit, from, sig);
 
         (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+    }
+
+    function testSetAllowanceDirtyWrite() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
+        Signature memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, permit2.DOMAIN_SEPARATOR());
+
+        permit2.permit(permit, fromDirty, sig);
+
+        (uint160 amount,,) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(amount, defaultAmount);
     }
 
