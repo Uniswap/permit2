@@ -48,3 +48,4 @@ error SignatureExpired();
 error AllowanceExpired();
 error NotSpender();
 error InvalidAmount();
+error ExcessiveInvalidation();
