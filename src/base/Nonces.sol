@@ -9,7 +9,7 @@ contract Nonces {
 
     /// @notice Checks whether a nonce is taken. Then sets an increasing nonce on the from address.
     function _useNonce(address from, uint256 nonce) internal {
-        if (nonce < nonces[from]) {
+        if (nonce != nonces[from]) {
             revert InvalidNonce();
         }
         unchecked {

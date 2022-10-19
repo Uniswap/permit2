@@ -101,12 +101,13 @@ contract PermitSignature {
         sig = Signature(v, r, s);
     }
 
+    // an average case where the allowance is set to the max
     function defaultERC20Permit(address token0, uint256 nonce, SigType sigType) internal view returns (Permit memory) {
         return Permit({
             sigType: sigType,
             token: token0,
             spender: address(this),
-            maxAmount: 10 ** 18,
+            maxAmount: type(uint256).max,
             nonce: nonce,
             deadline: block.timestamp + 100,
             witness: 0x0

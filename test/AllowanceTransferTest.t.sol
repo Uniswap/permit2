@@ -24,6 +24,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     // has some balance of token0
     address address3 = address(3);
 
+    uint256 MAX_APPROVAL = type(uint256).max;
     uint256 defaultAmount = 10 ** 18;
 
     function setUp() public {
@@ -60,10 +61,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.permit(permit, from, sig);
 
         uint256 allowance = permit2.allowance(from, address(token0), address(this));
-        assertEq(allowance, defaultAmount);
+        assertEq(allowance, MAX_APPROVAL);
     }
 
-    // clean sstore on nonce, clean sstore on transfer
+    // clean sstore on nonce, clean sstore on transfer, no refund bc allowance is still > transferred amount
     function testSetAllowanceTransferCleanNonceCleanTransfer() public {
         uint256 nonce = 0;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
@@ -78,27 +79,28 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.permit(permit, from, sig);
 
         uint256 allowance = permit2.allowance(from, address(token0), address(this));
-        assertEq(allowance, defaultAmount);
+        assertEq(allowance, MAX_APPROVAL);
 
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
     }
 
+    // dirty sstore on nonce
     function testSetAllowanceDirtyNonce() public {
-        uint256 nonce = 2;
+        uint256 nonce = 1;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
         Signature memory sig = getPermitSignature(vm, permit, fromPrivateKeyDirty, permit2.DOMAIN_SEPARATOR());
 
         permit2.permit(permit, fromDirty, sig);
 
         uint256 allowance = permit2.allowance(fromDirty, address(token0), address(this));
-        assertEq(allowance, defaultAmount);
+        assertEq(allowance, MAX_APPROVAL);
     }
 
-    // dirty sstore on nonce, dirty sstore on transfer
+    // dirty sstore on nonce, dirty sstore on transfer, no refund bc allowance > transferred amount
     function testSetAllowanceTransferDirtyNonceDirtynTransfer() public {
-        uint256 nonce = 2;
+        uint256 nonce = 1;
         Permit memory permit = defaultERC20Permit(address(token0), nonce, SigType.ORDERED);
         Signature memory sig = getPermitSignature(vm, permit, fromPrivateKeyDirty, permit2.DOMAIN_SEPARATOR());
 
@@ -110,7 +112,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.permit(permit, fromDirty, sig);
 
         uint256 allowance = permit2.allowance(fromDirty, address(token0), address(this));
-        assertEq(allowance, defaultAmount);
+        assertEq(allowance, MAX_APPROVAL);
 
         permit2.transferFrom(address(token0), fromDirty, address3, defaultAmount);
         assertEq(token0.balanceOf(fromDirty), startBalanceFrom - defaultAmount);
@@ -125,7 +127,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.permit(permit, from, sig);
 
         uint256 allowance = permit2.allowance(from, address(token0), address(this));
-        assertEq(allowance, defaultAmount);
+        assertEq(allowance, MAX_APPROVAL);
     }
 
     // test setting allowance with ordered nonce and transfer
@@ -141,7 +143,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.permit(permit, from, sig);
 
         uint256 allowance = permit2.allowance(from, address(token0), address(this));
-        assertEq(allowance, defaultAmount);
+        assertEq(allowance, MAX_APPROVAL);
 
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
