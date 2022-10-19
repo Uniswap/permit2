@@ -6,5 +6,5 @@
   "files.associations": {
     ".gas-snapshot": "julia"
   },
-  "editor.formatOnSave": false
+  "editor.formatOnSave": true
 }
