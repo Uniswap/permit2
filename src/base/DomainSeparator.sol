@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity 0.8.17;
 
 /// @notice caching domain separator
 /// @dev maintains cross-chain replay protection in the event of a fork

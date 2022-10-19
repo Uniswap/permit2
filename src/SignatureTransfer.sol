@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit, Signature, PermitBatch, SigType} from "./Permit2.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
