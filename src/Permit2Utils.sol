@@ -46,7 +46,6 @@ enum SigType {
     UNORDERED
 }
 
-error InvalidSignature();
 error DeadlinePassed();
 error LengthMismatch();
 error InvalidNonce();
