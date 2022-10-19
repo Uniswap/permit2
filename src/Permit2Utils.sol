@@ -7,7 +7,6 @@ struct Permit {
     uint160 amount;
     uint64 expiration;
     uint256 sigDeadline;
-    bytes32 witness;
 }
 
 struct PermitTransfer {

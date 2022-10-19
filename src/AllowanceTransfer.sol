@@ -23,9 +23,8 @@ import "forge-std/console2.sol";
 contract AllowanceTransfer is DomainSeparator {
     using SafeTransferLib for ERC20;
 
-    // TODO kill witness?
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline,bytes32 witness)"
+        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -80,8 +79,7 @@ contract AllowanceTransfer is DomainSeparator {
                             signed.amount,
                             signed.expiration,
                             nonce,
-                            signed.sigDeadline,
-                            signed.witness
+                            signed.sigDeadline
                         )
                     )
                 )

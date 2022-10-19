@@ -9,7 +9,7 @@ import {Permit2} from "../../src/Permit2.sol";
 
 contract PermitSignature {
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline,bytes32 witness)"
+        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
 
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
@@ -36,8 +36,7 @@ contract PermitSignature {
                         permit.amount,
                         permit.expiration,
                         nonce,
-                        permit.sigDeadline,
-                        permit.witness
+                        permit.sigDeadline
                     )
                 )
             )
@@ -113,8 +112,7 @@ contract PermitSignature {
             spender: address(this),
             amount: amount,
             expiration: expiration,
-            sigDeadline: block.timestamp + 100,
-            witness: 0x0
+            sigDeadline: block.timestamp + 100
         });
     }
 
