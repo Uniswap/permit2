@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+import {SignatureRecovery} from "./libraries/SignatureRecovery.sol";
 import {
     PermitTransfer,
     PermitBatchTransfer,
@@ -19,6 +20,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 
 contract SignatureTransfer is DomainSeparator {
+    using SignatureRecovery for Signature;
+
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
         "PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
@@ -43,19 +46,25 @@ contract SignatureTransfer is DomainSeparator {
             revert InvalidAmount();
         }
 
-        bytes32 hashedPermit = keccak256(
-            abi.encode(
-                _PERMIT_TRANSFER_TYPEHASH,
-                permit.token,
-                permit.spender,
-                permit.signedAmount,
-                permit.nonce,
-                permit.deadline,
-                permit.witness
+        signer = sig.recover(
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR(),
+                    keccak256(
+                        abi.encode(
+                            _PERMIT_TRANSFER_TYPEHASH,
+                            permit.token,
+                            permit.spender,
+                            permit.signedAmount,
+                            permit.nonce,
+                            permit.deadline,
+                            permit.witness
+                        )
+                    )
+                )
             )
         );
-
-        signer = recover(hashedPermit, sig.v, sig.r, sig.s);
 
         _useUnorderedNonce(signer, permit.nonce);
 
@@ -82,19 +91,25 @@ contract SignatureTransfer is DomainSeparator {
             }
         }
 
-        bytes32 hashedPermit = keccak256(
-            abi.encode(
-                _PERMIT_BATCH_TRANSFER_TYPEHASH,
-                keccak256(abi.encodePacked(permit.tokens)),
-                permit.spender,
-                keccak256(abi.encodePacked(permit.signedAmounts)),
-                permit.nonce,
-                permit.deadline,
-                permit.witness
+        signer = sig.recover(
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR(),
+                    keccak256(
+                        abi.encode(
+                            _PERMIT_BATCH_TRANSFER_TYPEHASH,
+                            keccak256(abi.encodePacked(permit.tokens)),
+                            permit.spender,
+                            keccak256(abi.encodePacked(permit.signedAmounts)),
+                            permit.nonce,
+                            permit.deadline,
+                            permit.witness
+                        )
+                    )
+                )
             )
         );
-
-        signer = recover(hashedPermit, sig.v, sig.r, sig.s);
 
         _useUnorderedNonce(signer, permit.nonce);
 
@@ -137,14 +152,6 @@ contract SignatureTransfer is DomainSeparator {
             revert InvalidNonce();
         }
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
-    }
-
-    function recover(bytes32 hashedPermit, uint8 v, bytes32 r, bytes32 s) public view returns (address signer) {
-        signer = ecrecover(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), hashedPermit)), v, r, s);
-
-        if (signer == address(0)) {
-            revert InvalidSignature();
-        }
     }
 
     function _validatePermit(address spender, uint256 deadline) internal view {

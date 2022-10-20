@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import {SignatureRecovery} from "./libraries/SignatureRecovery.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {
@@ -9,7 +10,6 @@ import {
     Signature,
     SignatureExpired,
     AllowanceExpired,
-    InvalidSignature,
     LengthMismatch,
     InvalidNonce,
     InsufficentAllowance,
@@ -22,7 +22,10 @@ import "forge-std/console2.sol";
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
 contract AllowanceTransfer is DomainSeparator {
+    using SignatureRecovery for Signature;
     using SafeTransferLib for ERC20;
+
+    error SignerIsNotOwner();
 
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
@@ -67,7 +70,7 @@ contract AllowanceTransfer is DomainSeparator {
         uint32 nonce = allowance[owner][signed.token][signed.spender].nonce;
 
         // Recover the signer address from the signature.
-        signer = ecrecover(
+        signer = sig.recover(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -84,14 +87,11 @@ contract AllowanceTransfer is DomainSeparator {
                         )
                     )
                 )
-            ),
-            sig.v,
-            sig.r,
-            sig.s
+            )
         );
 
-        if (signer == address(0) || signer != owner) {
-            revert InvalidSignature();
+        if (signer != owner) {
+            revert SignerIsNotOwner();
         }
         // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
         uint64 expiration = signed.expiration == 0 ? uint64(block.timestamp) : signed.expiration;

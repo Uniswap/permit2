@@ -2,6 +2,9 @@
 solc = "0.8.17"
 bytecode_hash = "none"
 optimizer_runs = 1000000
-
-[profile.intense]
+no_match_path = "*/integration/*"
 fuzz_runs = 10000
+
+[profile.integration]
+no_match_path = ""
+match_path = "*/integration/*"

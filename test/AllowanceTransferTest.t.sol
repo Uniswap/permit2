@@ -2,7 +2,6 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "forge-std/console2.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {
@@ -15,6 +14,7 @@ import {
     ExcessiveInvalidation
 } from "../src/Permit2Utils.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
+import {AllowanceTransfer} from "../src/AllowanceTransfer.sol";
 
 import {MockPermit2} from "./mocks/MockPermit2.sol";
 
@@ -130,7 +130,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
         Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        vm.expectRevert(InvalidSignature.selector);
+        vm.expectRevert(AllowanceTransfer.SignerIsNotOwner.selector);
         permit.spender = address0;
         permit2.permit(permit, from, sig);
     }
@@ -200,7 +200,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
 
-        vm.expectRevert(InvalidSignature.selector);
+        vm.expectRevert(AllowanceTransfer.SignerIsNotOwner.selector);
         permit2.permit(permit, from, sig);
     }
 
@@ -214,7 +214,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
 
-        vm.expectRevert(InvalidSignature.selector);
+        vm.expectRevert(AllowanceTransfer.SignerIsNotOwner.selector);
         permit2.permit(permit, from, sig);
     }
 
