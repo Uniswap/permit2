@@ -20,6 +20,8 @@ import {MockPermit2} from "./mocks/MockPermit2.sol";
 contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     using stdStorage for StdStorage;
 
+    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+
     MockPermit2 permit2;
 
     address from;
@@ -218,6 +220,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
         // just need to invalidate 1 nonce on from address
         vm.prank(from);
+        vm.expectEmit(true, true, false, true);
+        emit InvalidateNonces(from, 1, address(token0), address(this));
         permit2.invalidateNonces(address(token0), address(this), 1);
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
