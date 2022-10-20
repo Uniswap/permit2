@@ -1,6 +1,8 @@
 [profile.default]
 solc = "0.8.17"
 bytecode_hash = "none"
+optimizer = true
+via_ir = true
 optimizer_runs = 1000000
 no_match_path = "*/integration/*"
 fuzz_runs = 10000
