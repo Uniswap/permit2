@@ -4,14 +4,17 @@ pragma solidity 0.8.17;
 import {SignatureRecovery} from "./libraries/SignatureRecovery.sol";
 import {
     PermitTransfer,
-    PermitBatch,
+    PermitBatchTransfer,
     Signature,
     InvalidNonce,
     InvalidSignature,
     LengthMismatch,
     NotSpender,
     InvalidAmount,
-    SignatureExpired
+    SignatureExpired,
+    SignedDetailsLengthMismatch,
+    AmountsLengthMismatch,
+    RecipientLengthMismatch
 } from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
@@ -31,12 +34,17 @@ contract SignatureTransfer is DomainSeparator {
 
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
-    /// Can use ordered or unordered nonces for replay protection.
-    function permitTransferFrom(PermitTransfer calldata permit, address to, uint256 amount, Signature calldata sig)
-        public
-        returns (address signer)
-    {
-        _validatePermit(permit.spender, permit.deadline, permit.maxAmount, amount);
+    function permitTransferFrom(
+        PermitTransfer calldata permit,
+        address to,
+        uint256 requestedAmount,
+        Signature calldata sig
+    ) public returns (address signer) {
+        _validatePermit(permit.spender, permit.deadline);
+
+        if (requestedAmount > permit.signedAmount) {
+            revert InvalidAmount();
+        }
 
         signer = sig.recover(
             keccak256(
@@ -48,7 +56,7 @@ contract SignatureTransfer is DomainSeparator {
                             _PERMIT_TRANSFER_TYPEHASH,
                             permit.token,
                             permit.spender,
-                            permit.maxAmount,
+                            permit.signedAmount,
                             permit.nonce,
                             permit.deadline,
                             permit.witness
@@ -60,20 +68,28 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(signer, permit.nonce);
 
-        if (to == address(0)) {
-            ERC20(permit.token).transferFrom(signer, permit.spender, amount);
-        } else {
-            ERC20(permit.token).transferFrom(signer, to, amount);
-        }
+        // send to spender if the inputted to address is 0
+        address recipient = to == address(0) ? permit.spender : to;
+        ERC20(permit.token).transferFrom(signer, recipient, requestedAmount);
     }
 
     function permitBatchTransferFrom(
-        PermitBatch calldata permit,
+        PermitBatchTransfer calldata permit,
         address[] calldata to,
-        uint256[] calldata amounts,
+        uint256[] calldata requestedAmounts,
         Signature calldata sig
     ) public returns (address signer) {
-        _validateBatchPermit(permit, to, amounts);
+        _validatePermit(permit.spender, permit.deadline);
+
+        _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
+
+        unchecked {
+            for (uint256 i = 0; i < permit.tokens.length; ++i) {
+                if (requestedAmounts[i] > permit.signedAmounts[i]) {
+                    revert InvalidAmount();
+                }
+            }
+        }
 
         signer = sig.recover(
             keccak256(
@@ -85,7 +101,7 @@ contract SignatureTransfer is DomainSeparator {
                             _PERMIT_BATCH_TRANSFER_TYPEHASH,
                             keccak256(abi.encodePacked(permit.tokens)),
                             permit.spender,
-                            keccak256(abi.encodePacked(permit.maxAmounts)),
+                            keccak256(abi.encodePacked(permit.signedAmounts)),
                             permit.nonce,
                             permit.deadline,
                             permit.witness
@@ -97,18 +113,19 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(signer, permit.nonce);
 
+        //TODO better way to check these cases? this hurts my eyes
         if (to.length == 1) {
             // send all tokens to the same recipient address if only one is specified
-            // address recipient = to[0];
+            address recipient = to[0];
             unchecked {
                 for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(signer, to[0], amounts[i]);
+                    ERC20(permit.tokens[i]).transferFrom(signer, recipient, requestedAmounts[i]);
                 }
             }
         } else {
             unchecked {
                 for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(signer, to[i], amounts[i]);
+                    ERC20(permit.tokens[i]).transferFrom(signer, to[i], requestedAmounts[i]);
                 }
             }
         }
@@ -137,43 +154,29 @@ contract SignatureTransfer is DomainSeparator {
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }
 
-    function _validateBatchPermit(PermitBatch memory permit, address[] memory to, uint256[] memory amounts)
-        internal
-        view
-    {
-        bool validMultiAddr = to.length == permit.tokens.length && amounts.length == permit.tokens.length;
-        bool validSingleAddr = to.length == 1 && amounts.length == permit.tokens.length;
-
-        if (!(validMultiAddr || validSingleAddr)) {
-            revert LengthMismatch();
-        }
-
-        if (msg.sender != permit.spender) {
-            revert NotSpender();
-        }
-        if (block.timestamp > permit.deadline) {
-            revert SignatureExpired();
-        }
-
-        unchecked {
-            for (uint256 i = 0; i < amounts.length; ++i) {
-                if (amounts[i] > permit.maxAmounts[i]) {
-                    revert InvalidAmount();
-                }
-            }
-        }
-    }
-
-    function _validatePermit(address spender, uint256 deadline, uint256 maxAmount, uint256 amount) internal view {
+    function _validatePermit(address spender, uint256 deadline) internal view {
         if (msg.sender != spender) {
             revert NotSpender();
         }
         if (block.timestamp > deadline) {
             revert SignatureExpired();
         }
+    }
 
-        if (amount > maxAmount) {
-            revert InvalidAmount();
+    function _validateInputLengths(
+        uint256 signedTokensLen,
+        uint256 recipientLen,
+        uint256 signedAmountsLen,
+        uint256 requestedAmountsLen
+    ) public pure {
+        if (signedAmountsLen != signedTokensLen) {
+            revert SignedDetailsLengthMismatch();
+        }
+        if (requestedAmountsLen != signedAmountsLen) {
+            revert AmountsLengthMismatch();
+        }
+        if (recipientLen != 1 && recipientLen != signedTokensLen) {
+            revert RecipientLengthMismatch();
         }
     }
 }

@@ -12,7 +12,8 @@ import {
     AllowanceExpired,
     LengthMismatch,
     InvalidNonce,
-    InsufficentAllowance
+    InsufficentAllowance,
+    ExcessiveInvalidation
 } from "./Permit2Utils.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 import "forge-std/console2.sol";
@@ -26,9 +27,8 @@ contract AllowanceTransfer is DomainSeparator {
 
     error SignerIsNotOwner();
 
-    // TODO kill witness?
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline,bytes32 witness)"
+        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -83,8 +83,7 @@ contract AllowanceTransfer is DomainSeparator {
                             signed.amount,
                             signed.expiration,
                             nonce,
-                            signed.sigDeadline,
-                            signed.witness
+                            signed.sigDeadline
                         )
                     )
                 )
@@ -161,5 +160,12 @@ contract AllowanceTransfer is DomainSeparator {
                 allowance[msg.sender][tokens[i]][spenders[i]].amount = 0;
             }
         }
+    }
+
+    function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
+        if (amountToInvalidate > type(uint16).max) {
+            revert ExcessiveInvalidation();
+        }
+        allowance[msg.sender][token][spender].nonce += amountToInvalidate;
     }
 }

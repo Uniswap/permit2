@@ -4,7 +4,15 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
-import {Permit, Signature, SignatureExpired, InvalidNonce, PackedAllowance} from "../src/Permit2Utils.sol";
+import {
+    Permit,
+    Signature,
+    InvalidSignature,
+    SignatureExpired,
+    InvalidNonce,
+    PackedAllowance,
+    ExcessiveInvalidation
+} from "../src/Permit2Utils.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {AllowanceTransfer} from "../src/AllowanceTransfer.sol";
 
@@ -31,8 +39,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     // has some balance of token0
     address address3 = address(3);
 
+    bytes32 DOMAIN_SEPARATOR;
+
     function setUp() public {
         permit2 = new MockPermit2();
+        DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
 
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
@@ -58,7 +69,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, from, sig);
 
@@ -68,7 +79,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowanceDirtyWrite() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, fromDirty, sig);
 
@@ -79,7 +90,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     // test setting allowance with ordered nonce and transfer
     function testSetAllowanceTransfer() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultNonce);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -98,7 +109,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     // dirty sstore on nonce, dirty sstore on transfer
     function testSetAllowanceTransferDirtyNonceDirtynTransfer() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(fromDirty);
         uint256 startBalanceTo = token0.balanceOf(address3);
@@ -117,7 +128,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowanceInvalidSignature() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.expectRevert(AllowanceTransfer.SignerIsNotOwner.selector);
         permit.spender = address0;
@@ -126,7 +137,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowanceDeadlinePassed() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.warp(block.timestamp + 101);
         vm.expectRevert(SignatureExpired.selector);
@@ -136,7 +147,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     function testMaxAllowance() public {
         uint160 maxAllowance = type(uint160).max;
         Permit memory permit = defaultERC20PermitAllowance(address(token0), maxAllowance, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -156,7 +167,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testPartialAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -179,7 +190,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testReuseOrderedNonceInvalid() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, permit2.DOMAIN_SEPARATOR());
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, from, sig);
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
@@ -191,5 +202,34 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
         vm.expectRevert(AllowanceTransfer.SignerIsNotOwner.selector);
         permit2.permit(permit, from, sig);
+    }
+
+    function testInvalidateNonces() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        // just need to invalidate 1 nonce on from address
+        vm.prank(from);
+        permit2.invalidateNonces(address(token0), address(this), 1);
+        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce, 1);
+
+        vm.expectRevert(AllowanceTransfer.SignerIsNotOwner.selector);
+        permit2.permit(permit, from, sig);
+    }
+
+    function testExcessiveInvalidation() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
+        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint32 numInvalidate = type(uint16).max;
+        vm.startPrank(from);
+        vm.expectRevert(ExcessiveInvalidation.selector);
+        permit2.invalidateNonces(address(token0), address(this), numInvalidate + 1);
+        vm.stopPrank();
+
+        permit2.permit(permit, from, sig);
+        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce, 1);
     }
 }
