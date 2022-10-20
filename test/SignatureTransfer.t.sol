@@ -13,6 +13,7 @@ import {Permit2} from "../src/Permit2.sol";
 import {
     PermitTransfer,
     PermitBatchTransfer,
+    PermitWitnessTransfer,
     LengthMismatch,
     InvalidNonce,
     RecipientLengthMismatch,
@@ -33,7 +34,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     }
 
     string public constant _PERMIT_TRANSFER_TYPEHASH_STUB =
-        "CustomPermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+        "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
     string constant MOCK_WITNESS_TYPE = "MockWitness(uint256 value,address person,bool test)";
     bytes32 constant MOCK_WITNESS_TYPEHASH =
@@ -259,16 +260,16 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
 
     function testPermitTransferFromTypedWitness() public {
         uint256 nonce = 0;
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        PermitWitnessTransfer memory permit =
+            defaultERC20PermitWitnessTransfer(address(token0), nonce, keccak256(abi.encode(witnessData)));
         bytes memory sig =
-            getPermitTransferTypedWitnessSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
+            getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
 
-        permit2.permitTransferFromTypedWitness(
-            permit, from, address2, defaultAmount, "MockWitness", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, "MockWitness", MOCK_WITNESS_TYPE, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
@@ -276,37 +277,36 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
 
     function testPermitTransferFromTypedWitnessInvalidType() public {
         uint256 nonce = 0;
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        PermitWitnessTransfer memory permit =
+            defaultERC20PermitWitnessTransfer(address(token0), nonce, keccak256(abi.encode(witnessData)));
         bytes memory sig =
-            getPermitTransferTypedWitnessSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
+            getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitTransferFromTypedWitness(
-            permit, from, address2, defaultAmount, "MockWitness", "fake typedef", sig
-        );
+        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, "MockWitness", "fake typedef", sig);
     }
 
     function testPermitTransferFromTypedWitnessInvalidTypehash() public {
         uint256 nonce = 0;
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
-        bytes memory sig =
-            getPermitTransferTypedWitnessSignature(permit, fromPrivateKey, "fake typehash", DOMAIN_SEPARATOR);
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        PermitWitnessTransfer memory permit =
+            defaultERC20PermitWitnessTransfer(address(token0), nonce, keccak256(abi.encode(witnessData)));
+        bytes memory sig = getPermitWitnessTransferSignature(permit, fromPrivateKey, "fake typehash", DOMAIN_SEPARATOR);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitTransferFromTypedWitness(
-            permit, from, address2, defaultAmount, "MockWitness", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, "MockWitness", MOCK_WITNESS_TYPE, sig);
     }
 
     function testPermitTransferFromTypedWitnessInvalidTypeName() public {
         uint256 nonce = 0;
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        PermitWitnessTransfer memory permit =
+            defaultERC20PermitWitnessTransfer(address(token0), nonce, keccak256(abi.encode(witnessData)));
         bytes memory sig =
-            getPermitTransferTypedWitnessSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
+            getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitTransferFromTypedWitness(
-            permit, from, address2, defaultAmount, "fake name", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, "fake name", MOCK_WITNESS_TYPE, sig);
     }
 }
