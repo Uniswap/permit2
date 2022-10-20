@@ -33,7 +33,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     }
 
     string public constant _PERMIT_TRANSFER_TYPEHASH_STUB =
-        "PermitTransferFromTypedWitness(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+        "CustomPermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
     string constant MOCK_WITNESS_TYPEDEF = "MockWitness witness)MockWitness(uint256 value,address person,bool test)";
     bytes32 constant MOCK_WITNESS_TYPEHASH =

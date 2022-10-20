@@ -30,8 +30,8 @@ contract SignatureTransfer is DomainSeparator {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
 
-    string public constant _PERMIT_TRANSFER_TYPEHASH_STUB =
-        "PermitTransferFromTypedWitness(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+    string public constant _PERMIT_TRANSFER_CUSTOM_TYPEHASH_STUB =
+        "CustomPermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
     event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
 
@@ -72,7 +72,7 @@ contract SignatureTransfer is DomainSeparator {
         string calldata witnessTypedef,
         bytes calldata signature
     ) public {
-        bytes32 typehash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_TYPEHASH_STUB, witnessTypedef));
+        bytes32 typehash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_CUSTOM_TYPEHASH_STUB, witnessTypedef));
         _permitTransferFrom(permit, owner, to, requestedAmount, typehash, signature);
     }
 
