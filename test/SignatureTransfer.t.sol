@@ -119,7 +119,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
         bytes memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        address[] memory to = AddressBuilder.fill(1, address(address2));
+        address[] memory to = AddressBuilder.fill(2, address(address2));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
 
         uint256 startBalanceFrom0 = token0.balanceOf(from);
@@ -170,7 +170,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceFrom0 = token0.balanceOf(from);
         uint256 startBalanceTo0 = token0.balanceOf(address(this));
 
-        address[] memory to = AddressBuilder.fill(1, address(this));
+        address[] memory to = AddressBuilder.fill(10, address(this));
         uint256[] memory amounts = AmountBuilder.fill(10, defaultAmount);
         snapStart("single recipient many tokens");
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);

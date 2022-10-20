@@ -116,18 +116,9 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        if (to.length == 1) {
-            address recipient = to[0];
-            unchecked {
-                for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(owner, recipient, requestedAmounts[i]);
-                }
-            }
-        } else {
-            unchecked {
-                for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
-                }
+        unchecked {
+            for (uint256 i = 0; i < permit.tokens.length; ++i) {
+                ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
             }
         }
     }
@@ -176,7 +167,7 @@ contract SignatureTransfer is DomainSeparator {
         if (requestedAmountsLen != signedAmountsLen) {
             revert AmountsLengthMismatch();
         }
-        if (recipientLen != 1 && recipientLen != signedTokensLen) {
+        if (recipientLen != signedTokensLen) {
             revert RecipientLengthMismatch();
         }
     }
