@@ -60,8 +60,10 @@ contract AllowanceTransfer is DomainSeparator {
             revert SignatureExpired();
         }
 
-        // Use current nonce. Incremented below.
-        uint32 nonce = allowance[owner][signed.token][signed.spender].nonce;
+        // Check current nonce (incremented below).
+        if (signed.nonce != allowance[owner][signed.token][signed.spender].nonce) {
+            revert InvalidNonce();
+        }
 
         // Verify the signer address from the signature.
         signature.verify(
@@ -76,7 +78,7 @@ contract AllowanceTransfer is DomainSeparator {
                             signed.spender,
                             signed.amount,
                             signed.expiration,
-                            nonce,
+                            signed.nonce,
                             signed.sigDeadline
                         )
                     )
@@ -90,7 +92,7 @@ contract AllowanceTransfer is DomainSeparator {
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
         allowance[owner][signed.token][signed.spender] =
-            PackedAllowance({amount: signed.amount, expiration: expiration, nonce: nonce + 1});
+            PackedAllowance({amount: signed.amount, expiration: expiration, nonce: signed.nonce + 1});
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -105,7 +107,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(address token, address from, address to, uint160 amount) external {
-        PackedAllowance memory allowed = allowance[from][token][msg.sender];
+        PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
         if (block.timestamp > allowed.expiration) {
             revert AllowanceExpired();
@@ -117,9 +119,8 @@ contract AllowanceTransfer is DomainSeparator {
                 revert InsufficientAllowance();
             } else {
                 unchecked {
-                    allowed.amount = maxAmount - amount;
+                    allowed.amount -= amount;
                 }
-                allowance[from][token][msg.sender] = allowed;
             }
         }
         // Transfer the tokens from the from address to the recipient.
