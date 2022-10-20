@@ -54,14 +54,14 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permit(Permit calldata signed, address owner, bytes calldata signature) external {
+    function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
         // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > signed.sigDeadline) {
+        if (block.timestamp > permitData.sigDeadline) {
             revert SignatureExpired();
         }
 
         // Check current nonce (incremented below).
-        if (signed.nonce != allowance[owner][signed.token][signed.spender].nonce) {
+        if (permitData.nonce != allowance[owner][permitData.token][permitData.spender].nonce) {
             revert InvalidNonce();
         }
 
@@ -74,12 +74,12 @@ contract AllowanceTransfer is DomainSeparator {
                     keccak256(
                         abi.encode(
                             _PERMIT_TYPEHASH,
-                            signed.token,
-                            signed.spender,
-                            signed.amount,
-                            signed.expiration,
-                            signed.nonce,
-                            signed.sigDeadline
+                            permitData.token,
+                            permitData.spender,
+                            permitData.amount,
+                            permitData.expiration,
+                            permitData.nonce,
+                            permitData.sigDeadline
                         )
                     )
                 )
@@ -88,11 +88,11 @@ contract AllowanceTransfer is DomainSeparator {
         );
 
         // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
-        uint64 expiration = signed.expiration == 0 ? uint64(block.timestamp) : signed.expiration;
+        uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
-        allowance[owner][signed.token][signed.spender] =
-            PackedAllowance({amount: signed.amount, expiration: expiration, nonce: signed.nonce + 1});
+        allowance[owner][permitData.token][permitData.spender] =
+            PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
     }
 
     /*//////////////////////////////////////////////////////////////
