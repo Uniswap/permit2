@@ -10,9 +10,9 @@ struct PackedAllowance {
 struct Permit {
     address token;
     address spender;
-    uint160 amount;
-    uint64 expiration;
-    uint32 nonce;
+    uint256 amount;
+    uint256 expiration;
+    uint256 nonce;
     uint256 sigDeadline;
 }
 

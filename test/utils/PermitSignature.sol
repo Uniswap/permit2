@@ -9,7 +9,7 @@ import {Permit2} from "../../src/Permit2.sol";
 
 contract PermitSignature {
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
+        "Permit(address token,address spender,uint256 amount,uint256 expiration,uint256 nonce,uint256 sigDeadline)"
     );
 
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
@@ -20,7 +20,7 @@ contract PermitSignature {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
 
-    function getPermitSignature(Vm vm, Permit memory permit, uint32 nonce, uint256 privateKey, bytes32 domainSeparator)
+    function getPermitSignature(Vm vm, Permit memory permit, uint256 nonce, uint256 privateKey, bytes32 domainSeparator)
         internal
         returns (bytes memory sig)
     {
@@ -102,7 +102,7 @@ contract PermitSignature {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration, uint32 nonce)
+    function defaultERC20PermitAllowance(address token0, uint256 amount, uint256 expiration, uint256 nonce)
         internal
         view
         returns (Permit memory)

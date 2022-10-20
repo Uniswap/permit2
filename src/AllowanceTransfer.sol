@@ -24,7 +24,7 @@ contract AllowanceTransfer is DomainSeparator {
     using SafeTransferLib for ERC20;
 
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
+        "Permit(address token,address spender,uint256 amount,uint256 expiration,uint256 nonce,uint256 sigDeadline)"
     );
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
@@ -43,10 +43,10 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param amount The approved amount of the token.
     /// @param expiration The duration of the approval.
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve.
-    function approve(address token, address spender, uint160 amount, uint64 expiration) external {
+    function approve(address token, address spender, uint256 amount, uint256 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
-        allowed.amount = amount;
-        allowed.expiration = expiration;
+        allowed.amount = uint160(amount);
+        allowed.expiration = uint64(expiration);
     }
 
     /*/////////////////////////////////////////////////////f/////////
@@ -90,11 +90,14 @@ contract AllowanceTransfer is DomainSeparator {
         );
 
         // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
-        uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
+        uint256 expiration = permitData.expiration == 0 ? block.timestamp : permitData.expiration;
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
-        allowance[owner][permitData.token][permitData.spender] =
-            PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
+        allowance[owner][permitData.token][permitData.spender] = PackedAllowance({
+            amount: uint160(permitData.amount),
+            expiration: uint64(expiration),
+            nonce: uint32(permitData.nonce + 1)
+        });
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -108,7 +111,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param amount The amount of tokens to transfer.
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
-    function transferFrom(address token, address from, address to, uint160 amount) external {
+    function transferFrom(address token, address from, address to, uint256 amount) external {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
         if (block.timestamp > allowed.expiration) {
@@ -121,7 +124,7 @@ contract AllowanceTransfer is DomainSeparator {
                 revert InsufficientAllowance();
             } else {
                 unchecked {
-                    allowed.amount -= amount;
+                    allowed.amount -= uint160(amount);
                 }
             }
         }
@@ -161,10 +164,10 @@ contract AllowanceTransfer is DomainSeparator {
     /// @dev token The token to invalidate nonces for
     /// @dev spender The spender to invalidate nonces for
     /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16.
-    function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
+    function invalidateNonces(address token, address spender, uint256 amountToInvalidate) public {
         if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
 
-        uint32 newNonce = allowance[msg.sender][token][spender].nonce + amountToInvalidate;
+        uint32 newNonce = allowance[msg.sender][token][spender].nonce + uint32(amountToInvalidate);
         allowance[msg.sender][token][spender].nonce = newNonce;
         emit InvalidateNonces(msg.sender, newNonce, token, spender);
     }

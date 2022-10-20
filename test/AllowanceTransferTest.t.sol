@@ -33,9 +33,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     address address0 = address(0);
     address address2 = address(2);
 
-    uint160 defaultAmount = 10 ** 18;
-    uint32 defaultNonce = 0;
-    uint64 defaultExpiration = uint64(block.timestamp + 5);
+    uint256 defaultAmount = 10 ** 18;
+    uint256 defaultNonce = 0;
+    uint256 defaultExpiration = uint64(block.timestamp + 5);
 
     // has some balance of token0
     address address3 = address(3);
