@@ -6,7 +6,6 @@ import {
     PermitTransfer,
     PermitBatchTransfer,
     InvalidNonce,
-    InvalidSignature,
     LengthMismatch,
     NotSpender,
     InvalidAmount,
@@ -30,6 +29,8 @@ contract SignatureTransfer is DomainSeparator {
     bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
+
+    event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
 
     mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
@@ -147,6 +148,7 @@ contract SignatureTransfer is DomainSeparator {
     /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
     function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public {
         nonceBitmap[msg.sender][wordPos] |= mask;
+        emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
     }
 
     /// @notice Checks whether a nonce is taken. Then sets the bit at the bitPos in the bitmap at the wordPos.

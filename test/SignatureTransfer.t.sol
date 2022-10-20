@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
+import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
@@ -21,6 +22,8 @@ import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     using AddressBuilder for address[];
     using AmountBuilder for uint256[];
+
+    event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
 
     Permit2 permit2;
 
@@ -220,5 +223,23 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
 
         vm.expectRevert(RecipientLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
+    }
+
+    function testInvalidateUnorderedNonces() public {
+        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), 0);
+        bytes memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 bitmap = permit2.nonceBitmap(from, 0);
+        assertEq(bitmap, 0);
+
+        vm.prank(from);
+        vm.expectEmit(true, false, false, true);
+        emit InvalidateUnorderedNonces(from, 0, 1);
+        permit2.invalidateUnorderedNonces(0, 1);
+        bitmap = permit2.nonceBitmap(from, 0);
+        assertEq(bitmap, 1);
+
+        vm.expectRevert(InvalidNonce.selector);
+        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
     }
 }
