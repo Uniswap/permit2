@@ -1,4 +1,4 @@
-AllowanceTransferTest:testApprove() (gas: 39802)
+AllowanceTransferTest:testApprove() (gas: 39603)
 AllowanceTransferTest:testExcessiveInvalidation() (gas: 54474)
 AllowanceTransferTest:testInvalidateNonces() (gas: 53064)
 AllowanceTransferTest:testMaxAllowance() (gas: 97792)

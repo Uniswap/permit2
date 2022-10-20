@@ -43,11 +43,9 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param expiration The duration of the approval.
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve.
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
-        // can prob do 1 sload here
-        PackedAllowance memory allowed = allowance[msg.sender][token][spender];
+        PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.amount = amount;
         allowed.expiration = expiration;
-        allowance[msg.sender][token][spender] = allowed;
     }
 
     /*/////////////////////////////////////////////////////f/////////
