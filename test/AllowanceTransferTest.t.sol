@@ -66,6 +66,15 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         token0.mint(address3, defaultAmount);
     }
 
+    function testApprove() public {
+        vm.prank(from);
+        permit2.approve(address(token0), address(this), defaultAmount, defaultExpiration);
+
+        (uint160 amount, uint64 expiration,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+    }
+
     function testSetAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
         bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
