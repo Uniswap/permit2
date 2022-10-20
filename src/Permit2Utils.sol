@@ -42,7 +42,7 @@ struct Signature {
 error InvalidSignature();
 error LengthMismatch();
 error InvalidNonce();
-error InsufficentAllowance();
+error InsufficientAllowance();
 error SignatureExpired();
 error AllowanceExpired();
 error NotSpender();

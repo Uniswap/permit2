@@ -12,7 +12,7 @@ import {
     InvalidSignature,
     LengthMismatch,
     InvalidNonce,
-    InsufficentAllowance,
+    InsufficientAllowance,
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
@@ -88,10 +88,9 @@ contract AllowanceTransfer is DomainSeparator {
             sig.s
         );
 
-        if (signer == address(0) || signer != owner) {
-            revert InvalidSignature();
-        }
-        // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
+        if (signer == address(0) || signer != owner) revert InvalidSignature();
+
+        // If the signed expiration is 0, the allowance only lasts the duration of the block.
         uint64 expiration = signed.expiration == 0 ? uint64(block.timestamp) : signed.expiration;
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
@@ -120,7 +119,7 @@ contract AllowanceTransfer is DomainSeparator {
         uint160 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
             if (amount > maxAmount) {
-                revert InsufficentAllowance();
+                revert InsufficientAllowance();
             } else {
                 unchecked {
                     allowed.amount = maxAmount - amount;
@@ -161,9 +160,8 @@ contract AllowanceTransfer is DomainSeparator {
     }
 
     function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
-        if (amountToInvalidate > type(uint16).max) {
-            revert ExcessiveInvalidation();
-        }
+        if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
+
         allowance[msg.sender][token][spender].nonce += amountToInvalidate;
     }
 }
