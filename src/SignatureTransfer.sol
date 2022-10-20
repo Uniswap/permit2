@@ -116,7 +116,12 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        //TODO better way to check these cases? this hurts my eyes
+        // unchecked {
+        //     for (uint256 i = 0; i < permit.tokens.length; ++i) {
+        //         ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
+        //     }
+        // }
+
         if (to.length == 1) {
             // send all tokens to the same recipient address if only one is specified
             address recipient = to[0];
