@@ -123,7 +123,7 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration)
+    function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration, uint32 nonce)
         internal
         view
         returns (Permit memory)
@@ -133,6 +133,7 @@ contract PermitSignature is Test {
             spender: address(this),
             amount: amount,
             expiration: expiration,
+            nonce: nonce,
             sigDeadline: block.timestamp + 100
         });
     }
@@ -169,7 +170,7 @@ contract PermitSignature is Test {
     {
         uint256[] memory maxAmounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
-            maxAmounts[i] = 10 ** 18;
+            maxAmounts[i] = 1 ** 18;
         }
         return PermitBatchTransfer({
             tokens: tokens,

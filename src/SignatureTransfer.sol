@@ -50,10 +50,13 @@ contract SignatureTransfer is DomainSeparator {
         address to,
         uint256 requestedAmount,
         bytes calldata signature
-    ) public {
+    ) external {
+        _validatePermit(permit.spender, permit.deadline);
         if (requestedAmount > permit.signedAmount) {
             revert InvalidAmount();
         }
+
+        _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(
             keccak256(
@@ -132,8 +135,6 @@ contract SignatureTransfer is DomainSeparator {
             owner
         );
 
-        _useUnorderedNonce(owner, permit.nonce);
-
         // send to spender if the inputted to address is 0
         address recipient = to == address(0) ? permit.spender : to;
         ERC20(permit.token).safeTransferFrom(owner, recipient, requestedAmount);
@@ -152,11 +153,9 @@ contract SignatureTransfer is DomainSeparator {
         address[] calldata to,
         uint256[] calldata requestedAmounts,
         bytes calldata signature
-    ) public {
+    ) external {
         _validatePermit(permit.spender, permit.deadline);
-
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
-
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
                 if (requestedAmounts[i] > permit.signedAmounts[i]) {
@@ -164,6 +163,8 @@ contract SignatureTransfer is DomainSeparator {
                 }
             }
         }
+
+        _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(
             keccak256(
@@ -185,22 +186,9 @@ contract SignatureTransfer is DomainSeparator {
             owner
         );
 
-        _useUnorderedNonce(owner, permit.nonce);
-
-        //TODO better way to check these cases? this hurts my eyes
-        if (to.length == 1) {
-            // send all tokens to the same recipient address if only one is specified
-            address recipient = to[0];
-            unchecked {
-                for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).safeTransferFrom(owner, recipient, requestedAmounts[i]);
-                }
-            }
-        } else {
-            unchecked {
-                for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmounts[i]);
-                }
+        unchecked {
+            for (uint256 i = 0; i < permit.tokens.length; ++i) {
+                ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
             }
         }
     }
@@ -214,13 +202,13 @@ contract SignatureTransfer is DomainSeparator {
     }
 
     /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
-    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) public {
+    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
         emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
     }
 
     /// @notice Checks whether a nonce is taken. Then sets the bit at the bitPos in the bitmap at the wordPos.
-    function _useUnorderedNonce(address from, uint256 nonce) internal {
+    function _useUnorderedNonce(address from, uint256 nonce) private {
         (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
         if ((bitmap >> bitPos) & 1 == 1) {
@@ -229,13 +217,9 @@ contract SignatureTransfer is DomainSeparator {
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }
 
-    function _validatePermit(address spender, uint256 deadline) internal view {
-        if (msg.sender != spender) {
-            revert NotSpender();
-        }
-        if (block.timestamp > deadline) {
-            revert SignatureExpired();
-        }
+    function _validatePermit(address spender, uint256 deadline) private view {
+        if (msg.sender != spender) revert NotSpender();
+        if (block.timestamp > deadline) revert SignatureExpired();
     }
 
     function _validateInputLengths(
@@ -243,15 +227,9 @@ contract SignatureTransfer is DomainSeparator {
         uint256 recipientLen,
         uint256 signedAmountsLen,
         uint256 requestedAmountsLen
-    ) public pure {
-        if (signedAmountsLen != signedTokensLen) {
-            revert SignedDetailsLengthMismatch();
-        }
-        if (requestedAmountsLen != signedAmountsLen) {
-            revert AmountsLengthMismatch();
-        }
-        if (recipientLen != 1 && recipientLen != signedTokensLen) {
-            revert RecipientLengthMismatch();
-        }
+    ) private pure {
+        if (signedAmountsLen != signedTokensLen) revert SignedDetailsLengthMismatch();
+        if (requestedAmountsLen != signedAmountsLen) revert AmountsLengthMismatch();
+        if (recipientLen != 1 && recipientLen != signedTokensLen) revert RecipientLengthMismatch();
     }
 }
