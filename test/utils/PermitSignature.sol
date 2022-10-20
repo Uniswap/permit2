@@ -135,7 +135,7 @@ contract PermitSignature {
     {
         uint256[] memory maxAmounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
-            maxAmounts[i] = 10 ** 18;
+            maxAmounts[i] = 1 ** 18;
         }
         return PermitBatchTransfer({
             tokens: tokens,

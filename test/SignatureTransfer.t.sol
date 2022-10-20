@@ -18,8 +18,9 @@ import {
     AmountsLengthMismatch
 } from "../src/Permit2Utils.sol";
 import {SignatureTransfer} from "../src/SignatureTransfer.sol";
+import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 
-contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
+contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnapshot {
     using AddressBuilder for address[];
     using AmountBuilder for uint256[];
 
@@ -29,7 +30,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
 
     address from;
     uint256 fromPrivateKey;
-    uint256 defaultAmount = 10 ** 18;
+    uint256 defaultAmount = 1 ** 18;
 
     address address0 = address(0x0);
     address address2 = address(0x2);
@@ -121,7 +122,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
         bytes memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        address[] memory to = AddressBuilder.fill(1, address(address2));
+        address[] memory to = AddressBuilder.fill(2, address(address2));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
 
         uint256 startBalanceFrom0 = token0.balanceOf(from);
@@ -129,7 +130,9 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         uint256 startBalanceTo0 = token0.balanceOf(address2);
         uint256 startBalanceTo1 = token1.balanceOf(address2);
 
+        snapStart("single recipient 2 tokens");
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
+        snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
@@ -160,27 +163,24 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
         assertEq(token1.balanceOf(address2), startBalanceTo1 + defaultAmount);
     }
 
-    function testPermitBatchTransferSingleAddr() public {
+    function testPermitBatchTransferSingleRecipientManyTokens() public {
         uint256 nonce = 0;
 
-        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        address[] memory tokens = AddressBuilder.fill(10, address(token0));
         PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
         bytes memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom0 = token0.balanceOf(from);
-        uint256 startBalanceFrom1 = token1.balanceOf(from);
         uint256 startBalanceTo0 = token0.balanceOf(address(this));
-        uint256 startBalanceTo1 = token1.balanceOf(address(this));
 
-        address[] memory to = AddressBuilder.fill(1, address(this));
-        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+        address[] memory to = AddressBuilder.fill(10, address(this));
+        uint256[] memory amounts = AmountBuilder.fill(10, defaultAmount);
+        snapStart("single recipient many tokens");
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
+        snapEnd();
 
-        assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
-        assertEq(token0.balanceOf(address(this)), startBalanceTo0 + defaultAmount);
-
-        assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
-        assertEq(token1.balanceOf(address(this)), startBalanceTo1 + defaultAmount);
+        assertEq(token0.balanceOf(from), startBalanceFrom0 - 10 * defaultAmount);
+        assertEq(token0.balanceOf(address(this)), startBalanceTo0 + 10 * defaultAmount);
     }
 
     function testPermitBatchTransferInvalidSingleAddr() public {
@@ -223,6 +223,67 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
 
         vm.expectRevert(RecipientLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
+    }
+
+    function testGasSinglePermitTransferFrom() public {
+        uint256 nonce = 0;
+        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig = getPermitTransferSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address2);
+        snapStart("permitTransferFromSingleToken");
+        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        snapEnd();
+
+        assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
+        assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
+    }
+
+    function testGasSinglePermitBatchTransferFrom() public {
+        uint256 nonce = 0;
+        address[] memory tokens = AddressBuilder.fill(1, address(token0));
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        address[] memory to = AddressBuilder.fill(1, address(address2));
+        uint256[] memory amounts = AmountBuilder.fill(1, defaultAmount);
+
+        uint256 startBalanceFrom0 = token0.balanceOf(from);
+        uint256 startBalanceTo0 = token0.balanceOf(address2);
+
+        snapStart("permitBatchTransferFromSingleToken");
+        permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
+        snapEnd();
+
+        assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
+        assertEq(token0.balanceOf(address2), startBalanceTo0 + defaultAmount);
+    }
+
+    function testGasMultiplePermitBatchTransferFrom() public {
+        uint256 nonce = 0;
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1)).push(address(token1));
+        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchSignature(vm, permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        address[] memory to = AddressBuilder.fill(2, address(address2)).push(address(this));
+        uint256[] memory amounts = AmountBuilder.fill(3, defaultAmount);
+
+        uint256 startBalanceFrom0 = token0.balanceOf(from);
+        uint256 startBalanceFrom1 = token1.balanceOf(from);
+        uint256 startBalanceTo0 = token0.balanceOf(address(address2));
+        uint256 startBalanceTo1 = token1.balanceOf(address(address2));
+        uint256 startBalanceToThis1 = token1.balanceOf(address(this));
+
+        snapStart("permitBatchTransferFromMultipleTokens");
+        permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
+        snapEnd();
+
+        assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
+        assertEq(token0.balanceOf(address2), startBalanceTo0 + defaultAmount);
+        assertEq(token1.balanceOf(from), startBalanceFrom1 - 2 * defaultAmount);
+        assertEq(token1.balanceOf(address2), startBalanceTo1 + defaultAmount);
+        assertEq(token1.balanceOf(address(this)), startBalanceToThis1 + defaultAmount);
     }
 
     function testInvalidateUnorderedNonces() public {
