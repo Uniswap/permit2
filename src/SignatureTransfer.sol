@@ -30,12 +30,20 @@ contract SignatureTransfer is DomainSeparator {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,bytes32 witness)"
     );
 
+    string public constant _PERMIT_TRANSFER_TYPEHASH_STUB =
+        "PermitTransferFromTypedWitness(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+
     event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
 
     mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
 
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipient of the tokens
+    /// @param requestedAmount The amount of tokens to transfer
+    /// @param signature The signature to verify
     function permitTransferFrom(
         PermitTransfer calldata permit,
         address owner,
@@ -43,6 +51,46 @@ contract SignatureTransfer is DomainSeparator {
         uint256 requestedAmount,
         bytes calldata signature
     ) public {
+        _permitTransferFrom(permit, owner, to, requestedAmount, _PERMIT_TRANSFER_TYPEHASH, signature);
+    }
+
+    /// @notice Transfers a token using a signed permit message.
+    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipient of the tokens
+    /// @param requestedAmount The amount of tokens to transfer
+    /// @param witnessTypedef The eip-712 type definition of the witness
+    ///     must be formatted to append to _PERMIT_TRANSFER_TYPEHASH_STUB.
+    ///     witness should be a hash of data matching the witnessTypedef.
+    /// @param signature The signature to verify
+    function permitTransferFromTypedWitness(
+        PermitTransfer calldata permit,
+        address owner,
+        address to,
+        uint256 requestedAmount,
+        string calldata witnessTypedef,
+        bytes calldata signature
+    ) public {
+        bytes32 typehash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_TYPEHASH_STUB, witnessTypedef));
+        _permitTransferFrom(permit, owner, to, requestedAmount, typehash, signature);
+    }
+
+    /// @notice internal function to perform a single permitTransferFrom
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipient of the tokens
+    /// @param requestedAmount The amount of tokens to transfer
+    /// @param typehash The typehash to use for the eip-712 message
+    /// @param signature The signature to verify
+    function _permitTransferFrom(
+        PermitTransfer calldata permit,
+        address owner,
+        address to,
+        uint256 requestedAmount,
+        bytes32 typehash,
+        bytes calldata signature
+    ) private {
         _validatePermit(permit.spender, permit.deadline);
 
         if (requestedAmount > permit.signedAmount) {
@@ -56,7 +104,7 @@ contract SignatureTransfer is DomainSeparator {
                     DOMAIN_SEPARATOR(),
                     keccak256(
                         abi.encode(
-                            _PERMIT_TRANSFER_TYPEHASH,
+                            typehash,
                             permit.token,
                             permit.spender,
                             permit.signedAmount,
@@ -77,6 +125,13 @@ contract SignatureTransfer is DomainSeparator {
         ERC20(permit.token).safeTransferFrom(owner, recipient, requestedAmount);
     }
 
+    /// @notice Transfers tokens using a signed permit message.
+    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipients of the tokens
+    /// @param requestedAmounts The amount of tokens to transfer
+    /// @param signature The signature to verify
     function permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,

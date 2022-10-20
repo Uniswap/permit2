@@ -74,6 +74,35 @@ contract PermitSignature {
         return bytes.concat(r, s, bytes1(v));
     }
 
+    function getPermitTransferTypedWitnessSignature(
+        Vm vm,
+        PermitTransfer memory permit,
+        uint256 privateKey,
+        bytes32 typehash,
+        bytes32 domainSeparator
+    ) internal returns (bytes memory sig) {
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        typehash,
+                        permit.token,
+                        permit.spender,
+                        permit.signedAmount,
+                        permit.nonce,
+                        permit.deadline,
+                        permit.witness
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
+    }
+
     function getPermitBatchSignature(
         Vm vm,
         PermitBatchTransfer memory permit,

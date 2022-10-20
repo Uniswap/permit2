@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
@@ -24,6 +25,19 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     using AmountBuilder for uint256[];
 
     event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
+
+    struct MockWitness {
+        uint256 value;
+        address person;
+        bool test;
+    }
+
+    string public constant _PERMIT_TRANSFER_TYPEHASH_STUB =
+        "PermitTransferFromTypedWitness(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+
+    string constant MOCK_WITNESS_TYPEDEF = "MockWitness witness)MockWitness(uint256 value,address person,bool test)";
+    bytes32 constant MOCK_WITNESS_TYPEHASH =
+        keccak256(abi.encodePacked(_PERMIT_TRANSFER_TYPEHASH_STUB, MOCK_WITNESS_TYPEDEF));
 
     Permit2 permit2;
 
@@ -241,5 +255,40 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
 
         vm.expectRevert(InvalidNonce.selector);
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+    }
+
+    function testPermitTransferFromTypedWitness() public {
+        uint256 nonce = 0;
+        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig =
+            getPermitTransferTypedWitnessSignature(vm, permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address2);
+
+        permit2.permitTransferFromTypedWitness(permit, from, address2, defaultAmount, MOCK_WITNESS_TYPEDEF, sig);
+
+        assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
+        assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
+    }
+
+    function testPermitTransferFromTypedWitnessInvalidTypedef() public {
+        uint256 nonce = 0;
+        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig =
+            getPermitTransferTypedWitnessSignature(vm, permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, DOMAIN_SEPARATOR);
+
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        permit2.permitTransferFromTypedWitness(permit, from, address2, defaultAmount, "fake typedef", sig);
+    }
+
+    function testPermitTransferFromTypedWitnessInvalidTypehash() public {
+        uint256 nonce = 0;
+        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig =
+            getPermitTransferTypedWitnessSignature(vm, permit, fromPrivateKey, "fake typehash", DOMAIN_SEPARATOR);
+
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        permit2.permitTransferFromTypedWitness(permit, from, address2, defaultAmount, MOCK_WITNESS_TYPEDEF, sig);
     }
 }
