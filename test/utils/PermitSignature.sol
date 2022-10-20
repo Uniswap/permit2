@@ -102,7 +102,7 @@ contract PermitSignature {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration)
+    function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration, uint32 nonce)
         internal
         view
         returns (Permit memory)
@@ -112,6 +112,7 @@ contract PermitSignature {
             spender: address(this),
             amount: amount,
             expiration: expiration,
+            nonce: nonce,
             sigDeadline: block.timestamp + 100
         });
     }
