@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {SignatureRecovery} from "./libraries/SignatureRecovery.sol";
+import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {
     Permit,
     PackedAllowance,
-    Signature,
     SignatureExpired,
     AllowanceExpired,
     LengthMismatch,
@@ -16,16 +15,13 @@ import {
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
-import "forge-std/console2.sol";
 
 /// TODO comments, headers, interface
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
 contract AllowanceTransfer is DomainSeparator {
-    using SignatureRecovery for Signature;
+    using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-
-    error SignerIsNotOwner();
 
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
@@ -60,7 +56,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permit(Permit calldata signed, address owner, Signature calldata sig) external returns (address signer) {
+    function permit(Permit calldata signed, address owner, bytes calldata signature) external {
         // Ensure the signature's deadline has not already passed.
         if (block.timestamp > signed.sigDeadline) {
             revert SignatureExpired();
@@ -69,8 +65,8 @@ contract AllowanceTransfer is DomainSeparator {
         // Use current nonce. Incremented below.
         uint32 nonce = allowance[owner][signed.token][signed.spender].nonce;
 
-        // Recover the signer address from the signature.
-        signer = sig.recover(
+        // Verify the signer address from the signature.
+        signature.verify(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -87,17 +83,15 @@ contract AllowanceTransfer is DomainSeparator {
                         )
                     )
                 )
-            )
+            ),
+            owner
         );
 
-        if (signer != owner) {
-            revert SignerIsNotOwner();
-        }
         // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
         uint64 expiration = signed.expiration == 0 ? uint64(block.timestamp) : signed.expiration;
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
-        allowance[signer][signed.token][signed.spender] =
+        allowance[owner][signed.token][signed.spender] =
             PackedAllowance({amount: signed.amount, expiration: expiration, nonce: nonce + 1});
     }
 

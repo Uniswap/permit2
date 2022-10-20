@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Vm} from "forge-std/Vm.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
-import {Signature, Permit, PermitTransfer, PermitBatchTransfer} from "../../src/Permit2Utils.sol";
+import {Permit, PermitTransfer, PermitBatchTransfer} from "../../src/Permit2Utils.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit2} from "../../src/Permit2.sol";
 
@@ -22,7 +22,7 @@ contract PermitSignature {
 
     function getPermitSignature(Vm vm, Permit memory permit, uint32 nonce, uint256 privateKey, bytes32 domainSeparator)
         internal
-        returns (Signature memory sig)
+        returns (bytes memory sig)
     {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
@@ -43,7 +43,7 @@ contract PermitSignature {
         );
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        sig = Signature(v, r, s);
+        return bytes.concat(r, s, bytes1(v));
     }
 
     function getPermitTransferSignature(
@@ -51,7 +51,7 @@ contract PermitSignature {
         PermitTransfer memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (Signature memory sig) {
+    ) internal returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -71,7 +71,7 @@ contract PermitSignature {
         );
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        sig = Signature(v, r, s);
+        return bytes.concat(r, s, bytes1(v));
     }
 
     function getPermitBatchSignature(
@@ -79,7 +79,7 @@ contract PermitSignature {
         PermitBatchTransfer memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (Signature memory sig) {
+    ) internal returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -99,7 +99,7 @@ contract PermitSignature {
         );
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        sig = Signature(v, r, s);
+        return bytes.concat(r, s, bytes1(v));
     }
 
     function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration)

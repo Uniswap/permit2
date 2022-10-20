@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {SignatureRecovery} from "./libraries/SignatureRecovery.sol";
+import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {
     PermitTransfer,
     PermitBatchTransfer,
-    Signature,
     InvalidNonce,
     InvalidSignature,
     LengthMismatch,
@@ -20,7 +19,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 
 contract SignatureTransfer is DomainSeparator {
-    using SignatureRecovery for Signature;
+    using SignatureVerification for bytes;
 
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
         "PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
@@ -36,17 +35,18 @@ contract SignatureTransfer is DomainSeparator {
     /// @dev If to is the zero address, the tokens are sent to the spender.
     function permitTransferFrom(
         PermitTransfer calldata permit,
+        address owner,
         address to,
         uint256 requestedAmount,
-        Signature calldata sig
-    ) public returns (address signer) {
+        bytes calldata signature
+    ) public {
         _validatePermit(permit.spender, permit.deadline);
 
         if (requestedAmount > permit.signedAmount) {
             revert InvalidAmount();
         }
 
-        signer = sig.recover(
+        signature.verify(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -63,22 +63,24 @@ contract SignatureTransfer is DomainSeparator {
                         )
                     )
                 )
-            )
+            ),
+            owner
         );
 
-        _useUnorderedNonce(signer, permit.nonce);
+        _useUnorderedNonce(owner, permit.nonce);
 
         // send to spender if the inputted to address is 0
         address recipient = to == address(0) ? permit.spender : to;
-        ERC20(permit.token).transferFrom(signer, recipient, requestedAmount);
+        ERC20(permit.token).transferFrom(owner, recipient, requestedAmount);
     }
 
     function permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
+        address owner,
         address[] calldata to,
         uint256[] calldata requestedAmounts,
-        Signature calldata sig
-    ) public returns (address signer) {
+        bytes calldata signature
+    ) public {
         _validatePermit(permit.spender, permit.deadline);
 
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
@@ -91,7 +93,7 @@ contract SignatureTransfer is DomainSeparator {
             }
         }
 
-        signer = sig.recover(
+        signature.verify(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -108,10 +110,11 @@ contract SignatureTransfer is DomainSeparator {
                         )
                     )
                 )
-            )
+            ),
+            owner
         );
 
-        _useUnorderedNonce(signer, permit.nonce);
+        _useUnorderedNonce(owner, permit.nonce);
 
         //TODO better way to check these cases? this hurts my eyes
         if (to.length == 1) {
@@ -119,13 +122,13 @@ contract SignatureTransfer is DomainSeparator {
             address recipient = to[0];
             unchecked {
                 for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(signer, recipient, requestedAmounts[i]);
+                    ERC20(permit.tokens[i]).transferFrom(owner, recipient, requestedAmounts[i]);
                 }
             }
         } else {
             unchecked {
                 for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(signer, to[i], requestedAmounts[i]);
+                    ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
                 }
             }
         }
