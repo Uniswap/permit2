@@ -16,10 +16,12 @@ import {
     RecipientLengthMismatch
 } from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 
 contract SignatureTransfer is DomainSeparator {
     using SignatureVerification for bytes;
+    using SafeTransferLib for ERC20;
 
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
         "PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
@@ -71,7 +73,7 @@ contract SignatureTransfer is DomainSeparator {
 
         // send to spender if the inputted to address is 0
         address recipient = to == address(0) ? permit.spender : to;
-        ERC20(permit.token).transferFrom(owner, recipient, requestedAmount);
+        ERC20(permit.token).safeTransferFrom(owner, recipient, requestedAmount);
     }
 
     function permitBatchTransferFrom(
@@ -122,13 +124,13 @@ contract SignatureTransfer is DomainSeparator {
             address recipient = to[0];
             unchecked {
                 for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(owner, recipient, requestedAmounts[i]);
+                    ERC20(permit.tokens[i]).safeTransferFrom(owner, recipient, requestedAmounts[i]);
                 }
             }
         } else {
             unchecked {
                 for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                    ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
+                    ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmounts[i]);
                 }
             }
         }
