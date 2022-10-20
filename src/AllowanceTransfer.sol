@@ -11,7 +11,7 @@ import {
     AllowanceExpired,
     LengthMismatch,
     InvalidNonce,
-    InsufficentAllowance,
+    InsufficientAllowance,
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
@@ -42,11 +42,9 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param expiration The duration of the approval.
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve.
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
-        // can prob do 1 sload here
-        PackedAllowance memory allowed = allowance[msg.sender][token][spender];
+        PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.amount = amount;
         allowed.expiration = expiration;
-        allowance[msg.sender][token][spender] = allowed;
     }
 
     /*/////////////////////////////////////////////////////f/////////
@@ -116,7 +114,7 @@ contract AllowanceTransfer is DomainSeparator {
         uint160 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
             if (amount > maxAmount) {
-                revert InsufficentAllowance();
+                revert InsufficientAllowance();
             } else {
                 unchecked {
                     allowed.amount = maxAmount - amount;
@@ -157,9 +155,8 @@ contract AllowanceTransfer is DomainSeparator {
     }
 
     function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
-        if (amountToInvalidate > type(uint16).max) {
-            revert ExcessiveInvalidation();
-        }
+        if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
+
         allowance[msg.sender][token][spender].nonce += amountToInvalidate;
     }
 }
