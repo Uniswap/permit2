@@ -7,7 +7,6 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {
     Permit,
     PackedAllowance,
-    Signature,
     SignatureExpired,
     AllowanceExpired,
     LengthMismatch,
@@ -22,7 +21,7 @@ import "forge-std/console2.sol";
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
 contract AllowanceTransfer is DomainSeparator {
-    using SignatureRecovery for Signature;
+    using SignatureRecovery for bytes;
     using SafeTransferLib for ERC20;
 
     error SignerIsNotOwner();
@@ -60,7 +59,10 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permit(Permit calldata signed, address owner, Signature calldata sig) external returns (address signer) {
+    function permit(Permit calldata signed, address owner, bytes calldata signature)
+        external
+        returns (address signer)
+    {
         // Ensure the signature's deadline has not already passed.
         if (block.timestamp > signed.sigDeadline) {
             revert SignatureExpired();
@@ -70,7 +72,7 @@ contract AllowanceTransfer is DomainSeparator {
         uint32 nonce = allowance[owner][signed.token][signed.spender].nonce;
 
         // Recover the signer address from the signature.
-        signer = sig.recover(
+        signer = signature.recover(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -87,7 +89,8 @@ contract AllowanceTransfer is DomainSeparator {
                         )
                     )
                 )
-            )
+            ),
+            owner
         );
 
         if (signer != owner) {

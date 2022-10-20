@@ -33,12 +33,6 @@ struct PackedAllowance {
     uint32 nonce;
 }
 
-struct Signature {
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-}
-
 error InvalidSignature();
 error LengthMismatch();
 error InvalidNonce();

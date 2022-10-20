@@ -6,7 +6,6 @@ import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {
     Permit,
-    Signature,
     InvalidSignature,
     SignatureExpired,
     InvalidNonce,
@@ -69,7 +68,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, from, sig);
 
@@ -79,7 +78,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowanceDirtyWrite() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, fromDirty, sig);
 
@@ -90,7 +89,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     // test setting allowance with ordered nonce and transfer
     function testSetAllowanceTransfer() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultNonce);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -109,7 +108,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     // dirty sstore on nonce, dirty sstore on transfer
     function testSetAllowanceTransferDirtyNonceDirtynTransfer() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(fromDirty);
         uint256 startBalanceTo = token0.balanceOf(address3);
@@ -128,7 +127,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowanceInvalidSignature() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.expectRevert(AllowanceTransfer.SignerIsNotOwner.selector);
         permit.spender = address0;
@@ -137,7 +136,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testSetAllowanceDeadlinePassed() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.warp(block.timestamp + 101);
         vm.expectRevert(SignatureExpired.selector);
@@ -147,7 +146,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     function testMaxAllowance() public {
         uint160 maxAllowance = type(uint160).max;
         Permit memory permit = defaultERC20PermitAllowance(address(token0), maxAllowance, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -167,7 +166,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testPartialAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -190,7 +189,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testReuseOrderedNonceInvalid() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, from, sig);
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
@@ -206,7 +205,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testInvalidateNonces() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         // just need to invalidate 1 nonce on from address
         vm.prank(from);
@@ -220,7 +219,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
 
     function testExcessiveInvalidation() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
-        Signature memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint32 numInvalidate = type(uint16).max;
         vm.startPrank(from);

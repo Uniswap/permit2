@@ -5,7 +5,6 @@ import {SignatureRecovery} from "./libraries/SignatureRecovery.sol";
 import {
     PermitTransfer,
     PermitBatchTransfer,
-    Signature,
     InvalidNonce,
     InvalidSignature,
     LengthMismatch,
@@ -20,7 +19,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 
 contract SignatureTransfer is DomainSeparator {
-    using SignatureRecovery for Signature;
+    using SignatureRecovery for bytes;
 
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH = keccak256(
         "PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,bytes32 witness)"
@@ -36,9 +35,10 @@ contract SignatureTransfer is DomainSeparator {
     /// @dev If to is the zero address, the tokens are sent to the spender.
     function permitTransferFrom(
         PermitTransfer calldata permit,
+        address owner,
         address to,
         uint256 requestedAmount,
-        Signature calldata sig
+        bytes calldata signature
     ) public returns (address signer) {
         _validatePermit(permit.spender, permit.deadline);
 
@@ -46,7 +46,7 @@ contract SignatureTransfer is DomainSeparator {
             revert InvalidAmount();
         }
 
-        signer = sig.recover(
+        signer = signature.recover(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -63,7 +63,8 @@ contract SignatureTransfer is DomainSeparator {
                         )
                     )
                 )
-            )
+            ),
+            owner
         );
 
         _useUnorderedNonce(signer, permit.nonce);
@@ -75,9 +76,10 @@ contract SignatureTransfer is DomainSeparator {
 
     function permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
+        address owner,
         address[] calldata to,
         uint256[] calldata requestedAmounts,
-        Signature calldata sig
+        bytes calldata signature
     ) public returns (address signer) {
         _validatePermit(permit.spender, permit.deadline);
 
@@ -91,7 +93,7 @@ contract SignatureTransfer is DomainSeparator {
             }
         }
 
-        signer = sig.recover(
+        signer = signature.recover(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -108,7 +110,8 @@ contract SignatureTransfer is DomainSeparator {
                         )
                     )
                 )
-            )
+            ),
+            owner
         );
 
         _useUnorderedNonce(signer, permit.nonce);
