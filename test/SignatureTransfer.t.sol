@@ -19,7 +19,6 @@ import {
 } from "../src/Permit2Utils.sol";
 import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 
-// forge test --match-contract SignatureTransferf
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider {
     using AddressBuilder for address[];
     using AmountBuilder for uint256[];
