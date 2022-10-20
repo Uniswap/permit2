@@ -27,6 +27,8 @@ contract AllowanceTransfer is DomainSeparator {
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
 
+    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -154,9 +156,15 @@ contract AllowanceTransfer is DomainSeparator {
         }
     }
 
+    /// @notice invalidate nonces for a given (token, spender) pair
+    /// @dev token The token to invalidate nonces for
+    /// @dev spender The spender to invalidate nonces for
+    /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16.
     function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
         if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
 
-        allowance[msg.sender][token][spender].nonce += amountToInvalidate;
+        uint32 newNonce = allowance[msg.sender][token][spender].nonce + amountToInvalidate;
+        allowance[msg.sender][token][spender].nonce = newNonce;
+        emit InvalidateNonces(msg.sender, newNonce, token, spender);
     }
 }
