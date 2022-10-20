@@ -108,7 +108,22 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param amount The amount of tokens to transfer.
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
-    function transferFrom(address token, address from, address to, uint160 amount) external {
+    // function transferFrom(address token, address from, address to, uint160 amount) external {
+    //     _transfer(token, from, to, amount);
+    // }
+
+    // function batchTransferFrom(address[] calldata token, address from, address[] calldata to, uint160[] calldata amount)
+    //     external
+    // {
+    //     if (amount.length != to.length || to.length != token.length) {
+    //         revert LengthMismatch();
+    //     }
+    //     for (uint256 i = 0; i < token.length; ++i) {
+    //         _transfer(token[i], from, to[i], amount[i]);
+    //     }
+    // }
+
+    function transferFrom(address token, address from, address to, uint160 amount) public {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
         if (block.timestamp > allowed.expiration) {
@@ -128,8 +143,6 @@ contract AllowanceTransfer is DomainSeparator {
         // Transfer the tokens from the from address to the recipient.
         ERC20(token).safeTransferFrom(from, to, amount);
     }
-
-    // TODO transferFromBatch
 
     /*//////////////////////////////////////////////////////////////
                              LOCKDOWN LOGIC
