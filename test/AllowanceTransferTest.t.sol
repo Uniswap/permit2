@@ -117,7 +117,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
     }
 
     // dirty sstore on nonce, dirty sstore on transfer
-    function testSetAllowanceTransferDirtyNonceDirtynTransfer() public {
+    function testSetAllowanceTransferDirtyNonceDirtyTransfer() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration);
         bytes memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
