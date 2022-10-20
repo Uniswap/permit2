@@ -78,8 +78,6 @@ contract SignatureTransfer is DomainSeparator {
             owner
         );
 
-        _useUnorderedNonce(owner, permit.nonce);
-
         // send to spender if the inputted to address is 0
         address recipient = to == address(0) ? permit.spender : to;
         ERC20(permit.token).safeTransferFrom(owner, recipient, requestedAmount);
@@ -113,6 +111,8 @@ contract SignatureTransfer is DomainSeparator {
         bytes32 typeHash = keccak256(
             abi.encodePacked(_PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
         );
+
+        _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(
             keccak256(
