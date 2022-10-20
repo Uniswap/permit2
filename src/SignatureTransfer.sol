@@ -60,19 +60,21 @@ contract SignatureTransfer is DomainSeparator {
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
     /// @param requestedAmount The amount of tokens to transfer
-    /// @param witnessTypedef The eip-712 type definition of the witness
-    ///     must be formatted to append to _PERMIT_TRANSFER_TYPEHASH_STUB.
-    ///     witness should be a hash of data matching the witnessTypedef.
+    /// @param witnessTypeName The name of the witness type
+    /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitTransferFromTypedWitness(
         PermitTransfer calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
-        string calldata witnessTypedef,
+        string calldata witnessTypeName,
+        string calldata witnessType,
         bytes calldata signature
     ) public {
-        bytes32 typehash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_CUSTOM_TYPEHASH_STUB, witnessTypedef));
+        bytes32 typehash = keccak256(
+            abi.encodePacked(_PERMIT_TRANSFER_CUSTOM_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
+        );
         _permitTransferFrom(permit, owner, to, requestedAmount, typehash, signature);
     }
 
