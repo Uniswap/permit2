@@ -96,8 +96,10 @@ contract AllowanceTransfer is DomainSeparator {
         uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
-        allowance[owner][permitData.token][permitData.spender] =
-            PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
+        unchecked {
+            allowance[owner][permitData.token][permitData.spender] =
+                PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -109,7 +111,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param from The address to transfer from.
     /// @param to The address to transfer to.
     /// @param amount The amount of tokens to transfer.
-    /// @dev Requires either the from address to have approved at least the desired amount
+    /// @dev Requires either the from address to have approved at last the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(address token, address from, address to, uint160 amount) external {
         _transfer(token, from, to, amount);
