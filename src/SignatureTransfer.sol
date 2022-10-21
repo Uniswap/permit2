@@ -29,8 +29,11 @@ contract SignatureTransfer is DomainSeparator {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline)"
     );
 
-    string public constant _PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB =
+    string public constant _PERMIT_WITNESS_TRANSFER_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+
+    string public constant _PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB =
+        "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,";
 
     event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
 
@@ -85,7 +88,7 @@ contract SignatureTransfer is DomainSeparator {
         bytes calldata signature
     ) public {
         bytes32 typeHash = keccak256(
-            abi.encodePacked(_PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
+            abi.encodePacked(_PERMIT_WITNESS_TRANSFER_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
         );
 
         bytes32 dataHash = keccak256(
@@ -141,6 +144,73 @@ contract SignatureTransfer is DomainSeparator {
         uint256[] calldata requestedAmounts,
         bytes calldata signature
     ) external {
+        bytes32 dataHash = keccak256(
+            abi.encode(
+                _PERMIT_BATCH_TRANSFER_TYPEHASH,
+                keccak256(abi.encodePacked(permit.tokens)),
+                permit.spender,
+                keccak256(abi.encodePacked(permit.signedAmounts)),
+                permit.nonce,
+                permit.deadline
+            )
+        );
+        _permitBatchTransferFrom(permit, dataHash, owner, to, requestedAmounts, signature);
+    }
+
+    /// @notice Transfers tokens using a signed permit message.
+    /// @notice Includes extra data provided by the caller to verify signature over.
+    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipients of the tokens
+    /// @param requestedAmounts The amount of tokens to transfer
+    /// @param witness Extra data to include when checking the user signature
+    /// @param witnessTypeName The name of the witness type
+    /// @param witnessType The EIP-712 type definition for the witness type
+    /// @param signature The signature to verify
+    function permitBatchWitnessTransferFrom(
+        PermitBatchTransfer calldata permit,
+        address owner,
+        address[] calldata to,
+        uint256[] calldata requestedAmounts,
+        bytes32 witness,
+        string calldata witnessTypeName,
+        string calldata witnessType,
+        bytes calldata signature
+    ) external {
+        bytes32 typeHash = keccak256(
+            abi.encodePacked(_PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
+        );
+
+        bytes32 dataHash = keccak256(
+            abi.encode(
+                typeHash,
+                keccak256(abi.encodePacked(permit.tokens)),
+                permit.spender,
+                keccak256(abi.encodePacked(permit.signedAmounts)),
+                permit.nonce,
+                permit.deadline,
+                witness
+            )
+        );
+        _permitBatchTransferFrom(permit, dataHash, owner, to, requestedAmounts, signature);
+    }
+
+    /// @notice Transfers tokens using a signed permit message.
+    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipients of the tokens
+    /// @param requestedAmounts The amount of tokens to transfer
+    /// @param signature The signature to verify
+    function _permitBatchTransferFrom(
+        PermitBatchTransfer calldata permit,
+        bytes32 dataHash,
+        address owner,
+        address[] calldata to,
+        uint256[] calldata requestedAmounts,
+        bytes calldata signature
+    ) internal {
         _validatePermit(permit.spender, permit.deadline);
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
         unchecked {
@@ -153,25 +223,7 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(
-                        abi.encode(
-                            _PERMIT_BATCH_TRANSFER_TYPEHASH,
-                            keccak256(abi.encodePacked(permit.tokens)),
-                            permit.spender,
-                            keccak256(abi.encodePacked(permit.signedAmounts)),
-                            permit.nonce,
-                            permit.deadline
-                        )
-                    )
-                )
-            ),
-            owner
-        );
+        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash)), owner);
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
