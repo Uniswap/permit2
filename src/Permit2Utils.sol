@@ -22,13 +22,20 @@ struct PermitTransfer {
     uint256 signedAmount;
     uint256 nonce;
     uint256 deadline;
-    bytes32 witness;
 }
 
 struct PermitBatchTransfer {
     address[] tokens;
     address spender;
     uint256[] signedAmounts;
+    uint256 nonce;
+    uint256 deadline;
+}
+
+struct PermitWitnessTransfer {
+    address token;
+    address spender;
+    uint256 signedAmount;
     uint256 nonce;
     uint256 deadline;
     bytes32 witness;

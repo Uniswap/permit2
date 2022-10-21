@@ -57,13 +57,13 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         fromPrivateKeyDirty = 0x56785678;
         fromDirty = vm.addr(fromPrivateKeyDirty);
 
-        initializeTokens();
+        initializeERC20Tokens();
 
-        setTestTokens(from);
-        setTestTokenApprovals(vm, from, address(permit2));
+        setERC20TestTokens(from);
+        setERC20TestTokenApprovals(vm, from, address(permit2));
 
-        setTestTokens(fromDirty);
-        setTestTokenApprovals(vm, fromDirty, address(permit2));
+        setERC20TestTokens(fromDirty);
+        setERC20TestTokenApprovals(vm, fromDirty, address(permit2));
 
         // dirty the nonce for fromDirty address
         permit2.setAllowance(fromDirty, address(token0), address(this), 1);
@@ -83,7 +83,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testSetAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, from, sig);
 
@@ -93,7 +93,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testSetAllowanceDirtyWrite() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 1);
-        bytes memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, fromDirty, sig);
 
@@ -104,7 +104,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     // test setting allowance with ordered nonce and transfer
     function testSetAllowanceTransfer() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -122,7 +122,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testTransferFromWithGasSnapshot() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -142,7 +142,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testBatchTransferFromWithGasSnapshot() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -168,7 +168,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     // dirty sstore on nonce, dirty sstore on transfer
     function testSetAllowanceTransferDirtyNonceDirtyTransfer() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 1);
-        bytes memory sig = getPermitSignature(vm, permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(fromDirty);
         uint256 startBalanceTo = token0.balanceOf(address3);
@@ -187,7 +187,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testSetAllowanceInvalidSignature() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         permit.spender = address0;
@@ -196,7 +196,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testSetAllowanceDeadlinePassed() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.warp(block.timestamp + 101);
         vm.expectRevert(SignatureExpired.selector);
@@ -206,7 +206,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     function testMaxAllowance() public {
         uint160 maxAllowance = type(uint160).max;
         Permit memory permit = defaultERC20PermitAllowance(address(token0), maxAllowance, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -226,7 +226,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testPartialAllowance() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -249,7 +249,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testReuseOrderedNonceInvalid() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, from, sig);
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
@@ -265,7 +265,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testInvalidateNonces() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         // just need to invalidate 1 nonce on from address
         vm.prank(from);
@@ -281,7 +281,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testExcessiveInvalidation() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint32 numInvalidate = type(uint16).max;
         vm.startPrank(from);
@@ -296,7 +296,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testBatchTransferFrom() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
@@ -320,7 +320,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testBatchTransferFromLengthMismatch() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
-        bytes memory sig = getPermitSignature(vm, permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(permit, from, sig);
 

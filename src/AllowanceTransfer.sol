@@ -118,8 +118,10 @@ contract AllowanceTransfer is DomainSeparator {
         if (amount.length != to.length || token.length != to.length) {
             revert LengthMismatch();
         }
-        for (uint256 i = 0; i < token.length; ++i) {
-            _transfer(token[i], from, to[i], amount[i]);
+        unchecked {
+            for (uint256 i = 0; i < token.length; ++i) {
+                _transfer(token[i], from, to[i], amount[i]);
+            }
         }
     }
 
