@@ -85,7 +85,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
         bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
+        snapStart("permit");
         permit2.permit(permit, from, sig);
+        snapEnd();
 
         (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
@@ -175,7 +177,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         // ensure its a dirty store for the recipient address
         assertEq(startBalanceTo, defaultAmount);
 
+        snapStart("permitDirtyNonce");
         permit2.permit(permit, fromDirty, sig);
+        snapEnd();
 
         (uint160 amount,,) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(amount, defaultAmount);
@@ -211,7 +215,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
 
+        snapStart("permitMaxAllowance");
         permit2.permit(permit, from, sig);
+        snapEnd();
 
         (uint160 startAllowedAmount0,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(startAllowedAmount0, type(uint160).max);
@@ -311,7 +317,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         uint160[] memory amounts = AmountBuilder.fillUInt160(3, 1 ** 18);
         address[] memory recipients = AddressBuilder.fill(3, address0);
 
+        snapStart("batchTransferFrom");
         permit2.batchTransferFrom(tokens, from, recipients, amounts);
+        snapEnd();
         assertEq(token0.balanceOf(from), startBalanceFrom - 3 * 1 ** 18);
         assertEq(token0.balanceOf(address0), startBalanceTo + 3 * 1 ** 18);
         (amount,,) = permit2.allowance(from, address(token0), address(this));

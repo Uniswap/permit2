@@ -56,6 +56,9 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
+    /// @param permitData Data signed over by the owner specifying the terms of approval.
+    /// @param owner The owner of the tokens being approved.
+    /// @param signature The owner's signature over the permit data.
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
         // Ensure the signature's deadline has not already passed.
         if (block.timestamp > permitData.sigDeadline) {
