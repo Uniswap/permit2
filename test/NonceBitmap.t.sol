@@ -38,17 +38,17 @@ contract NonceBitmapTest is Test {
     }
 
     function testHighNonces() public {
-        permit2.useUnorderedNonce(address(this), 2**240);
-        permit2.useUnorderedNonce(address(this), 2**240 + 1);
+        permit2.useUnorderedNonce(address(this), 2 ** 240);
+        permit2.useUnorderedNonce(address(this), 2 ** 240 + 1);
 
         vm.expectRevert(InvalidNonce.selector);
-        permit2.useUnorderedNonce(address(this), 2**240);
+        permit2.useUnorderedNonce(address(this), 2 ** 240);
         vm.expectRevert(InvalidNonce.selector);
-        permit2.useUnorderedNonce(address(this), 2**240 + 1);
+        permit2.useUnorderedNonce(address(this), 2 ** 240 + 1);
     }
 
     function testInvalidateFullWord() public {
-        permit2.invalidateUnorderedNonces(0, 2**256 - 1);
+        permit2.invalidateUnorderedNonces(0, 2 ** 256 - 1);
 
         vm.expectRevert(InvalidNonce.selector);
         permit2.useUnorderedNonce(address(this), 0);
@@ -62,7 +62,7 @@ contract NonceBitmapTest is Test {
     }
 
     function testInvalidateNonzeroWord() public {
-        permit2.invalidateUnorderedNonces(1, 2**256 - 1);
+        permit2.invalidateUnorderedNonces(1, 2 ** 256 - 1);
 
         permit2.useUnorderedNonce(address(this), 0);
         permit2.useUnorderedNonce(address(this), 254);
