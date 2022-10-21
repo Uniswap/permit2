@@ -14,6 +14,7 @@ import {
     InsufficientAllowance,
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
+import {PermitHash} from "./libraries/PermitHash.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
 
 /// TODO comments, headers, interface
@@ -22,10 +23,7 @@ import {DomainSeparator} from "./DomainSeparator.sol";
 contract AllowanceTransfer is DomainSeparator {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-
-    bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
-    );
+    using PermitHash for Permit;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
@@ -68,26 +66,7 @@ contract AllowanceTransfer is DomainSeparator {
         }
 
         // Verify the signer address from the signature.
-        signature.verify(
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(
-                        abi.encode(
-                            _PERMIT_TYPEHASH,
-                            permitData.token,
-                            permitData.spender,
-                            permitData.amount,
-                            permitData.expiration,
-                            permitData.nonce,
-                            permitData.sigDeadline
-                        )
-                    )
-                )
-            ),
-            owner
-        );
+        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), permitData.hash())), owner);
 
         // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
         uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
