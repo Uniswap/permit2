@@ -5,7 +5,6 @@ import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {
     PermitTransfer,
     PermitBatchTransfer,
-    PermitWitnessTransfer,
     InvalidNonce,
     LengthMismatch,
     NotSpender,
@@ -71,14 +70,16 @@ contract SignatureTransfer is DomainSeparator {
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
     /// @param requestedAmount The amount of tokens to transfer
+    /// @param witness Extra data to include when checking the user signature
     /// @param witnessTypeName The name of the witness type
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
-        PermitWitnessTransfer calldata permit,
+        PermitTransfer calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
+        bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
@@ -89,29 +90,10 @@ contract SignatureTransfer is DomainSeparator {
 
         bytes32 dataHash = keccak256(
             abi.encode(
-                typeHash,
-                permit.token,
-                permit.spender,
-                permit.signedAmount,
-                permit.nonce,
-                permit.deadline,
-                permit.witness
+                typeHash, permit.token, permit.spender, permit.signedAmount, permit.nonce, permit.deadline, witness
             )
         );
-        _permitTransferFrom(
-            PermitTransfer({
-                token: permit.token,
-                spender: permit.spender,
-                signedAmount: permit.signedAmount,
-                nonce: permit.nonce,
-                deadline: permit.deadline
-            }),
-            dataHash,
-            owner,
-            to,
-            requestedAmount,
-            signature
-        );
+        _permitTransferFrom(permit, dataHash, owner, to, requestedAmount, signature);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -123,7 +105,7 @@ contract SignatureTransfer is DomainSeparator {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function _permitTransferFrom(
-        PermitTransfer memory permit,
+        PermitTransfer calldata permit,
         bytes32 dataHash,
         address owner,
         address to,

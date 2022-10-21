@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
-import {Permit, PermitTransfer, PermitBatchTransfer, PermitWitnessTransfer} from "../../src/Permit2Utils.sol";
+import {Permit, PermitTransfer, PermitBatchTransfer} from "../../src/Permit2Utils.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit2} from "../../src/Permit2.sol";
 
@@ -71,9 +71,10 @@ contract PermitSignature is Test {
     }
 
     function getPermitWitnessTransferSignature(
-        PermitWitnessTransfer memory permit,
+        PermitTransfer memory permit,
         uint256 privateKey,
         bytes32 typehash,
+        bytes32 witness,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
@@ -88,7 +89,7 @@ contract PermitSignature is Test {
                         permit.signedAmount,
                         permit.nonce,
                         permit.deadline,
-                        permit.witness
+                        witness
                     )
                 )
             )
@@ -148,18 +149,17 @@ contract PermitSignature is Test {
         });
     }
 
-    function defaultERC20PermitWitnessTransfer(address token0, uint256 nonce, bytes32 witness)
+    function defaultERC20PermitWitnessTransfer(address token0, uint256 nonce)
         internal
         view
-        returns (PermitWitnessTransfer memory)
+        returns (PermitTransfer memory)
     {
-        return PermitWitnessTransfer({
+        return PermitTransfer({
             token: token0,
             spender: address(this),
             signedAmount: 10 ** 18,
             nonce: nonce,
-            deadline: block.timestamp + 100,
-            witness: witness
+            deadline: block.timestamp + 100
         });
     }
 

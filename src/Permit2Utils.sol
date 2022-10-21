@@ -32,15 +32,6 @@ struct PermitBatchTransfer {
     uint256 deadline;
 }
 
-struct PermitWitnessTransfer {
-    address token;
-    address spender;
-    uint256 signedAmount;
-    uint256 nonce;
-    uint256 deadline;
-    bytes32 witness;
-}
-
 error InvalidSignature();
 error LengthMismatch();
 error InvalidNonce();
