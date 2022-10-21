@@ -53,13 +53,13 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         fromPrivateKeyDirty = 0x56785678;
         fromDirty = vm.addr(fromPrivateKeyDirty);
 
-        initializeTokens();
+        initializeERC20Tokens();
 
-        setTestTokens(from);
-        setTestTokenApprovals(vm, from, address(permit2));
+        setERC20TestTokens(from);
+        setERC20TestTokenApprovals(vm, from, address(permit2));
 
-        setTestTokens(fromDirty);
-        setTestTokenApprovals(vm, fromDirty, address(permit2));
+        setERC20TestTokens(fromDirty);
+        setERC20TestTokenApprovals(vm, fromDirty, address(permit2));
 
         // dirty the nonce for fromDirty address
         permit2.setAllowance(fromDirty, address(token0), address(this), 1);
