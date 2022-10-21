@@ -44,10 +44,10 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
 
-        initializeTokens();
+        initializeERC20Tokens();
 
-        setTestTokens(from);
-        setTestTokenApprovals(vm, from, address(permit2));
+        setERC20TestTokens(from);
+        setERC20TestTokenApprovals(vm, from, address(permit2));
     }
 
     function testPermitTransferFrom() public {
