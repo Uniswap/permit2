@@ -124,10 +124,13 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function getPermitBatchSignature(PermitBatchTransfer memory permit, uint256 privateKey, bytes32 typeHash, bytes32 witness, bytes32 domainSeparator)
-        internal
-        returns (bytes memory sig)
-    {
+    function getPermitBatchWitnessSignature(
+        PermitBatchTransfer memory permit,
+        uint256 privateKey,
+        bytes32 typeHash,
+        bytes32 witness,
+        bytes32 domainSeparator
+    ) internal returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -166,20 +169,6 @@ contract PermitSignature is Test {
     }
 
     function defaultERC20PermitTransfer(address token0, uint256 nonce) internal view returns (PermitTransfer memory) {
-        return PermitTransfer({
-            token: token0,
-            spender: address(this),
-            signedAmount: 10 ** 18,
-            nonce: nonce,
-            deadline: block.timestamp + 100
-        });
-    }
-
-    function defaultERC20PermitWitnessTransfer(address token0, uint256 nonce)
-        internal
-        view
-        returns (PermitTransfer memory)
-    {
         return PermitTransfer({
             token: token0,
             spender: address(this),
