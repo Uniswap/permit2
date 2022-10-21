@@ -119,9 +119,12 @@ contract AllowanceTransfer is DomainSeparator {
             owner
         );
 
+        // can do in 1 sstore?
+        allowed.amount = permitData.amounts[0];
+        allowed.expiration = permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0];
         ++allowed.nonce;
         unchecked {
-            for (uint256 i = 0; i < permitData.tokens.length; ++i) {
+            for (uint256 i = 1; i < permitData.tokens.length; ++i) {
                 _updateAllowance(
                     allowance[owner][permitData.tokens[i]][permitData.spender],
                     permitData.amounts[i],
