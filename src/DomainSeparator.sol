@@ -13,14 +13,13 @@ contract DomainSeparator {
     address private immutable _CACHED_THIS;
 
     bytes32 private constant _HASHED_NAME = keccak256("Permit2");
-    bytes32 private constant _HASHED_VERSION = keccak256("1");
     bytes32 private constant _TYPE_HASH =
-        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+        keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     constructor() {
         _CACHED_CHAIN_ID = block.chainid;
         _CACHED_THIS = address(this);
-        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME, _HASHED_VERSION);
+        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME);
     }
 
     /// @notice returns the domain separator for the current chain
@@ -29,16 +28,12 @@ contract DomainSeparator {
         if (address(this) == _CACHED_THIS && block.chainid == _CACHED_CHAIN_ID) {
             return _CACHED_DOMAIN_SEPARATOR;
         } else {
-            return _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME, _HASHED_VERSION);
+            return _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME);
         }
     }
 
     /// @notice builds a domain separator using the current chainId and contract address
-    function _buildDomainSeparator(bytes32 typeHash, bytes32 nameHash, bytes32 versionHash)
-        private
-        view
-        returns (bytes32)
-    {
-        return keccak256(abi.encode(typeHash, nameHash, versionHash, block.chainid, address(this)));
+    function _buildDomainSeparator(bytes32 typeHash, bytes32 nameHash) private view returns (bytes32) {
+        return keccak256(abi.encode(typeHash, nameHash, block.chainid, address(this)));
     }
 }
