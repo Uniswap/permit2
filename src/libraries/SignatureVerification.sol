@@ -10,8 +10,7 @@ library SignatureVerification {
 
     function verify(bytes calldata signature, bytes32 hash, address claimedSigner) internal view {
         if (claimedSigner.code.length == 0) {
-            bytes32 r = bytes32(signature[0:32]);
-            bytes32 s = bytes32(signature[32:64]);
+            (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
             uint8 v = uint8(signature[64]);
             address signer = ecrecover(hash, v, r, s);
             if (signer == address(0)) revert InvalidSignature();
