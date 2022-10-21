@@ -10,14 +10,18 @@ import {
     SignatureExpired,
     InvalidNonce,
     PackedAllowance,
-    ExcessiveInvalidation
+    ExcessiveInvalidation,
+    LengthMismatch
 } from "../src/Permit2Utils.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
+import {AddressBuilder} from "./utils/AddressBuilder.sol";
+import {AmountBuilder} from "./utils/AmountBuilder.sol";
 
 import {MockPermit2} from "./mocks/MockPermit2.sol";
+import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 
-contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
+contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnapshot {
     using stdStorage for StdStorage;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
@@ -114,6 +118,51 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
+    }
+
+    function testTransferFromWithGasSnapshot() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address0);
+
+        permit2.permit(permit, from, sig);
+
+        (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
+
+        assertEq(amount, defaultAmount);
+
+        snapStart("transferFrom");
+        permit2.transferFrom(address(token0), from, address0, defaultAmount);
+        snapEnd();
+        assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
+        assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
+    }
+
+    function testBatchTransferFromWithGasSnapshot() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address0);
+
+        permit2.permit(permit, from, sig);
+
+        (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+
+        // permit token0 for 10 ** 18
+        address[] memory tokens = AddressBuilder.fill(3, address(token0));
+        uint160[] memory amounts = AmountBuilder.fillUInt160(3, 1 ** 18);
+        address[] memory recipients = AddressBuilder.fill(3, address0);
+        snapStart("batchTransferFrom");
+        permit2.batchTransferFrom(tokens, from, recipients, amounts);
+        snapEnd();
+        assertEq(token0.balanceOf(from), startBalanceFrom - 3 * 1 ** 18);
+        assertEq(token0.balanceOf(address0), startBalanceTo + 3 * 1 ** 18);
+        (amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount - 3 * 1 ** 18);
     }
 
     // dirty sstore on nonce, dirty sstore on transfer
@@ -243,5 +292,47 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature {
         permit2.permit(permit, from, sig);
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
+    }
+
+    function testBatchTransferFrom() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address0);
+
+        permit2.permit(permit, from, sig);
+
+        (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+
+        // permit token0 for 10 ** 18
+        address[] memory tokens = AddressBuilder.fill(3, address(token0));
+        uint160[] memory amounts = AmountBuilder.fillUInt160(3, 1 ** 18);
+        address[] memory recipients = AddressBuilder.fill(3, address0);
+
+        permit2.batchTransferFrom(tokens, from, recipients, amounts);
+        assertEq(token0.balanceOf(from), startBalanceFrom - 3 * 1 ** 18);
+        assertEq(token0.balanceOf(address0), startBalanceTo + 3 * 1 ** 18);
+        (amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount - 3 * 1 ** 18);
+    }
+
+    function testBatchTransferFromLengthMismatch() public {
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
+        bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        permit2.permit(permit, from, sig);
+
+        (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+
+        // permit token0 for 10 ** 18
+        address[] memory tokens = AddressBuilder.fill(3, address(token0));
+        uint160[] memory amounts = AmountBuilder.fillUInt160(3, 1 ** 18);
+        address[] memory recipients = AddressBuilder.fill(4, address0);
+
+        vm.expectRevert(LengthMismatch.selector);
+        permit2.batchTransferFrom(tokens, from, recipients, amounts);
     }
 }
