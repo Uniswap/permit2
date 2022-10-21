@@ -16,6 +16,15 @@ struct Permit {
     uint256 sigDeadline;
 }
 
+struct PermitBatch {
+    address[] tokens;
+    address spender;
+    uint160[] amounts;
+    uint64[] expirations;
+    uint32 nonce;
+    uint256 sigDeadline;
+}
+
 struct PermitTransfer {
     address token;
     address spender;

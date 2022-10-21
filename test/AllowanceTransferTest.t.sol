@@ -6,6 +6,7 @@ import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {
     Permit,
+    PermitBatch,
     InvalidSignature,
     SignatureExpired,
     InvalidNonce,
@@ -22,6 +23,7 @@ import {MockPermit2} from "./mocks/MockPermit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 
 contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnapshot {
+    using AddressBuilder for address[];
     using stdStorage for StdStorage;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
@@ -65,11 +67,13 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         setERC20TestTokens(fromDirty);
         setERC20TestTokenApprovals(vm, fromDirty, address(permit2));
 
-        // dirty the nonce for fromDirty address
+        // dirty the nonce for fromDirty address on token0 and token1
         permit2.setAllowance(fromDirty, address(token0), address(this), 1);
+        permit2.setAllowance(fromDirty, address(token1), address(this), 1);
 
-        // ensure address3 has some balance of token0 for dirty sstore on transfer
+        // ensure address3 has some balance of token0 and token1 for dirty sstore on transfer
         token0.mint(address3, defaultAmount);
+        token1.mint(address3, defaultAmount);
     }
 
     function testApprove() public {
@@ -89,8 +93,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         permit2.permit(permit, from, sig);
         snapEnd();
 
-        (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
     }
 
     function testSetAllowanceDirtyWrite() public {
@@ -101,8 +107,49 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         permit2.permit(permit, fromDirty, sig);
         snapEnd();
 
-        (uint160 amount,,) = permit2.allowance(fromDirty, address(token0), address(this));
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 2);
+    }
+
+    function testSetAllowanceBatch() public {
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        PermitBatch memory permit = defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, 0);
+        bytes memory sig = getPermitBatchSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        snapStart("permitBatchCleanWrite");
+        permit2.permitBatch(permit, from, sig);
+        snapEnd();
+
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount1, defaultAmount);
+        assertEq(expiration1, defaultExpiration);
+        assertEq(nonce1, 0);
+    }
+
+    function testSetAllowanceBatchDirtyWrite() public {
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        PermitBatch memory permit = defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, 1);
+        bytes memory sig = getPermitBatchSignature(permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
+
+        snapStart("permitBatchDirtyWrite");
+        permit2.permitBatch(permit, fromDirty, sig);
+        snapEnd();
+
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(fromDirty, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 2);
+        (uint160 amount1, uint64 expiration1, uint32 nonce1) =
+            permit2.allowance(fromDirty, address(token1), address(this));
+        assertEq(amount1, defaultAmount);
+        assertEq(expiration1, defaultExpiration);
+        assertEq(nonce1, 1);
     }
 
     // test setting allowance with ordered nonce and transfer
