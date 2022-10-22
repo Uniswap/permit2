@@ -36,4 +36,9 @@ contract DomainSeparator {
     function _buildDomainSeparator(bytes32 typeHash, bytes32 nameHash) private view returns (bytes32) {
         return keccak256(abi.encode(typeHash, nameHash, block.chainid, address(this)));
     }
+
+    /// @notice Creates an EIP-712 typed data hash
+    function _hashTypedData(bytes32 dataHash) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash));
+    }
 }

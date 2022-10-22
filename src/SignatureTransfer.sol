@@ -96,7 +96,7 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash)), owner);
+        signature.verify(_hashTypedData(dataHash), owner);
 
         // send to spender if the inputted to address is 0
         address recipient = to == address(0) ? permit.spender : to;
@@ -129,7 +129,7 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), permit.hash())), owner);
+        signature.verify(_hashTypedData(permit.hash()), owner);
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {

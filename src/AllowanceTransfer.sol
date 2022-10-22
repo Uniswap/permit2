@@ -66,7 +66,7 @@ contract AllowanceTransfer is DomainSeparator {
         }
 
         // Verify the signer address from the signature.
-        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), permitData.hash())), owner);
+        signature.verify(_hashTypedData(permitData.hash()), owner);
 
         // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
         uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
