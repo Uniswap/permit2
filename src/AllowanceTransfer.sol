@@ -1,32 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {
     Permit,
     PackedAllowance,
-    Signature,
     SignatureExpired,
     AllowanceExpired,
-    InvalidSignature,
     LengthMismatch,
     InvalidNonce,
     InsufficientAllowance,
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
 import {DomainSeparator} from "./DomainSeparator.sol";
-import "forge-std/console2.sol";
 
 /// TODO comments, headers, interface
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
 contract AllowanceTransfer is DomainSeparator {
+    using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
 
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
+
+    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
@@ -55,17 +56,19 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    function permit(Permit calldata signed, address owner, Signature calldata sig) external returns (address signer) {
+    function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
         // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > signed.sigDeadline) {
+        if (block.timestamp > permitData.sigDeadline) {
             revert SignatureExpired();
         }
 
-        // Use current nonce. Incremented below.
-        uint32 nonce = allowance[owner][signed.token][signed.spender].nonce;
+        // Check current nonce (incremented below).
+        if (permitData.nonce != allowance[owner][permitData.token][permitData.spender].nonce) {
+            revert InvalidNonce();
+        }
 
-        // Recover the signer address from the signature.
-        signer = ecrecover(
+        // Verify the signer address from the signature.
+        signature.verify(
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
@@ -73,29 +76,25 @@ contract AllowanceTransfer is DomainSeparator {
                     keccak256(
                         abi.encode(
                             _PERMIT_TYPEHASH,
-                            signed.token,
-                            signed.spender,
-                            signed.amount,
-                            signed.expiration,
-                            nonce,
-                            signed.sigDeadline
+                            permitData.token,
+                            permitData.spender,
+                            permitData.amount,
+                            permitData.expiration,
+                            permitData.nonce,
+                            permitData.sigDeadline
                         )
                     )
                 )
             ),
-            sig.v,
-            sig.r,
-            sig.s
+            owner
         );
 
-        if (signer == address(0) || signer != owner) revert InvalidSignature();
-
-        // If the signed expiration is 0, the allowance only lasts the duration of the block.
-        uint64 expiration = signed.expiration == 0 ? uint64(block.timestamp) : signed.expiration;
+        // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
+        uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
-        allowance[signer][signed.token][signed.spender] =
-            PackedAllowance({amount: signed.amount, expiration: expiration, nonce: nonce + 1});
+        allowance[owner][permitData.token][permitData.spender] =
+            PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -110,7 +109,24 @@ contract AllowanceTransfer is DomainSeparator {
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(address token, address from, address to, uint160 amount) external {
-        PackedAllowance memory allowed = allowance[from][token][msg.sender];
+        _transfer(token, from, to, amount);
+    }
+
+    function batchTransferFrom(address[] calldata token, address from, address[] calldata to, uint160[] calldata amount)
+        external
+    {
+        if (amount.length != to.length || token.length != to.length) {
+            revert LengthMismatch();
+        }
+        unchecked {
+            for (uint256 i = 0; i < token.length; ++i) {
+                _transfer(token[i], from, to[i], amount[i]);
+            }
+        }
+    }
+
+    function _transfer(address token, address from, address to, uint160 amount) private {
+        PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
         if (block.timestamp > allowed.expiration) {
             revert AllowanceExpired();
@@ -122,16 +138,13 @@ contract AllowanceTransfer is DomainSeparator {
                 revert InsufficientAllowance();
             } else {
                 unchecked {
-                    allowed.amount = maxAmount - amount;
+                    allowed.amount -= amount;
                 }
-                allowance[from][token][msg.sender] = allowed;
             }
         }
         // Transfer the tokens from the from address to the recipient.
         ERC20(token).safeTransferFrom(from, to, amount);
     }
-
-    // TODO transferFromBatch
 
     /*//////////////////////////////////////////////////////////////
                              LOCKDOWN LOGIC
@@ -159,9 +172,15 @@ contract AllowanceTransfer is DomainSeparator {
         }
     }
 
+    /// @notice invalidate nonces for a given (token, spender) pair
+    /// @dev token The token to invalidate nonces for
+    /// @dev spender The spender to invalidate nonces for
+    /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16.
     function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
         if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
 
-        allowance[msg.sender][token][spender].nonce += amountToInvalidate;
+        uint32 newNonce = allowance[msg.sender][token][spender].nonce + amountToInvalidate;
+        allowance[msg.sender][token][spender].nonce = newNonce;
+        emit InvalidateNonces(msg.sender, newNonce, token, spender);
     }
 }

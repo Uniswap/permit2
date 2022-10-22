@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+struct PackedAllowance {
+    uint160 amount;
+    uint64 expiration;
+    uint32 nonce;
+}
+
 struct Permit {
     address token;
     address spender;
     uint160 amount;
     uint64 expiration;
+    uint32 nonce;
     uint256 sigDeadline;
 }
 
@@ -15,7 +22,6 @@ struct PermitTransfer {
     uint256 signedAmount;
     uint256 nonce;
     uint256 deadline;
-    bytes32 witness;
 }
 
 struct PermitBatchTransfer {
@@ -24,19 +30,6 @@ struct PermitBatchTransfer {
     uint256[] signedAmounts;
     uint256 nonce;
     uint256 deadline;
-    bytes32 witness;
-}
-
-struct PackedAllowance {
-    uint160 amount;
-    uint64 expiration;
-    uint32 nonce;
-}
-
-struct Signature {
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
 }
 
 error InvalidSignature();
