@@ -32,9 +32,9 @@ contract SignatureTransfer is DomainSeparator {
     string public constant _PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
-    event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
+    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
-    mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
+    mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
@@ -189,7 +189,7 @@ contract SignatureTransfer is DomainSeparator {
     }
 
     /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
-    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) external {
+    function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
         emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
     }

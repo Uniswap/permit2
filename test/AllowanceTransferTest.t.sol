@@ -85,7 +85,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
         bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
+        snapStart("permitCleanWrite");
         permit2.permit(permit, from, sig);
+        snapEnd();
 
         (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
@@ -95,7 +97,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 1);
         bytes memory sig = getPermitSignature(permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
+        snapStart("permitDirtyWrite");
         permit2.permit(permit, fromDirty, sig);
+        snapEnd();
 
         (uint160 amount,,) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(amount, defaultAmount);
@@ -188,10 +192,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     function testSetAllowanceInvalidSignature() public {
         Permit memory permit = defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, 0);
         bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
-
+        snapStart("permitInvalidSigner");
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         permit.spender = address0;
         permit2.permit(permit, from, sig);
+        snapEnd();
     }
 
     function testSetAllowanceDeadlinePassed() public {
@@ -199,8 +204,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         bytes memory sig = getPermitSignature(permit, defaultNonce, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.warp(block.timestamp + 101);
+        snapStart("permitSignatureExpired");
         vm.expectRevert(SignatureExpired.selector);
         permit2.permit(permit, from, sig);
+        snapEnd();
     }
 
     function testMaxAllowance() public {
@@ -211,7 +218,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
 
+        snapStart("permitSetMaxAllowanceCleanWrite");
         permit2.permit(permit, from, sig);
+        snapEnd();
 
         (uint160 startAllowedAmount0,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(startAllowedAmount0, type(uint160).max);
@@ -221,6 +230,29 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(endAllowedAmount0, type(uint160).max);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
+        assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
+    }
+
+    function testMaxAllowanceDirtyWrite() public {
+        uint160 maxAllowance = type(uint160).max;
+        Permit memory permit = defaultERC20PermitAllowance(address(token0), maxAllowance, defaultExpiration, 1);
+        bytes memory sig = getPermitSignature(permit, 1, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(fromDirty);
+        uint256 startBalanceTo = token0.balanceOf(address0);
+
+        snapStart("permitSetMaxAllowanceDirtyWrite");
+        permit2.permit(permit, fromDirty, sig);
+        snapEnd();
+
+        (uint160 startAllowedAmount0,,) = permit2.allowance(fromDirty, address(token0), address(this));
+        assertEq(startAllowedAmount0, type(uint160).max);
+
+        permit2.transferFrom(address(token0), fromDirty, address0, defaultAmount);
+        (uint160 endAllowedAmount0,,) = permit2.allowance(fromDirty, address(token0), address(this));
+        assertEq(endAllowedAmount0, type(uint160).max);
+
+        assertEq(token0.balanceOf(fromDirty), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
     }
 
