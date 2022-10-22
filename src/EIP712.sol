@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-/// @notice caching domain separator
+/// @notice EIP712 helpers for permit2
 /// @dev maintains cross-chain replay protection in the event of a fork
 /// @dev reference: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/EIP712.sol
-contract DomainSeparator {
+contract EIP712 {
     /* solhint-disable var-name-mixedcase */
     // Cache the domain separator as an immutable value, but also store the chain id that it corresponds to, in order to
     // invalidate the cached domain separator if the chain id changes.

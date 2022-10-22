@@ -17,9 +17,9 @@ import {
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
-import {DomainSeparator} from "./DomainSeparator.sol";
+import {EIP712} from "./EIP712.sol";
 
-contract SignatureTransfer is DomainSeparator {
+contract SignatureTransfer is EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
     using PermitHash for PermitTransfer;

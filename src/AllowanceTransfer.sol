@@ -15,12 +15,12 @@ import {
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
-import {DomainSeparator} from "./DomainSeparator.sol";
+import {EIP712} from "./EIP712.sol";
 
 /// TODO comments, headers, interface
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
-contract AllowanceTransfer is DomainSeparator {
+contract AllowanceTransfer is EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
     using PermitHash for Permit;
