@@ -25,9 +25,9 @@ contract SignatureTransfer is EIP712 {
     using PermitHash for PermitTransfer;
     using PermitHash for PermitBatchTransfer;
 
-    event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
+    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
-    mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
+    mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
@@ -147,7 +147,7 @@ contract SignatureTransfer is EIP712 {
     }
 
     /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
-    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) external {
+    function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
         emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
     }
