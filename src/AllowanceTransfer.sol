@@ -176,11 +176,17 @@ contract AllowanceTransfer is DomainSeparator {
     /// @dev token The token to invalidate nonces for
     /// @dev spender The spender to invalidate nonces for
     /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16.
-    function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
+    function invalidateNonces(address token, address spender, uint32 amountToInvalidate)
+        public
+        returns (uint32 newNonce)
+    {
         if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
 
-        uint32 newNonce = allowance[msg.sender][token][spender].nonce + amountToInvalidate;
-        allowance[msg.sender][token][spender].nonce = newNonce;
+        unchecked {
+            // Overflow is impossible on human timescales.
+            newNonce = allowance[msg.sender][token][spender].nonce += amountToInvalidate;
+        }
+
         emit InvalidateNonces(msg.sender, newNonce, token, spender);
     }
 }
