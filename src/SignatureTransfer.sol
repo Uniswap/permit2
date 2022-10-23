@@ -25,9 +25,6 @@ contract SignatureTransfer is EIP712 {
     using PermitHash for PermitTransfer;
     using PermitHash for PermitBatchTransfer;
 
-    string public constant _PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB =
-        "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,";
-
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
@@ -116,17 +113,7 @@ contract SignatureTransfer is EIP712 {
         uint256[] calldata requestedAmounts,
         bytes calldata signature
     ) external {
-        bytes32 dataHash = keccak256(
-            abi.encode(
-                _PERMIT_BATCH_TRANSFER_TYPEHASH,
-                keccak256(abi.encodePacked(permit.tokens)),
-                permit.spender,
-                keccak256(abi.encodePacked(permit.signedAmounts)),
-                permit.nonce,
-                permit.deadline
-            )
-        );
-        _permitBatchTransferFrom(permit, dataHash, owner, to, requestedAmounts, signature);
+        _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
     }
 
     /// @notice Transfers tokens using a signed permit message.
@@ -150,22 +137,7 @@ contract SignatureTransfer is EIP712 {
         string calldata witnessType,
         bytes calldata signature
     ) external {
-        bytes32 typeHash = keccak256(
-            abi.encodePacked(_PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
-        );
-
-        bytes32 dataHash = keccak256(
-            abi.encode(
-                typeHash,
-                keccak256(abi.encodePacked(permit.tokens)),
-                permit.spender,
-                keccak256(abi.encodePacked(permit.signedAmounts)),
-                permit.nonce,
-                permit.deadline,
-                witness
-            )
-        );
-        _permitBatchTransferFrom(permit, dataHash, owner, to, requestedAmounts, signature);
+        _permitBatchTransferFrom(permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmounts, signature);
     }
 
     /// @notice Transfers tokens using a signed permit message.
@@ -193,7 +165,7 @@ contract SignatureTransfer is EIP712 {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(_hashTypedData(permit.hash()), owner);
+        signature.verify(_hashTypedData(dataHash), owner);
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
