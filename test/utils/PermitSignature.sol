@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
-import {Permit, PermitTransfer, PermitBatchTransfer} from "../../src/Permit2Utils.sol";
+import {Permit, PermitBatch, PermitTransfer, PermitBatchTransfer} from "../../src/Permit2Utils.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit2} from "../../src/Permit2.sol";
 
@@ -11,7 +11,9 @@ contract PermitSignature is Test {
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
-
+    bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
+        "Permit(address[] token,address spender,uint160[] amount,uint64[] expiration,uint32 nonce,uint256 sigDeadline)"
+    );
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH =
         keccak256("PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline)");
 
@@ -19,7 +21,7 @@ contract PermitSignature is Test {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline)"
     );
 
-    function getPermitSignature(Permit memory permit, uint32 nonce, uint256 privateKey, bytes32 domainSeparator)
+    function getPermitSignature(Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
         internal
         returns (bytes memory sig)
     {
@@ -34,7 +36,33 @@ contract PermitSignature is Test {
                         permit.spender,
                         permit.amount,
                         permit.expiration,
-                        nonce,
+                        permit.nonce,
+                        permit.sigDeadline
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
+    }
+
+    function getPermitBatchSignature(PermitBatch memory permit, uint256 privateKey, bytes32 domainSeparator)
+        internal
+        returns (bytes memory sig)
+    {
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        _PERMIT_BATCH_TYPEHASH,
+                        keccak256(abi.encodePacked(permit.tokens)),
+                        permit.spender,
+                        keccak256(abi.encodePacked(permit.amounts)),
+                        keccak256(abi.encodePacked(permit.expirations)),
+                        permit.nonce,
                         permit.sigDeadline
                     )
                 )
@@ -99,10 +127,11 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function getPermitBatchSignature(PermitBatchTransfer memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (bytes memory sig)
-    {
+    function getPermitBatchTransferSignature(
+        PermitBatchTransfer memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -134,6 +163,27 @@ contract PermitSignature is Test {
             spender: address(this),
             amount: amount,
             expiration: expiration,
+            nonce: nonce,
+            sigDeadline: block.timestamp + 100
+        });
+    }
+
+    function defaultERC20PermitBatchAllowance(address[] memory tokens, uint160 amount, uint64 expiration, uint32 nonce)
+        internal
+        view
+        returns (PermitBatch memory)
+    {
+        uint160[] memory maxAmounts = new uint160[](tokens.length);
+        uint64[] memory expirations = new uint64[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            maxAmounts[i] = amount;
+            expirations[i] = expiration;
+        }
+        return PermitBatch({
+            tokens: tokens,
+            spender: address(this),
+            amounts: maxAmounts,
+            expirations: expirations,
             nonce: nonce,
             sigDeadline: block.timestamp + 100
         });

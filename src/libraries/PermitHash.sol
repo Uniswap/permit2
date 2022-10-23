@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {Permit, PermitTransfer, PermitBatchTransfer} from "../Permit2Utils.sol";
+import {Permit, PermitBatch, PermitTransfer, PermitBatchTransfer} from "../Permit2Utils.sol";
 
 /// @notice utilities for hashing permit structs
 library PermitHash {
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
+    );
+
+    bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
+        "Permit(address[] token,address spender,uint160[] amount,uint64[] expiration,uint32 nonce,uint256 sigDeadline)"
     );
 
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH =
@@ -27,6 +31,20 @@ library PermitHash {
                 permit.spender,
                 permit.amount,
                 permit.expiration,
+                permit.nonce,
+                permit.sigDeadline
+            )
+        );
+    }
+
+    function hash(PermitBatch calldata permit) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                _PERMIT_BATCH_TYPEHASH,
+                keccak256(abi.encodePacked(permit.tokens)),
+                permit.spender,
+                keccak256(abi.encodePacked(permit.amounts)),
+                keccak256(abi.encodePacked(permit.expirations)),
                 permit.nonce,
                 permit.sigDeadline
             )

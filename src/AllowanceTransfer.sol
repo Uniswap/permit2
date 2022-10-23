@@ -6,6 +6,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {
     Permit,
+    PermitBatch,
     PackedAllowance,
     SignatureExpired,
     AllowanceExpired,
@@ -24,6 +25,7 @@ contract AllowanceTransfer is EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
     using PermitHash for Permit;
+    using PermitHash for PermitBatch;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
@@ -38,7 +40,7 @@ contract AllowanceTransfer is EIP712 {
     /// @notice Approves the `spender` to use up to `amount` of the specified `token` up until the `expiration`.
     /// @param token The token to approve.
     /// @param spender The spender address to approve.
-    /// @param amount The approved amount of the token.
+    /// @param amount The approved amount of the token.f
     /// @param expiration The duration of the approval.
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve.
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
@@ -58,23 +60,55 @@ contract AllowanceTransfer is EIP712 {
     /// @param owner The owner of the tokens being approved.
     /// @param signature The owner's signature over the permit data.
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
-        // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > permitData.sigDeadline) revert SignatureExpired();
-
-        // Check current nonce (incremented below).
-        if (permitData.nonce != allowance[owner][permitData.token][permitData.spender].nonce) revert InvalidNonce();
+        PackedAllowance storage allowed = allowance[owner][permitData.token][permitData.spender];
+        _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
-        // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
-        uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
-
-        // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
         unchecked {
-            allowance[owner][permitData.token][permitData.spender] =
-                PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
+            ++allowed.nonce;
         }
+        _updateAllowance(allowed, permitData.amount, permitData.expiration);
+    }
+
+    function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external {
+        // Use the first token's nonce.
+        PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
+        _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
+
+        // Verify the signer address from the signature.
+        signature.verify(_hashTypedData(permitData.hash()), owner);
+
+        // can do in 1 sstore?
+        allowed.amount = permitData.amounts[0];
+        allowed.expiration = permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0];
+        ++allowed.nonce;
+        unchecked {
+            for (uint256 i = 1; i < permitData.tokens.length; ++i) {
+                _updateAllowance(
+                    allowance[owner][permitData.tokens[i]][permitData.spender],
+                    permitData.amounts[i],
+                    permitData.expirations[i]
+                );
+            }
+        }
+    }
+
+    /// @notice Sets the allowed amount and expiry of the spender's permissions on owner's token.
+    /// @dev Nonce has already been incremented.
+    function _updateAllowance(PackedAllowance storage allowed, uint160 amount, uint64 expiration) private {
+        // If the signed expiration is 0, the allowance only lasts the duration of the block.
+        allowed.expiration = expiration == 0 ? uint64(block.timestamp) : expiration;
+        allowed.amount = amount;
+    }
+
+    function _validatePermit(uint32 nonce, uint32 signedNonce, uint256 sigDeadline) private view {
+        // Ensure the signature's deadline has not already passed.
+        if (block.timestamp > sigDeadline) revert SignatureExpired();
+
+        // Check current nonce.
+        if (nonce != signedNonce) revert InvalidNonce();
     }
 
     /*//////////////////////////////////////////////////////////////
