@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MockPermit2} from "./mocks/MockPermit2.sol";
-import {InvalidNonce} from "../src/Permit2Utils.sol";
+import {InvalidNonce} from "../src/PermitErrors.sol";
 
 contract NonceBitmapTest is Test {
     MockPermit2 permit2;

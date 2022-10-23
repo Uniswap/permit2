@@ -1,27 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {
-    Permit,
-    PermitBatch,
-    PackedAllowance,
-    SignatureExpired,
-    AllowanceExpired,
-    LengthMismatch,
-    InvalidNonce,
-    InsufficientAllowance,
-    ExcessiveInvalidation
-} from "./Permit2Utils.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
+import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {EIP712} from "./EIP712.sol";
+import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
+import {SignatureExpired, LengthMismatch, InvalidNonce} from "./PermitErrors.sol";
 
-/// TODO comments, headers, interface
-/// @title Permit2
-/// @author transmissions11 <t11s@paradigm.xyz>
-contract AllowanceTransfer is EIP712 {
+contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
     using PermitHash for Permit;
@@ -33,16 +21,12 @@ contract AllowanceTransfer is EIP712 {
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Maps users to tokens to spender addresses and information about the approval on the token.
-    /// @dev The saved packed word saves the allowed amount, expiration, and nonce.
+    /// @notice Maps users to tokens to spender addresses and information about the approval on the token
+    /// @dev Indexed in the order of token owner address, token address, spender address
+    /// @dev The stored word saves the allowed amount, expiration on the allowance, and nonce
     mapping(address => mapping(address => mapping(address => PackedAllowance))) public allowance;
 
-    /// @notice Approves the `spender` to use up to `amount` of the specified `token` up until the `expiration`.
-    /// @param token The token to approve.
-    /// @param spender The spender address to approve.
-    /// @param amount The approved amount of the token.f
-    /// @param expiration The duration of the approval.
-    /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve.
+    /// @inheritdoc IAllowanceTransfer
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.amount = amount;
@@ -53,12 +37,7 @@ contract AllowanceTransfer is EIP712 {
                               PERMIT LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Permit a user to spend a given amount of another user's
-    /// approved amount of the given token via the owner's EIP-712 signature.
-    /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
-    /// @param permitData Data signed over by the owner specifying the terms of approval.
-    /// @param owner The owner of the tokens being approved.
-    /// @param signature The owner's signature over the permit data.
+    /// @inheritdoc IAllowanceTransfer
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
         PackedAllowance storage allowed = allowance[owner][permitData.token][permitData.spender];
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
@@ -72,6 +51,7 @@ contract AllowanceTransfer is EIP712 {
         _updateAllowance(allowed, permitData.amount, permitData.expiration);
     }
 
+    /// @inheritdoc IAllowanceTransfer
     function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external {
         // Use the first token's nonce.
         PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
@@ -103,11 +83,9 @@ contract AllowanceTransfer is EIP712 {
         allowed.amount = amount;
     }
 
+    /// @notice Ensures that the deadline on the signature has not passed, and that the nonce hasn't been used
     function _validatePermit(uint32 nonce, uint32 signedNonce, uint256 sigDeadline) private view {
-        // Ensure the signature's deadline has not already passed.
         if (block.timestamp > sigDeadline) revert SignatureExpired();
-
-        // Check current nonce.
         if (nonce != signedNonce) revert InvalidNonce();
     }
 
@@ -115,22 +93,12 @@ contract AllowanceTransfer is EIP712 {
                              TRANSFER LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Transfer approved tokens from one address to another.
-    /// @param token The token to transfer.
-    /// @param from The address to transfer from.
-    /// @param to The address to transfer to.
-    /// @param amount The amount of tokens to transfer.
-    /// @dev Requires either the from address to have approved at last the desired amount
-    /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
+    /// @inheritdoc IAllowanceTransfer
     function transferFrom(address token, address from, address to, uint160 amount) external {
         _transfer(token, from, to, amount);
     }
 
-    /// @notice Transfer approved tokens in a batch
-    /// @param tokens Array of token addresses to transfer
-    /// @param from The address to transfer tokens from
-    /// @param to Array of recipients for the transfers
-    /// @param amounts Array of token amounts to transfer
+    /// @inheritdoc IAllowanceTransfer
     function batchTransferFrom(
         address[] calldata tokens,
         address from,
@@ -146,7 +114,8 @@ contract AllowanceTransfer is EIP712 {
         }
     }
 
-    /// @notice Internal function for transferring tokens using stored allowances.
+    /// @notice Internal function for transferring tokens using stored allowances
+    /// @dev Will fail if the allowed timeframe has passed
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
@@ -172,14 +141,7 @@ contract AllowanceTransfer is EIP712 {
                              LOCKDOWN LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // TODO: Bench if a struct for token-spender pairs is cheaper.
-    // TODO test
-    /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
-    /// by batch revoking approvals, and invalidating ordered nonces.
-    /// @param tokens An array of tokens who's corresponding spenders should have their
-    /// approvals revoked. Each index should correspond to an index in the spenders array.
-    /// @param spenders An array of addresses to revoke approvals from.
-    /// Each index should correspond to an index in the tokens array.
+    /// @inheritdoc IAllowanceTransfer
     function lockdown(address[] calldata tokens, address[] calldata spenders) external {
         // Each index should correspond to an index in the other array.
         if (tokens.length != spenders.length) revert LengthMismatch();
@@ -192,10 +154,7 @@ contract AllowanceTransfer is EIP712 {
         }
     }
 
-    /// @notice invalidate nonces for a given (token, spender) pair
-    /// @dev token The token to invalidate nonces for
-    /// @dev spender The spender to invalidate nonces for
-    /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16.
+    /// @inheritdoc IAllowanceTransfer
     function invalidateNonces(address token, address spender, uint32 amountToInvalidate)
         public
         returns (uint32 newNonce)
