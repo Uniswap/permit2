@@ -137,7 +137,14 @@ contract SignatureTransfer is EIP712 {
         string calldata witnessType,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmounts, signature);
+        _permitBatchTransferFrom(
+            permit,
+            permit.hashWithWitness(witness, witnessTypeName, witnessType),
+            owner,
+            to,
+            requestedAmounts,
+            signature
+        );
     }
 
     /// @notice Transfers tokens using a signed permit message.
