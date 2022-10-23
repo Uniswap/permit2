@@ -14,18 +14,16 @@ import {
     InsufficientAllowance,
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
-import {DomainSeparator} from "./DomainSeparator.sol";
+import {PermitHash} from "./libraries/PermitHash.sol";
+import {EIP712} from "./EIP712.sol";
 
 /// TODO comments, headers, interface
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
-contract AllowanceTransfer is DomainSeparator {
+contract AllowanceTransfer is EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-
-    bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
-    );
+    using PermitHash for Permit;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
@@ -56,45 +54,27 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
+    /// @param permitData Data signed over by the owner specifying the terms of approval.
+    /// @param owner The owner of the tokens being approved.
+    /// @param signature The owner's signature over the permit data.
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
         // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > permitData.sigDeadline) {
-            revert SignatureExpired();
-        }
+        if (block.timestamp > permitData.sigDeadline) revert SignatureExpired();
 
         // Check current nonce (incremented below).
-        if (permitData.nonce != allowance[owner][permitData.token][permitData.spender].nonce) {
-            revert InvalidNonce();
-        }
+        if (permitData.nonce != allowance[owner][permitData.token][permitData.spender].nonce) revert InvalidNonce();
 
         // Verify the signer address from the signature.
-        signature.verify(
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(
-                        abi.encode(
-                            _PERMIT_TYPEHASH,
-                            permitData.token,
-                            permitData.spender,
-                            permitData.amount,
-                            permitData.expiration,
-                            permitData.nonce,
-                            permitData.sigDeadline
-                        )
-                    )
-                )
-            ),
-            owner
-        );
+        signature.verify(_hashTypedData(permitData.hash()), owner);
 
         // If the signed expiration expiration is 0, the allowance only lasts the duration of the block.
         uint64 expiration = permitData.expiration == 0 ? uint64(block.timestamp) : permitData.expiration;
 
         // Set the allowance, timestamp, and incremented nonce of the spender's permissions on signer's token.
-        allowance[owner][permitData.token][permitData.spender] =
-            PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
+        unchecked {
+            allowance[owner][permitData.token][permitData.spender] =
+                PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -106,25 +86,33 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param from The address to transfer from.
     /// @param to The address to transfer to.
     /// @param amount The amount of tokens to transfer.
-    /// @dev Requires either the from address to have approved at least the desired amount
+    /// @dev Requires either the from address to have approved at last the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(address token, address from, address to, uint160 amount) external {
         _transfer(token, from, to, amount);
     }
 
-    function batchTransferFrom(address[] calldata token, address from, address[] calldata to, uint160[] calldata amount)
-        external
-    {
-        if (amount.length != to.length || token.length != to.length) {
-            revert LengthMismatch();
-        }
+    /// @notice Transfer approved tokens in a batch
+    /// @param tokens Array of token addresses to transfer
+    /// @param from The address to transfer tokens from
+    /// @param to Array of recipients for the transfers
+    /// @param amounts Array of token amounts to transfer
+    function batchTransferFrom(
+        address[] calldata tokens,
+        address from,
+        address[] calldata to,
+        uint160[] calldata amounts
+    ) external {
+        if (amounts.length != to.length || tokens.length != to.length) revert LengthMismatch();
+
         unchecked {
-            for (uint256 i = 0; i < token.length; ++i) {
-                _transfer(token[i], from, to[i], amount[i]);
+            for (uint256 i = 0; i < tokens.length; ++i) {
+                _transfer(tokens[i], from, to[i], amounts[i]);
             }
         }
     }
 
+    /// @notice Internal function for transferring tokens using stored allowances.
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
@@ -160,9 +148,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// Each index should correspond to an index in the tokens array.
     function lockdown(address[] calldata tokens, address[] calldata spenders) external {
         // Each index should correspond to an index in the other array.
-        if (tokens.length != spenders.length) {
-            revert LengthMismatch();
-        }
+        if (tokens.length != spenders.length) revert LengthMismatch();
 
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {

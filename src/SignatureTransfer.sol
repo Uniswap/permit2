@@ -16,21 +16,14 @@ import {
 } from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {DomainSeparator} from "./DomainSeparator.sol";
+import {PermitHash} from "./libraries/PermitHash.sol";
+import {EIP712} from "./EIP712.sol";
 
-contract SignatureTransfer is DomainSeparator {
+contract SignatureTransfer is EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-
-    bytes32 public constant _PERMIT_TRANSFER_TYPEHASH =
-        keccak256("PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline)");
-
-    bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
-        "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline)"
-    );
-
-    string public constant _PERMIT_WITNESS_TRANSFER_TYPEHASH_STUB =
-        "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+    using PermitHash for PermitTransfer;
+    using PermitHash for PermitBatchTransfer;
 
     string public constant _PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB =
         "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,";
@@ -53,17 +46,7 @@ contract SignatureTransfer is DomainSeparator {
         uint256 requestedAmount,
         bytes calldata signature
     ) external {
-        bytes32 dataHash = keccak256(
-            abi.encode(
-                _PERMIT_TRANSFER_TYPEHASH,
-                permit.token,
-                permit.spender,
-                permit.signedAmount,
-                permit.nonce,
-                permit.deadline
-            )
-        );
-        _permitTransferFrom(permit, dataHash, owner, to, requestedAmount, signature);
+        _permitTransferFrom(permit, permit.hash(), owner, to, requestedAmount, signature);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -86,17 +69,10 @@ contract SignatureTransfer is DomainSeparator {
         string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
-    ) public {
-        bytes32 typeHash = keccak256(
-            abi.encodePacked(_PERMIT_WITNESS_TRANSFER_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
+    ) external {
+        _permitTransferFrom(
+            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmount, signature
         );
-
-        bytes32 dataHash = keccak256(
-            abi.encode(
-                typeHash, permit.token, permit.spender, permit.signedAmount, permit.nonce, permit.deadline, witness
-            )
-        );
-        _permitTransferFrom(permit, dataHash, owner, to, requestedAmount, signature);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -116,14 +92,10 @@ contract SignatureTransfer is DomainSeparator {
         bytes calldata signature
     ) internal {
         _validatePermit(permit.spender, permit.deadline);
-
-        if (requestedAmount > permit.signedAmount) {
-            revert InvalidAmount();
-        }
-
+        if (requestedAmount > permit.signedAmount) revert InvalidAmount();
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash)), owner);
+        signature.verify(_hashTypedData(dataHash), owner);
 
         // send to spender if the inputted to address is 0
         address recipient = to == address(0) ? permit.spender : to;
@@ -215,15 +187,13 @@ contract SignatureTransfer is DomainSeparator {
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                if (requestedAmounts[i] > permit.signedAmounts[i]) {
-                    revert InvalidAmount();
-                }
+                if (requestedAmounts[i] > permit.signedAmounts[i]) revert InvalidAmount();
             }
         }
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash)), owner);
+        signature.verify(_hashTypedData(permit.hash()), owner);
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
@@ -235,7 +205,7 @@ contract SignatureTransfer is DomainSeparator {
     /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces.
     /// @dev The first 248 bits of the nonce value is the index of the desired bitmap.
     /// The last 8 bits of the nonce value is the position of the bit in the bitmap.
-    function bitmapPositions(uint256 nonce) public pure returns (uint248 wordPos, uint8 bitPos) {
+    function bitmapPositions(uint256 nonce) private pure returns (uint248 wordPos, uint8 bitPos) {
         wordPos = uint248(nonce >> 8);
         bitPos = uint8(nonce & 255);
     }
@@ -247,7 +217,7 @@ contract SignatureTransfer is DomainSeparator {
     }
 
     /// @notice Checks whether a nonce is taken. Then sets the bit at the bitPos in the bitmap at the wordPos.
-    function _useUnorderedNonce(address from, uint256 nonce) private {
+    function _useUnorderedNonce(address from, uint256 nonce) internal {
         (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
         if ((bitmap >> bitPos) & 1 == 1) {
@@ -256,11 +226,19 @@ contract SignatureTransfer is DomainSeparator {
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }
 
+    /// @notice ensures that the permit spender is caller and deadline is not passed
+    /// @param spender The expected spender
+    /// @param deadline The user-provided deadline
     function _validatePermit(address spender, uint256 deadline) private view {
         if (msg.sender != spender) revert NotSpender();
         if (block.timestamp > deadline) revert SignatureExpired();
     }
 
+    /// @notice ensures that permit token arrays are valid with regard to the tokens being spent
+    /// @param signedTokensLen The length of the tokens array signed by the user
+    /// @param recipientLen The length of the given recipients array
+    /// @param signedAmountsLen The length of the amounts length signed by the user
+    /// @param requestedAmountsLen The length of the given amounts array
     function _validateInputLengths(
         uint256 signedTokensLen,
         uint256 recipientLen,
