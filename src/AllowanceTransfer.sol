@@ -133,7 +133,7 @@ contract AllowanceTransfer is DomainSeparator {
         }
     }
 
-    /// @notice internal function for transferring tokens using stored alloawnces
+    /// @notice Internal function for transferring tokens using stored allowances.
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
