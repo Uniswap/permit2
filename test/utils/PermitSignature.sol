@@ -156,6 +156,35 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
+    function getPermitBatchWitnessSignature(
+        ISignatureTransfer.PermitBatchTransfer memory permit,
+        uint256 privateKey,
+        bytes32 typeHash,
+        bytes32 witness,
+        bytes32 domainSeparator
+    ) internal returns (bytes memory sig) {
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        typeHash,
+                        keccak256(abi.encodePacked(permit.tokens)),
+                        permit.spender,
+                        keccak256(abi.encodePacked(permit.signedAmounts)),
+                        permit.nonce,
+                        permit.deadline,
+                        witness
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
+    }
+
     function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration, uint32 nonce)
         internal
         view

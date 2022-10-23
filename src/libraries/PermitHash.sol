@@ -24,6 +24,9 @@ library PermitHash {
     string public constant _PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
+    string public constant _PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB =
+        "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,";
+
     function hash(IAllowanceTransfer.Permit calldata permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
@@ -91,6 +94,29 @@ library PermitHash {
         return keccak256(
             abi.encode(
                 typeHash, permit.token, permit.spender, permit.signedAmount, permit.nonce, permit.deadline, witness
+            )
+        );
+    }
+
+    function hashWithWitness(
+        ISignatureTransfer.PermitBatchTransfer calldata permit,
+        bytes32 witness,
+        string calldata witnessTypeName,
+        string calldata witnessType
+    ) internal pure returns (bytes32) {
+        bytes32 typeHash = keccak256(
+            abi.encodePacked(_PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
+        );
+
+        return keccak256(
+            abi.encode(
+                typeHash,
+                keccak256(abi.encodePacked(permit.tokens)),
+                permit.spender,
+                keccak256(abi.encodePacked(permit.signedAmounts)),
+                permit.nonce,
+                permit.deadline,
+                witness
             )
         );
     }

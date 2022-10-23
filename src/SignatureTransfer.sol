@@ -82,6 +82,55 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         uint256[] calldata requestedAmounts,
         bytes calldata signature
     ) external {
+        _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
+    }
+
+    /// @notice Transfers tokens using a signed permit message.
+    /// @notice Includes extra data provided by the caller to verify signature over.
+    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipients of the tokens
+    /// @param requestedAmounts The amount of tokens to transfer
+    /// @param witness Extra data to include when checking the user signature
+    /// @param witnessTypeName The name of the witness type
+    /// @param witnessType The EIP-712 type definition for the witness type
+    /// @param signature The signature to verify
+    function permitBatchWitnessTransferFrom(
+        PermitBatchTransfer calldata permit,
+        address owner,
+        address[] calldata to,
+        uint256[] calldata requestedAmounts,
+        bytes32 witness,
+        string calldata witnessTypeName,
+        string calldata witnessType,
+        bytes calldata signature
+    ) external {
+        _permitBatchTransferFrom(
+            permit,
+            permit.hashWithWitness(witness, witnessTypeName, witnessType),
+            owner,
+            to,
+            requestedAmounts,
+            signature
+        );
+    }
+
+    /// @notice Transfers tokens using a signed permit message.
+    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param to The recipients of the tokens
+    /// @param requestedAmounts The amount of tokens to transfer
+    /// @param signature The signature to verify
+    function _permitBatchTransferFrom(
+        PermitBatchTransfer calldata permit,
+        bytes32 dataHash,
+        address owner,
+        address[] calldata to,
+        uint256[] calldata requestedAmounts,
+        bytes calldata signature
+    ) internal {
         _validatePermit(permit.spender, permit.deadline);
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
         unchecked {
@@ -92,7 +141,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(_hashTypedData(permit.hash()), owner);
+        signature.verify(_hashTypedData(dataHash), owner);
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
