@@ -12,4 +12,8 @@ contract MockPermit2 is Permit2 {
         allowed = allowance[from][token][spender];
         allowance[from][token][spender].nonce = nonce;
     }
+
+    function useUnorderedNonce(address from, uint256 nonce) public {
+        _useUnorderedNonce(from, nonce);
+    }
 }

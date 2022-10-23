@@ -61,6 +61,9 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
+    /// @param permitData Data signed over by the owner specifying the terms of approval.
+    /// @param owner The owner of the tokens being approved.
+    /// @param signature The owner's signature over the permit data.
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
         PackedAllowance storage allowed = allowance[owner][permitData.token][permitData.spender];
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
@@ -94,6 +97,7 @@ contract AllowanceTransfer is DomainSeparator {
     }
 
     function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external {
+        // Use the first token's nonce.
         PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
 
@@ -144,14 +148,10 @@ contract AllowanceTransfer is DomainSeparator {
 
     function _validatePermit(uint32 nonce, uint32 signedNonce, uint256 sigDeadline) private view {
         // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > sigDeadline) {
-            revert SignatureExpired();
-        }
+        if (block.timestamp > sigDeadline) revert SignatureExpired();
 
         // Check current nonce.
-        if (nonce != signedNonce) {
-            revert InvalidNonce();
-        }
+        if (nonce != signedNonce) revert InvalidNonce();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -163,25 +163,33 @@ contract AllowanceTransfer is DomainSeparator {
     /// @param from The address to transfer from.
     /// @param to The address to transfer to.
     /// @param amount The amount of tokens to transfer.
-    /// @dev Requires either the from address to have approved at least the desired amount
+    /// @dev Requires either the from address to have approved at last the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(address token, address from, address to, uint160 amount) external {
         _transfer(token, from, to, amount);
     }
 
-    function batchTransferFrom(address[] calldata token, address from, address[] calldata to, uint160[] calldata amount)
-        external
-    {
-        if (amount.length != to.length || token.length != to.length) {
-            revert LengthMismatch();
-        }
+    /// @notice Transfer approved tokens in a batch
+    /// @param tokens Array of token addresses to transfer
+    /// @param from The address to transfer tokens from
+    /// @param to Array of recipients for the transfers
+    /// @param amounts Array of token amounts to transfer
+    function batchTransferFrom(
+        address[] calldata tokens,
+        address from,
+        address[] calldata to,
+        uint160[] calldata amounts
+    ) external {
+        if (amounts.length != to.length || tokens.length != to.length) revert LengthMismatch();
+
         unchecked {
-            for (uint256 i = 0; i < token.length; ++i) {
-                _transfer(token[i], from, to[i], amount[i]);
+            for (uint256 i = 0; i < tokens.length; ++i) {
+                _transfer(tokens[i], from, to[i], amounts[i]);
             }
         }
     }
 
+    /// @notice Internal function for transferring tokens using stored allowances.
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
@@ -217,9 +225,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// Each index should correspond to an index in the tokens array.
     function lockdown(address[] calldata tokens, address[] calldata spenders) external {
         // Each index should correspond to an index in the other array.
-        if (tokens.length != spenders.length) {
-            revert LengthMismatch();
-        }
+        if (tokens.length != spenders.length) revert LengthMismatch();
 
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
@@ -233,11 +239,17 @@ contract AllowanceTransfer is DomainSeparator {
     /// @dev token The token to invalidate nonces for
     /// @dev spender The spender to invalidate nonces for
     /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16.
-    function invalidateNonces(address token, address spender, uint32 amountToInvalidate) public {
+    function invalidateNonces(address token, address spender, uint32 amountToInvalidate)
+        public
+        returns (uint32 newNonce)
+    {
         if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
 
-        uint32 newNonce = allowance[msg.sender][token][spender].nonce + amountToInvalidate;
-        allowance[msg.sender][token][spender].nonce = newNonce;
+        unchecked {
+            // Overflow is impossible on human timescales.
+            newNonce = allowance[msg.sender][token][spender].nonce += amountToInvalidate;
+        }
+
         emit InvalidateNonces(msg.sender, newNonce, token, spender);
     }
 }

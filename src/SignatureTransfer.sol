@@ -32,9 +32,9 @@ contract SignatureTransfer is DomainSeparator {
     string public constant _PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
-    event InvalidateUnorderedNonces(address indexed owner, uint248 word, uint256 mask);
+    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
-    mapping(address => mapping(uint248 => uint256)) public nonceBitmap;
+    mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
     /// @notice Transfers a token using a signed permit message.
     /// @dev If to is the zero address, the tokens are sent to the spender.
@@ -113,11 +113,7 @@ contract SignatureTransfer is DomainSeparator {
         bytes calldata signature
     ) internal {
         _validatePermit(permit.spender, permit.deadline);
-
-        if (requestedAmount > permit.signedAmount) {
-            revert InvalidAmount();
-        }
-
+        if (requestedAmount > permit.signedAmount) revert InvalidAmount();
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash)), owner);
@@ -145,9 +141,7 @@ contract SignatureTransfer is DomainSeparator {
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                if (requestedAmounts[i] > permit.signedAmounts[i]) {
-                    revert InvalidAmount();
-                }
+                if (requestedAmounts[i] > permit.signedAmounts[i]) revert InvalidAmount();
             }
         }
 
@@ -175,7 +169,7 @@ contract SignatureTransfer is DomainSeparator {
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
+                ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmounts[i]);
             }
         }
     }
@@ -189,13 +183,13 @@ contract SignatureTransfer is DomainSeparator {
     }
 
     /// @notice Invalidates the bits specified in `mask` for the bitmap at `wordPos`.
-    function invalidateUnorderedNonces(uint248 wordPos, uint256 mask) external {
+    function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
         emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
     }
 
     /// @notice Checks whether a nonce is taken. Then sets the bit at the bitPos in the bitmap at the wordPos.
-    function _useUnorderedNonce(address from, uint256 nonce) private {
+    function _useUnorderedNonce(address from, uint256 nonce) internal {
         (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
         if ((bitmap >> bitPos) & 1 == 1) {
@@ -204,11 +198,19 @@ contract SignatureTransfer is DomainSeparator {
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }
 
+    /// @notice ensures that the permit spender is caller and deadline is not passed
+    /// @param spender The expected spender
+    /// @param deadline The user-provided deadline
     function _validatePermit(address spender, uint256 deadline) private view {
         if (msg.sender != spender) revert NotSpender();
         if (block.timestamp > deadline) revert SignatureExpired();
     }
 
+    /// @notice ensures that permit token arrays are valid with regard to the tokens being spent
+    /// @param signedTokensLen The length of the tokens array signed by the user
+    /// @param recipientLen The length of the given recipients array
+    /// @param signedAmountsLen The length of the amounts length signed by the user
+    /// @param requestedAmountsLen The length of the given amounts array
     function _validateInputLengths(
         uint256 signedTokensLen,
         uint256 recipientLen,
