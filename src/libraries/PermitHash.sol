@@ -99,7 +99,7 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        PermitBatchTransfer calldata permit,
+        ISignatureTransfer.PermitBatchTransfer calldata permit,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType

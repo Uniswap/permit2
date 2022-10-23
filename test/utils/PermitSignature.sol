@@ -157,7 +157,7 @@ contract PermitSignature is Test {
     }
 
     function getPermitBatchWitnessSignature(
-        PermitBatchTransfer memory permit,
+        ISignatureTransfer.PermitBatchTransfer memory permit,
         uint256 privateKey,
         bytes32 typeHash,
         bytes32 witness,
