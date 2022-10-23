@@ -175,7 +175,7 @@ contract SignatureTransfer is DomainSeparator {
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                ERC20(permit.tokens[i]).transferFrom(owner, to[i], requestedAmounts[i]);
+                ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmounts[i]);
             }
         }
     }
