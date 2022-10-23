@@ -29,10 +29,6 @@ contract AllowanceTransfer is DomainSeparator {
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
-    /*//////////////////////////////////////////////////////////////
-                            ALLOWANCE STORAGE
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Maps users to tokens to spender addresses and information about the approval on the token.
     /// @dev The saved packed word saves the allowed amount, expiration, and nonce.
     mapping(address => mapping(address => mapping(address => PackedAllowance))) public allowance;
@@ -49,18 +45,12 @@ contract AllowanceTransfer is DomainSeparator {
         allowed.expiration = expiration;
     }
 
-    /*/////////////////////////////////////////////////////f/////////
-                              PERMIT LOGIC
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Permit a user to spend a given amount of another user's
     /// approved amount of the given token via the owner's EIP-712 signature.
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce.
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
         // Ensure the signature's deadline has not already passed.
-        if (block.timestamp > permitData.sigDeadline) {
-            revert SignatureExpired();
-        }
+        if (block.timestamp > permitData.sigDeadline) revert SignatureExpired();
 
         // Check current nonce (incremented below).
         if (permitData.nonce != allowance[owner][permitData.token][permitData.spender].nonce) {
@@ -97,10 +87,6 @@ contract AllowanceTransfer is DomainSeparator {
             PackedAllowance({amount: permitData.amount, expiration: expiration, nonce: permitData.nonce + 1});
     }
 
-    /*//////////////////////////////////////////////////////////////
-                             TRANSFER LOGIC
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Transfer approved tokens from one address to another.
     /// @param token The token to transfer.
     /// @param from The address to transfer from.
@@ -115,9 +101,8 @@ contract AllowanceTransfer is DomainSeparator {
     function batchTransferFrom(address[] calldata token, address from, address[] calldata to, uint160[] calldata amount)
         external
     {
-        if (amount.length != to.length || token.length != to.length) {
-            revert LengthMismatch();
-        }
+        if (amount.length != to.length || token.length != to.length) revert LengthMismatch();
+
         unchecked {
             for (uint256 i = 0; i < token.length; ++i) {
                 _transfer(token[i], from, to[i], amount[i]);
@@ -128,11 +113,9 @@ contract AllowanceTransfer is DomainSeparator {
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
-        if (block.timestamp > allowed.expiration) {
-            revert AllowanceExpired();
-        }
+        if (block.timestamp > allowed.expiration) revert AllowanceExpired();
 
-        uint160 maxAmount = allowed.amount;
+        uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
             if (amount > maxAmount) {
                 revert InsufficientAllowance();
@@ -142,13 +125,10 @@ contract AllowanceTransfer is DomainSeparator {
                 }
             }
         }
+
         // Transfer the tokens from the from address to the recipient.
         ERC20(token).safeTransferFrom(from, to, amount);
     }
-
-    /*//////////////////////////////////////////////////////////////
-                             LOCKDOWN LOGIC
-    //////////////////////////////////////////////////////////////*/
 
     // TODO: Bench if a struct for token-spender pairs is cheaper.
     // TODO test
@@ -160,9 +140,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// Each index should correspond to an index in the tokens array.
     function lockdown(address[] calldata tokens, address[] calldata spenders) external {
         // Each index should correspond to an index in the other array.
-        if (tokens.length != spenders.length) {
-            revert LengthMismatch();
-        }
+        if (tokens.length != spenders.length) revert LengthMismatch();
 
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
