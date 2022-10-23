@@ -85,17 +85,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
     }
 
-    /// @notice Transfers tokens using a signed permit message.
-    /// @notice Includes extra data provided by the caller to verify signature over.
-    /// @dev If to is the zero address, the tokens are sent to the spender.
-    /// @param permit The permit data signed over by the owner
-    /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
-    /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeName The name of the witness type
-    /// @param witnessType The EIP-712 type definition for the witness type
-    /// @param signature The signature to verify
+    /// @inheritdoc ISignatureTransfer
     function permitBatchWitnessTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,
@@ -116,12 +106,13 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         );
     }
 
-    /// @notice Transfers tokens using a signed permit message.
-    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @notice Transfers tokens using a signed permit messages
+    /// @dev If to is the zero address, the tokens are sent to the spender
     /// @param permit The permit data signed over by the owner
+    /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
+    /// @param to An array of the recipients of the tokens
+    /// @param requestedAmounts An array with the amount of each token to transfer
     /// @param signature The signature to verify
     function _permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
