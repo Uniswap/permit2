@@ -16,21 +16,14 @@ import {
 } from "./Permit2Utils.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {DomainSeparator} from "./DomainSeparator.sol";
+import {PermitHash} from "./libraries/PermitHash.sol";
+import {EIP712} from "./EIP712.sol";
 
-contract SignatureTransfer is DomainSeparator {
+contract SignatureTransfer is EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-
-    bytes32 public constant _PERMIT_TRANSFER_TYPEHASH =
-        keccak256("PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline)");
-
-    bytes32 public constant _PERMIT_BATCH_TRANSFER_TYPEHASH = keccak256(
-        "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline)"
-    );
-
-    string public constant _PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB =
-        "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
+    using PermitHash for PermitTransfer;
+    using PermitHash for PermitBatchTransfer;
 
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
@@ -50,17 +43,7 @@ contract SignatureTransfer is DomainSeparator {
         uint256 requestedAmount,
         bytes calldata signature
     ) external {
-        bytes32 dataHash = keccak256(
-            abi.encode(
-                _PERMIT_TRANSFER_TYPEHASH,
-                permit.token,
-                permit.spender,
-                permit.signedAmount,
-                permit.nonce,
-                permit.deadline
-            )
-        );
-        _permitTransferFrom(permit, dataHash, owner, to, requestedAmount, signature);
+        _permitTransferFrom(permit, permit.hash(), owner, to, requestedAmount, signature);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -83,17 +66,10 @@ contract SignatureTransfer is DomainSeparator {
         string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
-    ) public {
-        bytes32 typeHash = keccak256(
-            abi.encodePacked(_PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
+    ) external {
+        _permitTransferFrom(
+            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmount, signature
         );
-
-        bytes32 dataHash = keccak256(
-            abi.encode(
-                typeHash, permit.token, permit.spender, permit.signedAmount, permit.nonce, permit.deadline, witness
-            )
-        );
-        _permitTransferFrom(permit, dataHash, owner, to, requestedAmount, signature);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -116,7 +92,7 @@ contract SignatureTransfer is DomainSeparator {
         if (requestedAmount > permit.signedAmount) revert InvalidAmount();
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash)), owner);
+        signature.verify(_hashTypedData(dataHash), owner);
 
         // send to spender if the inputted to address is 0
         address recipient = to == address(0) ? permit.spender : to;
@@ -147,25 +123,7 @@ contract SignatureTransfer is DomainSeparator {
 
         _useUnorderedNonce(owner, permit.nonce);
 
-        signature.verify(
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(
-                        abi.encode(
-                            _PERMIT_BATCH_TRANSFER_TYPEHASH,
-                            keccak256(abi.encodePacked(permit.tokens)),
-                            permit.spender,
-                            keccak256(abi.encodePacked(permit.signedAmounts)),
-                            permit.nonce,
-                            permit.deadline
-                        )
-                    )
-                )
-            ),
-            owner
-        );
+        signature.verify(_hashTypedData(permit.hash()), owner);
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
@@ -177,7 +135,7 @@ contract SignatureTransfer is DomainSeparator {
     /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces.
     /// @dev The first 248 bits of the nonce value is the index of the desired bitmap.
     /// The last 8 bits of the nonce value is the position of the bit in the bitmap.
-    function bitmapPositions(uint256 nonce) public pure returns (uint248 wordPos, uint8 bitPos) {
+    function bitmapPositions(uint256 nonce) private pure returns (uint248 wordPos, uint8 bitPos) {
         wordPos = uint248(nonce >> 8);
         bitPos = uint8(nonce & 255);
     }
