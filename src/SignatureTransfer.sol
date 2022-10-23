@@ -89,11 +89,7 @@ contract SignatureTransfer is EIP712 {
         bytes calldata signature
     ) internal {
         _validatePermit(permit.spender, permit.deadline);
-
-        if (requestedAmount > permit.signedAmount) {
-            revert InvalidAmount();
-        }
-
+        if (requestedAmount > permit.signedAmount) revert InvalidAmount();
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(_hashTypedData(dataHash), owner);
@@ -121,9 +117,7 @@ contract SignatureTransfer is EIP712 {
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                if (requestedAmounts[i] > permit.signedAmounts[i]) {
-                    revert InvalidAmount();
-                }
+                if (requestedAmounts[i] > permit.signedAmounts[i]) revert InvalidAmount();
             }
         }
 
@@ -153,7 +147,7 @@ contract SignatureTransfer is EIP712 {
     }
 
     /// @notice Checks whether a nonce is taken. Then sets the bit at the bitPos in the bitmap at the wordPos.
-    function _useUnorderedNonce(address from, uint256 nonce) private {
+    function _useUnorderedNonce(address from, uint256 nonce) internal {
         (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
         if ((bitmap >> bitPos) & 1 == 1) {
@@ -162,11 +156,19 @@ contract SignatureTransfer is EIP712 {
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }
 
+    /// @notice ensures that the permit spender is caller and deadline is not passed
+    /// @param spender The expected spender
+    /// @param deadline The user-provided deadline
     function _validatePermit(address spender, uint256 deadline) private view {
         if (msg.sender != spender) revert NotSpender();
         if (block.timestamp > deadline) revert SignatureExpired();
     }
 
+    /// @notice ensures that permit token arrays are valid with regard to the tokens being spent
+    /// @param signedTokensLen The length of the tokens array signed by the user
+    /// @param recipientLen The length of the given recipients array
+    /// @param signedAmountsLen The length of the amounts length signed by the user
+    /// @param requestedAmountsLen The length of the given amounts array
     function _validateInputLengths(
         uint256 signedTokensLen,
         uint256 recipientLen,
