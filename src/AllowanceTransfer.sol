@@ -15,22 +15,17 @@ import {
     InsufficientAllowance,
     ExcessiveInvalidation
 } from "./Permit2Utils.sol";
-import {DomainSeparator} from "./DomainSeparator.sol";
+import {PermitHash} from "./libraries/PermitHash.sol";
+import {EIP712} from "./EIP712.sol";
 
 /// TODO comments, headers, interface
 /// @title Permit2
 /// @author transmissions11 <t11s@paradigm.xyz>
-contract AllowanceTransfer is DomainSeparator {
+contract AllowanceTransfer is EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-
-    bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
-    );
-
-    bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "Permit(address[] token,address spender,uint160[] amount,uint64[] expiration,uint32 nonce,uint256 sigDeadline)"
-    );
+    using PermitHash for Permit;
+    using PermitHash for PermitBatch;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
@@ -45,7 +40,7 @@ contract AllowanceTransfer is DomainSeparator {
     /// @notice Approves the `spender` to use up to `amount` of the specified `token` up until the `expiration`.
     /// @param token The token to approve.
     /// @param spender The spender address to approve.
-    /// @param amount The approved amount of the token.
+    /// @param amount The approved amount of the token.f
     /// @param expiration The duration of the approval.
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve.
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
@@ -69,26 +64,7 @@ contract AllowanceTransfer is DomainSeparator {
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
 
         // Verify the signer address from the signature.
-        signature.verify(
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(
-                        abi.encode(
-                            _PERMIT_TYPEHASH,
-                            permitData.token,
-                            permitData.spender,
-                            permitData.amount,
-                            permitData.expiration,
-                            permitData.nonce,
-                            permitData.sigDeadline
-                        )
-                    )
-                )
-            ),
-            owner
-        );
+        signature.verify(_hashTypedData(permitData.hash()), owner);
 
         unchecked {
             ++allowed.nonce;
@@ -102,26 +78,7 @@ contract AllowanceTransfer is DomainSeparator {
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
 
         // Verify the signer address from the signature.
-        signature.verify(
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(
-                        abi.encode(
-                            _PERMIT_BATCH_TYPEHASH,
-                            keccak256(abi.encodePacked(permitData.tokens)),
-                            permitData.spender,
-                            keccak256(abi.encodePacked(permitData.amounts)),
-                            keccak256(abi.encodePacked(permitData.expirations)),
-                            permitData.nonce,
-                            permitData.sigDeadline
-                        )
-                    )
-                )
-            ),
-            owner
-        );
+        signature.verify(_hashTypedData(permitData.hash()), owner);
 
         // can do in 1 sstore?
         allowed.amount = permitData.amounts[0];

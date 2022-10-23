@@ -21,7 +21,7 @@ contract PermitSignature is Test {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline)"
     );
 
-    function getPermitSignature(Permit memory permit, uint32 nonce, uint256 privateKey, bytes32 domainSeparator)
+    function getPermitSignature(Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
         internal
         returns (bytes memory sig)
     {
@@ -36,7 +36,7 @@ contract PermitSignature is Test {
                         permit.spender,
                         permit.amount,
                         permit.expiration,
-                        nonce,
+                        permit.nonce,
                         permit.sigDeadline
                     )
                 )
@@ -47,12 +47,10 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function getPermitBatchSignature(
-        PermitBatch memory permit,
-        uint32 nonce,
-        uint256 privateKey,
-        bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    function getPermitBatchSignature(PermitBatch memory permit, uint256 privateKey, bytes32 domainSeparator)
+        internal
+        returns (bytes memory sig)
+    {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
