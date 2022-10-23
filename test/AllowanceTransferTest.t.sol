@@ -4,21 +4,13 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
-import {
-    Permit,
-    PermitBatch,
-    InvalidSignature,
-    SignatureExpired,
-    InvalidNonce,
-    PackedAllowance,
-    ExcessiveInvalidation,
-    LengthMismatch
-} from "../src/Permit2Utils.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
-
+import {AllowanceTransfer} from "../src/AllowanceTransfer.sol";
+import {SignatureExpired, InvalidNonce, LengthMismatch} from "../src/PermitErrors.sol";
+import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
 import {MockPermit2} from "./mocks/MockPermit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 
@@ -87,7 +79,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testSetAllowance() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -102,7 +94,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testSetAllowanceDirtyWrite() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, dirtyNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
@@ -118,7 +110,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testSetAllowanceBatch() public {
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit =
+        IAllowanceTransfer.PermitBatch memory permit =
             defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -138,7 +130,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testSetAllowanceBatchDirtyWrite() public {
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatch memory permit =
+        IAllowanceTransfer.PermitBatch memory permit =
             defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, dirtyNonce);
         bytes memory sig = getPermitBatchSignature(permit, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
@@ -159,7 +151,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     // test setting allowance with ordered nonce and transfer
     function testSetAllowanceTransfer() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -178,7 +170,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testTransferFromWithGasSnapshot() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -199,7 +191,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testBatchTransferFromWithGasSnapshot() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -226,7 +218,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     // dirty sstore on nonce, dirty sstore on transfer
     function testSetAllowanceTransferDirtyNonceDirtyTransfer() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, dirtyNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
@@ -248,7 +240,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testSetAllowanceInvalidSignature() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
         snapStart("permitInvalidSigner");
@@ -259,7 +251,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testSetAllowanceDeadlinePassed() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -272,7 +264,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testMaxAllowance() public {
         uint160 maxAllowance = type(uint160).max;
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), maxAllowance, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -296,7 +288,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testMaxAllowanceDirtyWrite() public {
         uint160 maxAllowance = type(uint160).max;
-        Permit memory permit = defaultERC20PermitAllowance(address(token0), maxAllowance, defaultExpiration, dirtyNonce);
+        IAllowanceTransfer.Permit memory permit =
+            defaultERC20PermitAllowance(address(token0), maxAllowance, defaultExpiration, dirtyNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKeyDirty, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(fromDirty);
@@ -318,7 +311,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testPartialAllowance() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -342,7 +335,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testReuseOrderedNonceInvalid() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -359,7 +352,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testInvalidateNonces() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -376,13 +369,13 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testExcessiveInvalidation() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint32 numInvalidate = type(uint16).max;
         vm.startPrank(from);
-        vm.expectRevert(ExcessiveInvalidation.selector);
+        vm.expectRevert(IAllowanceTransfer.ExcessiveInvalidation.selector);
         permit2.invalidateNonces(address(token0), address(this), numInvalidate + 1);
         vm.stopPrank();
 
@@ -392,7 +385,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testBatchTransferFrom() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
@@ -419,7 +412,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     }
 
     function testBatchTransferFromLengthMismatch() public {
-        Permit memory permit =
+        IAllowanceTransfer.Permit memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 

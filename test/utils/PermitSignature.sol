@@ -3,9 +3,10 @@ pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
-import {Permit, PermitBatch, PermitTransfer, PermitBatchTransfer} from "../../src/Permit2Utils.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Permit2} from "../../src/Permit2.sol";
+import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
+import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
 
 contract PermitSignature is Test {
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
@@ -21,7 +22,7 @@ contract PermitSignature is Test {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline)"
     );
 
-    function getPermitSignature(Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
+    function getPermitSignature(IAllowanceTransfer.Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
         internal
         returns (bytes memory sig)
     {
@@ -47,10 +48,11 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function getPermitBatchSignature(PermitBatch memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (bytes memory sig)
-    {
+    function getPermitBatchSignature(
+        IAllowanceTransfer.PermitBatch memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -73,10 +75,11 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function getPermitTransferSignature(PermitTransfer memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (bytes memory sig)
-    {
+    function getPermitTransferSignature(
+        ISignatureTransfer.PermitTransfer memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -99,7 +102,7 @@ contract PermitSignature is Test {
     }
 
     function getPermitWitnessTransferSignature(
-        PermitTransfer memory permit,
+        ISignatureTransfer.PermitTransfer memory permit,
         uint256 privateKey,
         bytes32 typehash,
         bytes32 witness,
@@ -128,7 +131,7 @@ contract PermitSignature is Test {
     }
 
     function getPermitBatchTransferSignature(
-        PermitBatchTransfer memory permit,
+        ISignatureTransfer.PermitBatchTransfer memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
@@ -156,9 +159,9 @@ contract PermitSignature is Test {
     function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration, uint32 nonce)
         internal
         view
-        returns (Permit memory)
+        returns (IAllowanceTransfer.Permit memory)
     {
-        return Permit({
+        return IAllowanceTransfer.Permit({
             token: token0,
             spender: address(this),
             amount: amount,
@@ -171,7 +174,7 @@ contract PermitSignature is Test {
     function defaultERC20PermitBatchAllowance(address[] memory tokens, uint160 amount, uint64 expiration, uint32 nonce)
         internal
         view
-        returns (PermitBatch memory)
+        returns (IAllowanceTransfer.PermitBatch memory)
     {
         uint160[] memory maxAmounts = new uint160[](tokens.length);
         uint64[] memory expirations = new uint64[](tokens.length);
@@ -179,7 +182,7 @@ contract PermitSignature is Test {
             maxAmounts[i] = amount;
             expirations[i] = expiration;
         }
-        return PermitBatch({
+        return IAllowanceTransfer.PermitBatch({
             tokens: tokens,
             spender: address(this),
             amounts: maxAmounts,
@@ -189,8 +192,12 @@ contract PermitSignature is Test {
         });
     }
 
-    function defaultERC20PermitTransfer(address token0, uint256 nonce) internal view returns (PermitTransfer memory) {
-        return PermitTransfer({
+    function defaultERC20PermitTransfer(address token0, uint256 nonce)
+        internal
+        view
+        returns (ISignatureTransfer.PermitTransfer memory)
+    {
+        return ISignatureTransfer.PermitTransfer({
             token: token0,
             spender: address(this),
             signedAmount: 10 ** 18,
@@ -202,9 +209,9 @@ contract PermitSignature is Test {
     function defaultERC20PermitWitnessTransfer(address token0, uint256 nonce)
         internal
         view
-        returns (PermitTransfer memory)
+        returns (ISignatureTransfer.PermitTransfer memory)
     {
-        return PermitTransfer({
+        return ISignatureTransfer.PermitTransfer({
             token: token0,
             spender: address(this),
             signedAmount: 10 ** 18,
@@ -216,13 +223,13 @@ contract PermitSignature is Test {
     function defaultERC20PermitMultiple(address[] memory tokens, uint256 nonce)
         internal
         view
-        returns (PermitBatchTransfer memory)
+        returns (ISignatureTransfer.PermitBatchTransfer memory)
     {
         uint256[] memory maxAmounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
             maxAmounts[i] = 1 ** 18;
         }
-        return PermitBatchTransfer({
+        return ISignatureTransfer.PermitBatchTransfer({
             tokens: tokens,
             spender: address(this),
             signedAmounts: maxAmounts,

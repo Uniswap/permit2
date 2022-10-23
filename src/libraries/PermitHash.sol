@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {Permit, PermitBatch, PermitTransfer, PermitBatchTransfer} from "../Permit2Utils.sol";
+import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
+import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
 
 /// @notice utilities for hashing permit structs
 library PermitHash {
@@ -23,7 +24,7 @@ library PermitHash {
     string public constant _PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
-    function hash(Permit calldata permit) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer.Permit calldata permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_TYPEHASH,
@@ -37,7 +38,7 @@ library PermitHash {
         );
     }
 
-    function hash(PermitBatch calldata permit) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer.PermitBatch calldata permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TYPEHASH,
@@ -51,7 +52,7 @@ library PermitHash {
         );
     }
 
-    function hash(PermitTransfer calldata permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitTransfer calldata permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_TRANSFER_TYPEHASH,
@@ -64,7 +65,7 @@ library PermitHash {
         );
     }
 
-    function hash(PermitBatchTransfer calldata permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitBatchTransfer calldata permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TRANSFER_TYPEHASH,
@@ -78,7 +79,7 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        PermitTransfer calldata permit,
+        ISignatureTransfer.PermitTransfer calldata permit,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType
