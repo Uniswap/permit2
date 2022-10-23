@@ -113,11 +113,7 @@ contract SignatureTransfer is DomainSeparator {
         bytes calldata signature
     ) internal {
         _validatePermit(permit.spender, permit.deadline);
-
-        if (requestedAmount > permit.signedAmount) {
-            revert InvalidAmount();
-        }
-
+        if (requestedAmount > permit.signedAmount) revert InvalidAmount();
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), dataHash)), owner);
@@ -145,9 +141,7 @@ contract SignatureTransfer is DomainSeparator {
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                if (requestedAmounts[i] > permit.signedAmounts[i]) {
-                    revert InvalidAmount();
-                }
+                if (requestedAmounts[i] > permit.signedAmounts[i]) revert InvalidAmount();
             }
         }
 
