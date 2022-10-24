@@ -11,6 +11,9 @@ interface ISignatureTransfer {
     error AmountsLengthMismatch();
     error RecipientLengthMismatch();
 
+    /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
+    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
+
     /// @notice The signed permit message for a single token transfer
     struct PermitTransfer {
         // ERC20 token address
