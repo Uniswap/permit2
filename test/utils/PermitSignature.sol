@@ -22,9 +22,9 @@ contract PermitSignature is Test {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline)"
     );
 
-    function getPermitSignature(IAllowanceTransfer.Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
+    function getPermitSignatureRaw(IAllowanceTransfer.Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
         internal
-        returns (bytes memory sig)
+        returns (uint8 v, bytes32 r, bytes32 s)
     {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
@@ -44,7 +44,15 @@ contract PermitSignature is Test {
             )
         );
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        (v, r, s) = vm.sign(privateKey, msgHash);
+    }
+
+    function getPermitSignature(IAllowanceTransfer.Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
+        internal
+        returns (bytes memory sig)
+    {
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
+
         return bytes.concat(r, s, bytes1(v));
     }
 

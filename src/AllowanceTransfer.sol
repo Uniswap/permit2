@@ -56,6 +56,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         allowed.amount = permitData.amounts[0];
         allowed.expiration = permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0];
         ++allowed.nonce;
+
         unchecked {
             for (uint256 i = 1; i < permitData.tokens.length; ++i) {
                 _updateAllowance(
