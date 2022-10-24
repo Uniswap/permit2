@@ -17,10 +17,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
-    /*//////////////////////////////////////////////////////////////
-                            ALLOWANCE STORAGE
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Maps users to tokens to spender addresses and information about the approval on the token
     /// @dev Indexed in the order of token owner address, token address, spender address
     /// @dev The stored word saves the allowed amount, expiration on the allowance, and nonce
@@ -32,10 +28,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         allowed.amount = amount;
         allowed.expiration = expiration;
     }
-
-    /*/////////////////////////////////////////////////////f/////////
-                              PERMIT LOGIC
-    //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAllowanceTransfer
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
@@ -89,10 +81,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         if (nonce != signedNonce) revert InvalidNonce();
     }
 
-    /*//////////////////////////////////////////////////////////////
-                             TRANSFER LOGIC
-    //////////////////////////////////////////////////////////////*/
-
     /// @inheritdoc IAllowanceTransfer
     function transferFrom(address token, address from, address to, uint160 amount) external {
         _transfer(token, from, to, amount);
@@ -119,11 +107,9 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
-        if (block.timestamp > allowed.expiration) {
-            revert AllowanceExpired();
-        }
+        if (block.timestamp > allowed.expiration) revert AllowanceExpired();
 
-        uint160 maxAmount = allowed.amount;
+        uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
             if (amount > maxAmount) {
                 revert InsufficientAllowance();
@@ -133,13 +119,10 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
                 }
             }
         }
+
         // Transfer the tokens from the from address to the recipient.
         ERC20(token).safeTransferFrom(from, to, amount);
     }
-
-    /*//////////////////////////////////////////////////////////////
-                             LOCKDOWN LOGIC
-    //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAllowanceTransfer
     function lockdown(address[] calldata tokens, address[] calldata spenders) external {
