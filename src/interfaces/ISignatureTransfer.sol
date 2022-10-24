@@ -81,7 +81,6 @@ interface ISignatureTransfer {
     ) external;
 
     /// @notice Transfers multiple tokens using a signed permit message
-    /// @dev If to is the zero address, the tokens are sent to the spender
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipients of the tokens
@@ -97,7 +96,6 @@ interface ISignatureTransfer {
 
     /// @notice Transfers multiple tokens using a signed permit message
     /// @notice Includes extra data provided by the caller to verify signature over
-    /// @dev If to is the zero address, the tokens are sent to the spender.
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipients of the tokens

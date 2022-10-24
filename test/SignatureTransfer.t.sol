@@ -160,7 +160,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo0 + defaultAmount);
-        assertEq(token1.balanceOf(address(this)), startBalanceTo1 + defaultAmount);
+        assertEq(token1.balanceOf(address0), startBalanceTo1 + defaultAmount);
     }
 
     function testPermitBatchTransferFromSingleRecipient() public {
@@ -185,30 +185,6 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo0 + defaultAmount);
         assertEq(token1.balanceOf(address2), startBalanceTo1 + defaultAmount);
-    }
-
-    function testPermitBatchTransferFromAddr0() public {
-        uint256 nonce = 0;
-        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
-
-        address[] memory to = AddressBuilder.fill(2, address(0));
-        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
-
-        uint256 startBalanceFrom0 = token0.balanceOf(from);
-        uint256 startBalanceFrom1 = token1.balanceOf(from);
-        uint256 startBalanceTo0 = token0.balanceOf(address2);
-        uint256 startBalanceTo1 = token1.balanceOf(address2);
-
-        snapStart("single recipient 2 tokens");
-        permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
-        snapEnd();
-
-        assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
-        assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
-        assertEq(token0.balanceOf(address(this)), startBalanceTo0 + defaultAmount);
-        assertEq(token1.balanceOf(address(this)), startBalanceTo1 + defaultAmount);
     }
 
     function testPermitBatchTransferMultiAddr() public {
@@ -383,7 +359,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo0 + defaultAmount);
-        assertEq(token1.balanceOf(address(this)), startBalanceTo1 + defaultAmount);
+        assertEq(token1.balanceOf(address0), startBalanceTo1 + defaultAmount);
     }
 
     function testPermitBatchTransferFromTypedWitnessInvalidType() public {
