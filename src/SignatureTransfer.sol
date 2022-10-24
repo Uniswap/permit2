@@ -124,6 +124,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     ) internal {
         _validatePermit(permit.spender, permit.deadline);
         _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
+
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
                 if (requestedAmounts[i] > permit.signedAmounts[i]) revert InvalidAmount();
@@ -144,6 +145,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @inheritdoc ISignatureTransfer
     function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
+
         emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
     }
 
@@ -164,9 +166,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function _useUnorderedNonce(address from, uint256 nonce) internal {
         (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
-        if ((bitmap >> bitPos) & 1 == 1) {
-            revert InvalidNonce();
-        }
+
+        if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce();
+
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }
 
