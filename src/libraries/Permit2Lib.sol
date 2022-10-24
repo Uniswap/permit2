@@ -2,13 +2,12 @@
 pragma solidity 0.8.17;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
-import {Permit2} from "../Permit2.sol";
 
-// TODO: Clobber slots instead of using the free memory pointer.
+import {Permit2} from "../Permit2.sol";
+import {IDAIPermit} from "../interfaces/IDAIPermit.sol";
+import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 
 /// @title Permit2Lib
-/// @author transmissions11 <t11s@paradigm.xyz>
 /// @notice Enables efficient transfers and EIP-2612/DAI
 /// permits for any token by falling back to Permit2.
 library Permit2Lib {
@@ -20,11 +19,7 @@ library Permit2Lib {
     bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
     /// @dev The address of the Permit2 contract the library will use.
-    bytes32 internal constant PERMIT2_ADDRESS = 0x000000000000000000000000ce71065d4017f316ec606fe4422e11eb2c47c246;
-
-    /*//////////////////////////////////////////////////////////////
-                             TRANSFER LOGIC
-    //////////////////////////////////////////////////////////////*/
+    Permit2 internal constant PERMIT2 = Permit2(address(0xCe71065D4017F316EC606Fe4422e11eB2c47c246)); // TODO
 
     /// @notice Transfer a given amount of tokens from one user to another.
     /// @param token The token to transfer.
@@ -32,62 +27,25 @@ library Permit2Lib {
     /// @param to The user to transfer to.
     /// @param amount The amount to transfer.
     function transferFrom2(ERC20 token, address from, address to, uint256 amount) internal {
+        // Generate calldata for a standard transferFrom call.
+        bytes memory inputData = abi.encodeCall(ERC20.transferFrom, (from, to, amount));
+
+        bool success; // Call the token contract as normal, capturing whether it succeeded.
         assembly {
-            /*//////////////////////////////////////////////////////////////
-                              ATTEMPT SAFE TRANSFER FROM
-            //////////////////////////////////////////////////////////////*/
-
-            // We'll write some calldata to this slot below, but restore it later.
-            let memPointer := mload(0x40)
-
-            // Write the abi-encoded calldata into memory, beginning with the function selector.
-            mstore(0, 0x23b872dd) // 0x23b872dd is the function selector for transferFrom.
-            mstore(32, from) // Append the "from" argument.
-            mstore(64, to) // Append the "to" argument.
-            mstore(96, amount) // Append the "amount" argument.
-
-            // If the call to transferFrom fails for any reason, try using Permit2.
-            if iszero(
+            success :=
                 and(
                     // Set success to whether the call reverted, if not we check it either
                     // returned exactly 1 (can't just be non-zero data), or had no return data.
                     or(eq(mload(0), 1), iszero(returndatasize())),
                     // Counterintuitively, this call() must be positioned after the or() in the
                     // surrounding and() because and() evaluates its arguments from right to left.
-                    // We use 0 and 28 because our calldata begins with the last 4 bytes of the first slot.
-                    // We use 100 because the length of our generated calldata totals up like so: 4 + 32 * 3.
                     // We use 0 and 32 to copy up to 32 bytes of return data into the first slot of scratch space.
-                    call(gas(), token, 0, 28, 100, 0, 32)
+                    call(gas(), token, 0, add(inputData, 32), mload(inputData), 0, 32)
                 )
-            ) {
-                /*//////////////////////////////////////////////////////////////
-                                      FALLBACK TO Permit2
-                //////////////////////////////////////////////////////////////*/
-
-                // We'll write some calldata to this slot below, but restore it later.
-                let memSlot128 := mload(128)
-
-                // Write the abi-encoded calldata into memory, beginning with the function selector.
-                mstore(0, 0x15dacbea) // 0x15dacbea is the function selector for Permit2's transferFrom.
-                mstore(32, token) // Append the "token" argument.
-                mstore(64, from) // Append the "from" argument.
-                mstore(96, to) // Append the "to" argument.
-                mstore(128, amount) // Append the "amount" argument.
-
-                // We use 0 and 28 because our calldata begins with the last 4 bytes of the first slot.
-                // We use 132 because the length of our generated calldata totals up like so: 4 + 32 * 4.
-                if iszero(call(gas(), PERMIT2_ADDRESS, 0, 28, 132, 0, 0)) {
-                    // Bubble up any revert reasons returned.
-                    returndatacopy(0, 0, returndatasize())
-                    revert(0, returndatasize())
-                }
-
-                mstore(128, memSlot128) // Restore slot 128.
-            }
-
-            mstore(0x60, 0) // Restore the zero slot to zero.
-            mstore(0x40, memPointer) // Restore the memPointer.
         }
+
+        // We'll fall back to using Permit2 if calling transferFrom on the token directly reverted.
+        if (!success) PERMIT2.transferFrom(address(token), from, to, uint160(amount));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -114,106 +72,58 @@ library Permit2Lib {
         bytes32 r,
         bytes32 s
     ) internal {
+        // Generate calldata for a call to DOMAIN_SEPARATOR on the token.
+        bytes memory inputData = abi.encodeWithSelector(ERC20.DOMAIN_SEPARATOR.selector);
+
+        bool success; // Call the token contract as normal, capturing whether it succeeded.
+        bytes32 domainSeparator; // If the call succeeded, we'll capture the return value here.
         assembly {
-            // Get a pointer to some free memory.
-            let freeMemoryPointer := mload(0x40)
-
-            // Write the abi-encoded calldata into memory, beginning
-            // with the function selector for EIP-2612 DOMAIN_SEPARATOR.
-            mstore(freeMemoryPointer, 0x3644e51500000000000000000000000000000000000000000000000000000000)
-
-            let success :=
+            success :=
                 and(
                     // Should resolve false if it returned <32 bytes or its first word is 0.
                     and(iszero(iszero(mload(0))), gt(returndatasize(), 31)),
-                    // We use 4 because our calldata is just a single 4 byte function selector.
                     // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
                     // Counterintuitively, this call must be positioned second to the and() call in the
                     // surrounding and() call or else returndatasize() will be zero during the computation.
-                    call(gas(), token, 0, freeMemoryPointer, 4, 0, 32)
+                    call(gas(), token, 0, add(inputData, 32), mload(inputData), 0, 32)
                 )
 
-            // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
-            if success {
-                // If the token's selector matches DAI's, it requires
-                // special logic, otherwise we can use EIP-2612 permit.
-                switch eq(mload(0), DAI_DOMAIN_SEPARATOR)
-                case 0 {
-                    /*//////////////////////////////////////////////////////////////
-                                          STANDARD PERMIT LOGIC
-                    //////////////////////////////////////////////////////////////*/
+            domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
+        }
 
-                    // Write the abi-encoded calldata into memory, beginning with the function selector.
-                    mstore(freeMemoryPointer, 0xd505accf00000000000000000000000000000000000000000000000000000000)
-                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
-                    mstore(add(freeMemoryPointer, 36), spender) // Append the "spender" argument.
-                    mstore(add(freeMemoryPointer, 68), amount) // Append the "amount" argument.
-                    mstore(add(freeMemoryPointer, 100), deadline) // Append the "deadline" argument.
-                    mstore(add(freeMemoryPointer, 132), v) // Append the "v" argument.
-                    mstore(add(freeMemoryPointer, 164), r) // Append the "r" argument.
-                    mstore(add(freeMemoryPointer, 196), s) // Append the "s" argument.
+        // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
+        if (success) {
+            // We'll use DAI's special permit if it's DOMAIN_SEPARATOR matches,
+            // otherwise we'll just encode a call to the standard permit function.
+            inputData = domainSeparator == DAI_DOMAIN_SEPARATOR
+                ? abi.encodeCall(IDAIPermit.permit, (owner, spender, token.nonces(owner), deadline, true, v, r, s))
+                : abi.encodeCall(ERC20.permit, (owner, spender, amount, deadline, v, r, s));
 
-                    // We use 228 because the length of our calldata totals up like so: 4 + 32 * 7.
-                    success := call(gas(), token, 0, freeMemoryPointer, 228, 0, 0)
-                }
-                case 1 {
-                    /*//////////////////////////////////////////////////////////////
-                                          NONCE RETRIEVAL LOGIC
-                    //////////////////////////////////////////////////////////////*/
-
-                    // Write the abi-encoded calldata into memory, beginning with the function selector.
-                    mstore(freeMemoryPointer, 0x7ecebe0000000000000000000000000000000000000000000000000000000000)
-                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
-
-                    // We use 36 because the length of our calldata totals up like so: 4 + 32.
-                    // We use 0 and 32 to copy up to 32 bytes of return data into scratch space.
-                    pop(call(gas(), token, 0, freeMemoryPointer, 36, 0, 32))
-
-                    /*//////////////////////////////////////////////////////////////
-                                            DAI PERMIT LOGIC
-                    //////////////////////////////////////////////////////////////*/
-
-                    // Write the abi-encoded calldata into memory, beginning with the function selector.
-                    mstore(freeMemoryPointer, 0x8fcbaf0c00000000000000000000000000000000000000000000000000000000)
-                    mstore(add(freeMemoryPointer, 4), owner) // Append the "owner" argument.
-                    mstore(add(freeMemoryPointer, 36), spender) // Append the "spender" argument.
-                    mstore(add(freeMemoryPointer, 68), mload(0)) // Append the "nonce" argument.
-                    mstore(add(freeMemoryPointer, 100), deadline) // Append the "deadline" argument.
-                    mstore(add(freeMemoryPointer, 132), 1) // Append the "allowed" argument.
-                    mstore(add(freeMemoryPointer, 164), v) // Append the "v" argument.
-                    mstore(add(freeMemoryPointer, 196), r) // Append the "r" argument.
-                    mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
-
-                    // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
-                    success := call(gas(), token, 0, freeMemoryPointer, 260, 0, 0)
-                }
+            assembly {
+                success := call(gas(), token, 0, add(inputData, 32), mload(inputData), 0, 0)
             }
+        }
 
+        if (!success) {
             // If the initial DOMAIN_SEPARATOR call on the token failed or a
             // subsequent call to permit failed, fall back to using Permit2.
-            if iszero(success) {
-                /*//////////////////////////////////////////////////////////////
-                                     Permit2 FALLBACK LOGIC
-                //////////////////////////////////////////////////////////////*/
 
-                // Write the abi-encoded calldata into memory, beginning with the function selector.
-                mstore(freeMemoryPointer, 0xd339056d00000000000000000000000000000000000000000000000000000000)
-                mstore(add(freeMemoryPointer, 4), token) // Append the "token" argument.
-                mstore(add(freeMemoryPointer, 36), owner) // Append the "owner" argument.
-                mstore(add(freeMemoryPointer, 68), spender) // Append the "spender" argument.
-                mstore(add(freeMemoryPointer, 100), amount) // Append the "amount" argument.
-                mstore(add(freeMemoryPointer, 132), deadline) // Append the "deadline" argument.
-                mstore(add(freeMemoryPointer, 164), v) // Append the "v" argument.
-                mstore(add(freeMemoryPointer, 196), r) // Append the "r" argument.
-                mstore(add(freeMemoryPointer, 228), s) // Append the "s" argument.
+            (,, uint32 nonce) = PERMIT2.allowance(owner, address(token), spender);
 
-                // We use 260 because the length of our calldata totals up like so: 4 + 32 * 8.
-                if iszero(call(gas(), PERMIT2_ADDRESS, 0, freeMemoryPointer, 260, 0, 0)) {
-                    // Bubble up any revert reasons returned.
-                    returndatacopy(0, 0, returndatasize())
-                    revert(0, returndatasize())
-                }
-            }
+            PERMIT2.permit(
+                IAllowanceTransfer.Permit({
+                    token: address(token),
+                    spender: spender,
+                    amount: uint160(amount),
+                    // Use an unlimited expiration because it most
+                    // closely mimics how a standard approval works.
+                    expiration: type(uint64).max,
+                    nonce: nonce,
+                    sigDeadline: deadline
+                }),
+                owner,
+                bytes.concat(r, s, bytes1(v))
+            );
         }
     }
 }

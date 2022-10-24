@@ -15,8 +15,6 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using PermitHash for PermitTransfer;
     using PermitHash for PermitBatchTransfer;
 
-    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
-
     /// @inheritdoc ISignatureTransfer
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
