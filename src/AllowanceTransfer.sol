@@ -29,8 +29,15 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @inheritdoc IAllowanceTransfer
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
-        allowed.amount = amount;
-        allowed.expiration = expiration;
+        uint256 word = _pack(amount, expiration, allowed.nonce);
+        assembly {
+            sstore(allowed.slot, word)
+        }
+    }
+
+    /// @notice Computes the packed slot of the amount, expiration, and nonce that make up PackedAllowance
+    function _pack(uint160 amount, uint64 expiration, uint32 nonce) private pure returns (uint256 word) {
+        word = (uint256(nonce) << 224) | uint256(expiration) << 160 | amount;
     }
 
     /*/////////////////////////////////////////////////////f/////////
@@ -45,10 +52,15 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
+        uint32 newNonce;
         unchecked {
-            ++allowed.nonce;
+            newNonce = permitData.nonce + 1;
         }
-        _updateAllowance(allowed, permitData.amount, permitData.expiration);
+
+        uint256 word = _pack(permitData.amount, permitData.expiration, newNonce);
+        assembly {
+            sstore(allowed.slot, word)
+        }
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -60,10 +72,19 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
-        // can do in 1 sstore?
-        allowed.amount = permitData.amounts[0];
-        allowed.expiration = permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0];
-        ++allowed.nonce;
+        uint32 newNonce;
+        unchecked {
+            newNonce = permitData.nonce + 1;
+        }
+        uint256 word = _pack(
+            permitData.amounts[0],
+            permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0],
+            newNonce
+        );
+
+        assembly {
+            sstore(allowed.slot, word)
+        }
         unchecked {
             for (uint256 i = 1; i < permitData.tokens.length; ++i) {
                 _updateAllowance(

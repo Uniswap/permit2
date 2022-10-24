@@ -73,9 +73,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         vm.prank(from);
         permit2.approve(address(token0), address(this), defaultAmount, defaultExpiration);
 
-        (uint160 amount, uint64 expiration,) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 0);
+        // DE0B6B3A7640000 0000000000000006 00000000
     }
 
     function testSetAllowance() public {
