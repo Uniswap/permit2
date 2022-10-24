@@ -39,6 +39,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
         // Increments the nonce, and sets the new values for amount and expiration.
         allowed.updateAll(permitData.amount, permitData.expiration, permitData.nonce);
+        emit Approval(owner, permitData.token, permitData.spender, permitData.amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -57,9 +58,9 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
             for (uint256 i = 1; i < permitData.tokens.length; ++i) {
                 allowed = allowance[owner][permitData.tokens[i]][permitData.spender];
                 allowed.updateAmountAndExpiration(permitData.amounts[i], permitData.expirations[i]);
+                emit Approval(owner, permitData.tokens[i], permitData.spender, permitData.amounts[i]);
             }
         }
-        emit BatchedApproval(owner, permitData.tokens, permitData.spender, permitData.amounts);
     }
 
     /// @notice Ensures that the deadline on the signature has not passed, and that the nonce hasn't been used
@@ -71,7 +72,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @inheritdoc IAllowanceTransfer
     function transferFrom(address token, address from, address to, uint160 amount) external {
         _transfer(token, from, to, amount);
-        emit Transfer(from, token, to, amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -88,7 +88,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
                 _transfer(tokens[i], from, to[i], amounts[i]);
             }
         }
-        emit BatchedTransfer(from, tokens, to, amounts);
     }
 
     /// @notice Internal function for transferring tokens using stored allowances
