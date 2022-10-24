@@ -8,16 +8,14 @@ import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {EIP712} from "./EIP712.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
 import {SignatureExpired, LengthMismatch, InvalidNonce} from "./PermitErrors.sol";
+import {Allowance} from "./libraries/Allowance.sol";
 
 contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
     using PermitHash for Permit;
     using PermitHash for PermitBatch;
-
-    /*//////////////////////////////////////////////////////////////
-                            ALLOWANCE STORAGE
-    //////////////////////////////////////////////////////////////*/
+    using Allowance for PackedAllowance;
 
     /// @notice Maps users to tokens to spender addresses and information about the approval on the token
     /// @dev Indexed in the order of token owner address, token address, spender address
@@ -27,14 +25,9 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @inheritdoc IAllowanceTransfer
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
-        allowed.amount = amount;
-        allowed.expiration = expiration;
+        allowed.updateAmountAndExpiration(amount, expiration);
         emit Approval(msg.sender, token, spender, amount, expiration);
     }
-
-    /*/////////////////////////////////////////////////////f/////////
-                              PERMIT LOGIC
-    //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAllowanceTransfer
     function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
@@ -44,11 +37,8 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
-        unchecked {
-            ++allowed.nonce;
-        }
-        _updateAllowance(allowed, permitData.amount, permitData.expiration);
-        emit Approval(owner, permitData.token, permitData.spender, permitData.amount, permitData.expiration);
+        // Increments the nonce, and sets the new values for amount and expiration.
+        allowed.updateAll(permitData.amount, permitData.expiration, permitData.nonce);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -60,28 +50,16 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
-        // can do in 1 sstore?
-        allowed.amount = permitData.amounts[0];
-        allowed.expiration = permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0];
-        ++allowed.nonce;
+        // Increments the nonce, and sets the new values for amount and expiration for the first token.
+        allowed.updateAll(permitData.amounts[0], permitData.expirations[0], permitData.nonce);
+
         unchecked {
             for (uint256 i = 1; i < permitData.tokens.length; ++i) {
-                _updateAllowance(
-                    allowance[owner][permitData.tokens[i]][permitData.spender],
-                    permitData.amounts[i],
-                    permitData.expirations[i]
-                );
+                allowed = allowance[owner][permitData.tokens[i]][permitData.spender];
+                allowed.updateAmountAndExpiration(permitData.amounts[i], permitData.expirations[i]);
             }
         }
         emit BatchedApproval(owner, permitData.tokens, permitData.spender, permitData.amounts, permitData.expirations);
-    }
-
-    /// @notice Sets the allowed amount and expiry of the spender's permissions on owner's token.
-    /// @dev Nonce has already been incremented.
-    function _updateAllowance(PackedAllowance storage allowed, uint160 amount, uint64 expiration) private {
-        // If the signed expiration is 0, the allowance only lasts the duration of the block.
-        allowed.expiration = expiration == 0 ? uint64(block.timestamp) : expiration;
-        allowed.amount = amount;
     }
 
     /// @notice Ensures that the deadline on the signature has not passed, and that the nonce hasn't been used
@@ -89,10 +67,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         if (block.timestamp > sigDeadline) revert SignatureExpired();
         if (nonce != signedNonce) revert InvalidNonce();
     }
-
-    /*//////////////////////////////////////////////////////////////
-                             TRANSFER LOGIC
-    //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAllowanceTransfer
     function transferFrom(address token, address from, address to, uint160 amount) external {
@@ -122,11 +96,9 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
-        if (block.timestamp > allowed.expiration) {
-            revert AllowanceExpired();
-        }
+        if (block.timestamp > allowed.expiration) revert AllowanceExpired();
 
-        uint160 maxAmount = allowed.amount;
+        uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
             if (amount > maxAmount) {
                 revert InsufficientAllowance();
@@ -136,13 +108,10 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
                 }
             }
         }
+
         // Transfer the tokens from the from address to the recipient.
         ERC20(token).safeTransferFrom(from, to, amount);
     }
-
-    /*//////////////////////////////////////////////////////////////
-                             LOCKDOWN LOGIC
-    //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAllowanceTransfer
     function lockdown(address[] calldata tokens, address[] calldata spenders) external {
