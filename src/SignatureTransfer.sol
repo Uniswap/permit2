@@ -120,22 +120,19 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         uint256[] calldata requestedAmounts,
         bytes calldata signature
     ) internal {
+        uint256 permitTokensLength = permit.tokens.length;
         _validatePermit(permit.spender, permit.deadline);
-        _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
-
-        unchecked {
-            for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                if (requestedAmounts[i] > permit.signedAmounts[i]) revert InvalidAmount();
-            }
-        }
+        _validateInputLengths(permitTokensLength, to.length, permit.signedAmounts.length, requestedAmounts.length);
 
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(_hashTypedData(dataHash), owner);
 
         unchecked {
-            for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmounts[i]);
+            for (uint256 i = 0; i < permitTokensLength; ++i) {
+                uint256 requestedAmount = requestedAmounts[i];
+                if (requestedAmount > permit.signedAmounts[i]) revert InvalidAmount();
+                ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmount);
             }
         }
     }
