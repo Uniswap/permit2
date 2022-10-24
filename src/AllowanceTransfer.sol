@@ -15,8 +15,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     using PermitHash for Permit;
     using PermitHash for PermitBatch;
 
-    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
-
     /*//////////////////////////////////////////////////////////////
                             ALLOWANCE STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -31,6 +29,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.amount = amount;
         allowed.expiration = expiration;
+        emit Approval(msg.sender, token, spender, amount, expiration);
     }
 
     /*/////////////////////////////////////////////////////f/////////
@@ -49,6 +48,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
             ++allowed.nonce;
         }
         _updateAllowance(allowed, permitData.amount, permitData.expiration);
+        emit Approval(owner, permitData.token, permitData.spender, permitData.amount, permitData.expiration);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -73,6 +73,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
                 );
             }
         }
+        emit BatchedApproval(owner, permitData.tokens, permitData.spender, permitData.amounts, permitData.expirations);
     }
 
     /// @notice Sets the allowed amount and expiry of the spender's permissions on owner's token.
@@ -96,6 +97,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @inheritdoc IAllowanceTransfer
     function transferFrom(address token, address from, address to, uint160 amount) external {
         _transfer(token, from, to, amount);
+        emit Transfer(from, token, to, amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -112,6 +114,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
                 _transfer(tokens[i], from, to[i], amounts[i]);
             }
         }
+        emit BatchedTransfer(from, tokens, to, amounts);
     }
 
     /// @notice Internal function for transferring tokens using stored allowances

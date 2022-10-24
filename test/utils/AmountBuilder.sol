@@ -23,6 +23,13 @@ library AmountBuilder {
         }
     }
 
+    function fillUInt64(uint256 length, uint64 exp) external pure returns (uint64[] memory exps) {
+        exps = new uint64[](length);
+        for (uint256 i = 0; i < length; ++i) {
+            exps[i] = exp;
+        }
+    }
+
     function push(uint256[] calldata a, uint256 b) external pure returns (uint256[] memory amounts) {
         amounts = new uint256[](a.length + 1);
         for (uint256 i = 0; i < a.length; ++i) {

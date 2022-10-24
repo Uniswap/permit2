@@ -19,6 +19,12 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     using stdStorage for StdStorage;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+    event Approval(
+        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint64 expiration
+    );
+    event BatchedApproval(
+        address indexed owner, address[] tokens, address indexed spender, uint160[] amount, uint64[] expiration
+    );
 
     MockPermit2 permit2;
 
@@ -71,6 +77,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
     function testApprove() public {
         vm.prank(from);
+        vm.expectEmit(true, true, true, true);
+        emit Approval(from, address(token0), address(this), defaultAmount, defaultExpiration);
         permit2.approve(address(token0), address(this), defaultAmount, defaultExpiration);
 
         (uint160 amount, uint64 expiration,) = permit2.allowance(from, address(token0), address(this));
@@ -117,6 +125,29 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         snapStart("permitBatchCleanWrite");
         permit2.permitBatch(permit, from, sig);
         snapEnd();
+
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount1, defaultAmount);
+        assertEq(expiration1, defaultExpiration);
+        assertEq(nonce1, 0);
+    }
+
+    function testSetAllowanceBatchEvent() public {
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        uint160[] memory amounts = AmountBuilder.fillUInt160(2, defaultAmount);
+        uint64[] memory exps = AmountBuilder.fillUInt64(2, defaultExpiration);
+
+        IAllowanceTransfer.PermitBatch memory permit =
+            defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        vm.expectEmit(true, true, false, true);
+        emit BatchedApproval(from, tokens, address(this), amounts, exps);
+        permit2.permitBatch(permit, from, sig);
 
         (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);

@@ -15,8 +15,6 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using PermitHash for PermitTransfer;
     using PermitHash for PermitBatchTransfer;
 
-    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
-
     /// @inheritdoc ISignatureTransfer
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
@@ -29,6 +27,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes calldata signature
     ) external {
         _permitTransferFrom(permit, permit.hash(), owner, to, requestedAmount, signature);
+        emit Transfer(owner, permit.token, to, requestedAmount, permit.nonce);
     }
 
     /// @inheritdoc ISignatureTransfer
@@ -45,6 +44,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         _permitTransferFrom(
             permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmount, signature
         );
+        emit Transfer(owner, permit.token, to, requestedAmount, permit.nonce);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -83,6 +83,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
+        emit BatchedTransfer(owner, permit.tokens, to, requestedAmounts, permit.nonce);
     }
 
     /// @inheritdoc ISignatureTransfer
@@ -104,6 +105,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
             requestedAmounts,
             signature
         );
+        emit BatchedTransfer(owner, permit.tokens, to, requestedAmounts, permit.nonce);
     }
 
     /// @notice Transfers tokens using a signed permit messages

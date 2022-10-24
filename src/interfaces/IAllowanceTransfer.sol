@@ -8,8 +8,27 @@ interface IAllowanceTransfer {
     error AllowanceExpired();
     error InsufficientAllowance();
     error ExcessiveInvalidation();
-    /// @notice The signed permit message for a single token allowance
 
+    /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
+    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+
+    /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
+    event Approval(
+        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint64 expiration
+    );
+
+    /// @notice Emits an event when the owner successfully sets permissions on a set of tokens for the spender.
+    event BatchedApproval(
+        address indexed owner, address[] tokens, address indexed spender, uint160[] amount, uint64[] expiration
+    );
+
+    /// @notice Emits an event when the token is successfully transferred.
+    event Transfer(address indexed from, address indexed token, address indexed to, uint160 amount);
+
+    /// @notice Emits an event when a set of tokens are successfully transferred.
+    event BatchedTransfer(address indexed from, address[] tokens, address[] to, uint160[] amounts);
+
+    /// @notice The signed permit message for a single token allowance
     struct Permit {
         // ERC20 token address
         address token;
