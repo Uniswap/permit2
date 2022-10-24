@@ -136,7 +136,8 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
         unchecked {
             for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmounts[i]);
+                address recipient = to[i] == address(0) ? permit.spender : to[i];
+                ERC20(permit.tokens[i]).safeTransferFrom(owner, recipient, requestedAmounts[i]);
             }
         }
     }
