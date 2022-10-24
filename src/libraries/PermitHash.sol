@@ -11,7 +11,7 @@ library PermitHash {
     );
 
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "Permit(address[] token,address spender,uint160[] amount,uint64[] expiration,uint32 nonce,uint256 sigDeadline)"
+        "PermitBatch(TokenAmountExpiration[] tokensAmountsExpirations,address spender,uint32 nonce,uint256 sigDeadline)"
     );
 
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH =
@@ -26,6 +26,9 @@ library PermitHash {
 
     string public constant _PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB =
         "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,";
+
+    bytes32 public constant _TOKEN_AMOUNT_EXPIRATION_TYPEHASH =
+        keccak256("TokenAmountExpiration(address token,uint160 amount,uint64 expiration)");
 
     function hash(IAllowanceTransfer.Permit calldata permit) internal pure returns (bytes32) {
         return keccak256(
@@ -42,13 +45,16 @@ library PermitHash {
     }
 
     function hash(IAllowanceTransfer.PermitBatch calldata permit) internal pure returns (bytes32) {
+        bytes32[] memory tokenHashes = new bytes32[](permit.tokensAmountsExpirations.length);
+        for (uint256 i = 0; i < permit.tokensAmountsExpirations.length; ++i) {
+            tokenHashes[i] =
+                keccak256(abi.encode(_TOKEN_AMOUNT_EXPIRATION_TYPEHASH, permit.tokensAmountsExpirations[i]));
+        }
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TYPEHASH,
-                keccak256(abi.encodePacked(permit.tokens)),
+                keccak256(abi.encodePacked(tokenHashes)),
                 permit.spender,
-                keccak256(abi.encodePacked(permit.amounts)),
-                keccak256(abi.encodePacked(permit.expirations)),
                 permit.nonce,
                 permit.sigDeadline
             )

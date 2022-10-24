@@ -31,16 +31,18 @@ interface IAllowanceTransfer {
         uint256 sigDeadline;
     }
 
+    struct TokenAmountExpiration {
+        address token;
+        uint160 maxAmount;
+        uint64 expiration;
+    }
+
     /// @notice The signed permit message for multiple token allowances
     struct PermitBatch {
         // ERC20 token addresses
-        address[] tokens;
+        TokenAmountExpiration[] tokensAmountsExpirations;
         // address permissioned on the allowed tokens
         address spender;
-        // the maximum amounts allowed to spend per token
-        uint160[] amounts;
-        // timestamp at which a spender's token allowances become invalid, assigned per token
-        uint64[] expirations;
         // a unique value for each signature
         uint32 nonce;
         // deadline on the permit signature

@@ -13,8 +13,10 @@ contract PermitSignature is Test {
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "Permit(address[] token,address spender,uint160[] amount,uint64[] expiration,uint32 nonce,uint256 sigDeadline)"
+        "PermitBatch(TokenAmountExpiration[] tokensAmountsExpirations,address spender,uint32 nonce,uint256 sigDeadline)"
     );
+    bytes32 public constant _TOKEN_AMOUNT_EXPIRATION_TYPEHASH =
+        keccak256("TokenAmountExpiration(address token,uint160 amount,uint64 expiration)");
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH =
         keccak256("PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline)");
 
@@ -61,6 +63,11 @@ contract PermitSignature is Test {
         uint256 privateKey,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
+        bytes32[] memory tokenHashes = new bytes32[](permit.tokensAmountsExpirations.length);
+        for (uint256 i = 0; i < permit.tokensAmountsExpirations.length; ++i) {
+            tokenHashes[i] =
+                keccak256(abi.encode(_TOKEN_AMOUNT_EXPIRATION_TYPEHASH, permit.tokensAmountsExpirations[i]));
+        }
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -68,10 +75,8 @@ contract PermitSignature is Test {
                 keccak256(
                     abi.encode(
                         _PERMIT_BATCH_TYPEHASH,
-                        keccak256(abi.encodePacked(permit.tokens)),
+                        keccak256(abi.encodePacked(tokenHashes)),
                         permit.spender,
-                        keccak256(abi.encodePacked(permit.amounts)),
-                        keccak256(abi.encodePacked(permit.expirations)),
                         permit.nonce,
                         permit.sigDeadline
                     )
@@ -213,17 +218,15 @@ contract PermitSignature is Test {
         view
         returns (IAllowanceTransfer.PermitBatch memory)
     {
-        uint160[] memory maxAmounts = new uint160[](tokens.length);
-        uint64[] memory expirations = new uint64[](tokens.length);
+        IAllowanceTransfer.TokenAmountExpiration[] memory tokensAmountsExpirations =
+            new IAllowanceTransfer.TokenAmountExpiration[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
-            maxAmounts[i] = amount;
-            expirations[i] = expiration;
+            tokensAmountsExpirations[i].maxAmount = amount;
+            tokensAmountsExpirations[i].expiration = expiration;
         }
         return IAllowanceTransfer.PermitBatch({
-            tokens: tokens,
+            tokensAmountsExpirations: tokensAmountsExpirations,
             spender: address(this),
-            amounts: maxAmounts,
-            expirations: expirations,
             nonce: nonce,
             sigDeadline: block.timestamp + 100
         });

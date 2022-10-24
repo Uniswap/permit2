@@ -44,21 +44,23 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external {
+        TokenAmountExpiration memory firstToken = permitData.tokensAmountsExpirations[0];
         // Use the first token's nonce.
-        PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
+        PackedAllowance storage allowed = allowance[owner][firstToken.token][permitData.spender];
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
         // Increments the nonce, and sets the new values for amount and expiration for the first token.
-        allowed.updateAll(permitData.amounts[0], permitData.expirations[0], permitData.nonce);
+        allowed.updateAll(firstToken.maxAmount, firstToken.expiration, permitData.nonce);
 
         unchecked {
-            for (uint256 i = 1; i < permitData.tokens.length; ++i) {
-                allowed = allowance[owner][permitData.tokens[i]][permitData.spender];
-                allowed.updateAmountAndExpiration(permitData.amounts[i], permitData.expirations[i]);
-                emit Approval(owner, permitData.tokens[i], permitData.spender, permitData.amounts[i]);
+            for (uint256 i = 1; i < permitData.tokensAmountsExpirations.length; ++i) {
+                TokenAmountExpiration memory nextToken = permitData.tokensAmountsExpirations[i];
+                allowed = allowance[owner][nextToken.token][permitData.spender];
+                allowed.updateAmountAndExpiration(nextToken.maxAmount, nextToken.expiration);
+                emit Approval(owner, nextToken.token, permitData.spender, nextToken.maxAmount);
             }
         }
     }
