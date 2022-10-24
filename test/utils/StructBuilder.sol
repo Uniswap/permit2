@@ -6,14 +6,14 @@ import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
 import {AddressBuilder} from "./AddressBuilder.sol";
 
 library StructBuilder {
-    function fillTransferDetails(uint256 length, address token, uint160 amount, address to)
+    function fillTransferDetail(uint256 length, address token, uint160 amount, address to)
         external
         pure
-        returns (IAllowanceTransfer.TransferDetails[] memory tokenDetails)
+        returns (IAllowanceTransfer.TransferDetail[] memory tokenDetails)
     {
-        tokenDetails = new IAllowanceTransfer.TransferDetails[](length);
+        tokenDetails = new IAllowanceTransfer.TransferDetail[](length);
         for (uint256 i = 0; i < length; ++i) {
-            tokenDetails[i] = IAllowanceTransfer.TransferDetails({token: token, amount: amount, to: to});
+            tokenDetails[i] = IAllowanceTransfer.TransferDetail({token: token, amount: amount, to: to});
         }
     }
 

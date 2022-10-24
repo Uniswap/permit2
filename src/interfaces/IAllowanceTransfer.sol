@@ -60,7 +60,7 @@ interface IAllowanceTransfer {
         address spender;
     }
 
-    struct TransferDetails {
+    struct TransferDetail {
         address token;
         uint160 amount;
         address to;
@@ -89,16 +89,15 @@ interface IAllowanceTransfer {
     function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external;
 
     /// @notice Transfer approved tokens from one address to another.
-    /// @param transferDetails The token to transfer.
     /// @param from The address to transfer from.
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
-    function transferFrom(address from, TransferDetails calldata transferDetails) external;
+    function transferFrom(address token, address from, address to, uint160 amount) external;
 
     /// @notice Transfer approved tokens in a batch
     /// @param from The address to transfer tokens from
     /// @param transferDetails Array of recipients for the transfers
-    function batchTransferFrom(address from, TransferDetails[] calldata transferDetails) external;
+    function batchTransferFrom(address from, TransferDetail[] calldata transferDetails) external;
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
     /// by batch revoking approvals
