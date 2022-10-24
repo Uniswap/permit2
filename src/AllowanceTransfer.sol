@@ -8,12 +8,14 @@ import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {EIP712} from "./EIP712.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
 import {SignatureExpired, LengthMismatch, InvalidNonce} from "./PermitErrors.sol";
+import {Allowance} from "./libraries/Allowance.sol";
 
 contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
     using PermitHash for Permit;
     using PermitHash for PermitBatch;
+    using Allowance for PackedAllowance;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
@@ -29,15 +31,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @inheritdoc IAllowanceTransfer
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
-        uint256 word = _pack(amount, expiration, allowed.nonce);
-        assembly {
-            sstore(allowed.slot, word)
-        }
-    }
-
-    /// @notice Computes the packed slot of the amount, expiration, and nonce that make up PackedAllowance
-    function _pack(uint160 amount, uint64 expiration, uint32 nonce) private pure returns (uint256 word) {
-        word = (uint256(nonce) << 224) | uint256(expiration) << 160 | amount;
+        allowed.updateAmountAndExpiration(amount, expiration);
     }
 
     /*/////////////////////////////////////////////////////f/////////
@@ -52,15 +46,8 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
-        uint32 newNonce;
-        unchecked {
-            newNonce = permitData.nonce + 1;
-        }
-
-        uint256 word = _pack(permitData.amount, permitData.expiration, newNonce);
-        assembly {
-            sstore(allowed.slot, word)
-        }
+        // Increments the nonce, and sets the new values for amount and expiration.
+        allowed.updateAll(permitData.amount, permitData.expiration, permitData.nonce);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -72,36 +59,15 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
-        uint32 newNonce;
-        unchecked {
-            newNonce = permitData.nonce + 1;
-        }
-        uint256 word = _pack(
-            permitData.amounts[0],
-            permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0],
-            newNonce
-        );
+        // Increments the nonce, and sets the new values for amount and expiration for the first token.
+        allowed.updateAll(permitData.amounts[0], permitData.expirations[0], permitData.nonce);
 
-        assembly {
-            sstore(allowed.slot, word)
-        }
         unchecked {
             for (uint256 i = 1; i < permitData.tokens.length; ++i) {
-                _updateAllowance(
-                    allowance[owner][permitData.tokens[i]][permitData.spender],
-                    permitData.amounts[i],
-                    permitData.expirations[i]
-                );
+                allowed = allowance[owner][permitData.tokens[i]][permitData.spender];
+                allowed.updateAmountAndExpiration(permitData.amounts[i], permitData.expirations[i]);
             }
         }
-    }
-
-    /// @notice Sets the allowed amount and expiry of the spender's permissions on owner's token.
-    /// @dev Nonce has already been incremented.
-    function _updateAllowance(PackedAllowance storage allowed, uint160 amount, uint64 expiration) private {
-        // If the signed expiration is 0, the allowance only lasts the duration of the block.
-        allowed.expiration = expiration == 0 ? uint64(block.timestamp) : expiration;
-        allowed.amount = amount;
     }
 
     /// @notice Ensures that the deadline on the signature has not passed, and that the nonce hasn't been used
