@@ -79,7 +79,7 @@ library Permit2Lib {
                     call(gas(), token, 0, add(inputData, 32), mload(inputData), 0, 32)
                 )
 
-            domainSeparator := mload(0)
+            domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
         }
 
         // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
@@ -107,6 +107,8 @@ library Permit2Lib {
                     token: address(token),
                     spender: spender,
                     amount: uint160(amount),
+                    // Use an unlimited expiration because it most
+                    // closely mimics how a standard approval works.
                     expiration: type(uint64).max,
                     nonce: nonce,
                     sigDeadline: deadline
