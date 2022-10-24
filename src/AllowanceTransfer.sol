@@ -47,16 +47,17 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external {
         // Use the first token's nonce.
         PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
-        _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
+        uint32 nonce = allowed.nonce;
+        _validatePermit(nonce, permitData.nonce, permitData.sigDeadline);
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitData.hash()), owner);
 
-        // can do in 1 sstore?
-        allowed.amount = permitData.amounts[0];
-        allowed.expiration = permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0];
-        ++allowed.nonce;
         unchecked {
+            allowed.amount = permitData.amounts[0];
+            allowed.expiration = permitData.expirations[0] == 0 ? uint64(block.timestamp) : permitData.expirations[0];
+            allowed.nonce = nonce + 1; // Nonce overflow is wildly unrealistic.
+
             for (uint256 i = 1; i < permitData.tokens.length; ++i) {
                 _updateAllowance(
                     allowance[owner][permitData.tokens[i]][permitData.spender],
