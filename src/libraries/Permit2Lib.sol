@@ -86,8 +86,7 @@ library Permit2Lib {
         if (success) {
             // We'll use DAI's special permit if it's DOMAIN_SEPARATOR matches,
             // otherwise we'll just encode a call to the standard permit function.
-            inputData =
-                domainSeparator == DAI_DOMAIN_SEPARATOR
+            inputData = domainSeparator == DAI_DOMAIN_SEPARATOR
                 ? abi.encodeCall(IDAIPermit.permit, (owner, spender, token.nonces(owner), deadline, true, v, r, s))
                 : abi.encodeCall(ERC20.permit, (owner, spender, amount, deadline, v, r, s));
 
