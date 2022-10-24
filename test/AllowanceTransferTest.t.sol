@@ -77,7 +77,6 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 0);
-        // DE0B6B3A7640000 0000000000000006 00000000
     }
 
     function testSetAllowance() public {
