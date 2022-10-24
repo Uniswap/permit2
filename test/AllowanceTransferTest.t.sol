@@ -166,7 +166,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         assertEq(amount, defaultAmount);
 
-        permit2.transferFrom(address(token0), from, address0, defaultAmount);
+        permit2.transferFrom(
+            from, IAllowanceTransfer.TransferDetails({token: address(token0), to: address0, amount: defaultAmount})
+        );
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
     }
@@ -186,7 +188,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount);
 
         snapStart("transferFrom");
-        permit2.transferFrom(address(token0), from, address0, defaultAmount);
+        permit2.transferFrom(
+            from, IAllowanceTransfer.TransferDetails({token: address(token0), to: address0, amount: defaultAmount})
+        );
         snapEnd();
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
@@ -235,7 +239,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         (uint160 amount,,) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(amount, defaultAmount);
 
-        permit2.transferFrom(address(token0), fromDirty, address3, defaultAmount);
+        permit2.transferFrom(
+            fromDirty, IAllowanceTransfer.TransferDetails({token: address(token0), to: address3, amount: defaultAmount})
+        );
         assertEq(token0.balanceOf(fromDirty), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address3), startBalanceTo + defaultAmount);
     }
@@ -279,7 +285,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         (uint160 startAllowedAmount0,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(startAllowedAmount0, type(uint160).max);
 
-        permit2.transferFrom(address(token0), from, address0, defaultAmount);
+        permit2.transferFrom(
+            from, IAllowanceTransfer.TransferDetails({token: address(token0), to: address0, amount: defaultAmount})
+        );
         (uint160 endAllowedAmount0,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(endAllowedAmount0, type(uint160).max);
 
@@ -303,7 +311,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         (uint160 startAllowedAmount0,,) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(startAllowedAmount0, type(uint160).max);
 
-        permit2.transferFrom(address(token0), fromDirty, address0, defaultAmount);
+        permit2.transferFrom(
+            fromDirty, IAllowanceTransfer.TransferDetails({token: address(token0), to: address0, amount: defaultAmount})
+        );
         (uint160 endAllowedAmount0,,) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(endAllowedAmount0, type(uint160).max);
 

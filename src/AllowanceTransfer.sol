@@ -69,8 +69,8 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function transferFrom(address token, address from, address to, uint160 amount) external {
-        _transfer(token, from, to, amount);
+    function transferFrom(address from, TransferDetails calldata transferDetails) external {
+        _transfer(from, transferDetails);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -85,24 +85,27 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @notice Internal function for transferring tokens using stored allowances
     /// @dev Will fail if the allowed timeframe has passed
-    function _transfer(address token, address from, address to, uint160 amount) private {
+    function _transfer(address from, TransferDetails calldata transferDetails) private {
+        address token = transferDetails.token;
+        uint160 transferAmount = transferDetails.amount;
+
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
         if (block.timestamp > allowed.expiration) revert AllowanceExpired();
 
         uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
-            if (amount > maxAmount) {
+            if (transferAmount > maxAmount) {
                 revert InsufficientAllowance();
             } else {
                 unchecked {
-                    allowed.amount -= amount;
+                    allowed.amount -= transferAmount;
                 }
             }
         }
 
         // Transfer the tokens from the from address to the recipient.
-        ERC20(token).safeTransferFrom(from, to, amount);
+        ERC20(token).safeTransferFrom(from, transferDetails.to, transferAmount);
     }
 
     /// @inheritdoc IAllowanceTransfer
