@@ -78,8 +78,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        TokenAmount[] calldata tokenAmounts,
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
@@ -89,8 +88,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function permitBatchWitnessTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        TokenAmount[] calldata tokenAmounts,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType,
@@ -111,15 +109,12 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param permit The permit data signed over by the owner
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
-    /// @param to An array of the recipients of the tokens
-    /// @param requestedAmounts An array with the amount of each token to transfer
     /// @param signature The signature to verify
     function _permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
         bytes32 dataHash,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        TokenAmount[] calldata tokenAmounts,
         bytes calldata signature
     ) internal {
         uint256 permitTokensLength = permit.tokens.length;
@@ -179,17 +174,13 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @notice Ensures that permit token arrays are valid with regard to the tokens being spent
     /// @param signedTokensLen The length of the tokens array signed by the user
-    /// @param recipientLen The length of the given recipients array
+    /// @param tokenAmountsLen The length of the given recipients array
     /// @param signedAmountsLen The length of the amounts length signed by the user
-    /// @param requestedAmountsLen The length of the given amounts array
-    function _validateInputLengths(
-        uint256 signedTokensLen,
-        uint256 recipientLen,
-        uint256 signedAmountsLen,
-        uint256 requestedAmountsLen
-    ) private pure {
+    function _validateInputLengths(uint256 signedTokensLen, uint256 tokenAmountsLen, uint256 signedAmountsLen)
+        private
+        pure
+    {
         if (signedAmountsLen != signedTokensLen) revert SignedDetailsLengthMismatch();
-        if (requestedAmountsLen != signedAmountsLen) revert AmountsLengthMismatch();
-        if (recipientLen != 1 && recipientLen != signedTokensLen) revert RecipientLengthMismatch();
+        if (tokenAmountsLen != signedAmountsLen) revert AmountsLengthMismatch();
     }
 }

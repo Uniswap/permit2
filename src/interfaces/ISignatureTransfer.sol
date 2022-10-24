@@ -25,6 +25,11 @@ interface ISignatureTransfer {
         uint256 deadline;
     }
 
+    struct TokenAmount {
+        address to;
+        uint256 requestedAmount;
+    }
+
     /// @notice The signed permit message for multiple token transfers
     struct PermitBatchTransfer {
         // ERC20 token addresses
