@@ -20,6 +20,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     using AmountBuilder for uint256[];
 
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
+    event Transfer(address indexed from, address indexed token, address indexed to, uint256 amount);
 
     struct MockWitness {
         uint256 value;

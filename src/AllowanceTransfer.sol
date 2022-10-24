@@ -17,8 +17,6 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     using PermitHash for PermitBatch;
     using Allowance for PackedAllowance;
 
-    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
-
     /// @notice Maps users to tokens to spender addresses and information about the approval on the token
     /// @dev Indexed in the order of token owner address, token address, spender address
     /// @dev The stored word saves the allowed amount, expiration on the allowance, and nonce
@@ -28,6 +26,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function approve(address token, address spender, uint160 amount, uint64 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.updateAmountAndExpiration(amount, expiration);
+        emit Approval(msg.sender, token, spender, amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -40,6 +39,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
         // Increments the nonce, and sets the new values for amount and expiration.
         allowed.updateAll(permitData.amount, permitData.expiration, permitData.nonce);
+        emit Approval(owner, permitData.token, permitData.spender, permitData.amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -58,6 +58,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
             for (uint256 i = 1; i < permitData.tokens.length; ++i) {
                 allowed = allowance[owner][permitData.tokens[i]][permitData.spender];
                 allowed.updateAmountAndExpiration(permitData.amounts[i], permitData.expirations[i]);
+                emit Approval(owner, permitData.tokens[i], permitData.spender, permitData.amounts[i]);
             }
         }
     }
