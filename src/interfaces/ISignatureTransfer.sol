@@ -15,10 +15,10 @@ interface ISignatureTransfer {
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
     /// @notice Emits an event when the token is successfully transferred through a signature.
-    event Transfer(address indexed from, address indexed token, address indexed to, uint256 amount, uint256 nonce);
+    event Transfer(address indexed from, address indexed token, address indexed to, uint256 amount);
 
     /// @notice Emits an event when a set of tokens are successfully transferred through a signature.
-    event BatchedTransfer(address indexed from, address[] tokens, address[] to, uint256[] amounts, uint256 nonce);
+    event BatchedTransfer(address indexed from, address[] tokens, address[] to, uint256[] amounts);
 
     /// @notice The signed permit message for a single token transfer
     struct PermitTransfer {

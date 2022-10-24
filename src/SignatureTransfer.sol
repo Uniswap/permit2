@@ -27,7 +27,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes calldata signature
     ) external {
         _permitTransferFrom(permit, permit.hash(), owner, to, requestedAmount, signature);
-        emit Transfer(owner, permit.token, to, requestedAmount, permit.nonce);
+        emit Transfer(owner, permit.token, to, requestedAmount);
     }
 
     /// @inheritdoc ISignatureTransfer
@@ -44,7 +44,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         _permitTransferFrom(
             permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmount, signature
         );
-        emit Transfer(owner, permit.token, to, requestedAmount, permit.nonce);
+        emit Transfer(owner, permit.token, to, requestedAmount);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -83,7 +83,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
-        emit BatchedTransfer(owner, permit.tokens, to, requestedAmounts, permit.nonce);
+        emit BatchedTransfer(owner, permit.tokens, to, requestedAmounts);
     }
 
     /// @inheritdoc ISignatureTransfer
@@ -105,7 +105,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
             requestedAmounts,
             signature
         );
-        emit BatchedTransfer(owner, permit.tokens, to, requestedAmounts, permit.nonce);
+        emit BatchedTransfer(owner, permit.tokens, to, requestedAmounts);
     }
 
     /// @notice Transfers tokens using a signed permit messages

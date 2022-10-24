@@ -20,8 +20,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     using AmountBuilder for uint256[];
 
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
-    event Transfer(address indexed from, address indexed token, address indexed to, uint256 amount, uint256 nonce);
-    event BatchedTransfer(address indexed from, address[] tokens, address[] to, uint256[] amounts, uint256 nonce);
+    event Transfer(address indexed from, address indexed token, address indexed to, uint256 amount);
+    event BatchedTransfer(address indexed from, address[] tokens, address[] to, uint256[] amounts);
 
     struct MockWitness {
         uint256 value;
@@ -76,7 +76,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo = token0.balanceOf(address2);
 
         vm.expectEmit(true, true, true, true);
-        emit Transfer(from, address(token0), address2, defaultAmount, nonce);
+        emit Transfer(from, address(token0), address2, defaultAmount);
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
@@ -160,7 +160,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo1 = token1.balanceOf(address0);
 
         vm.expectEmit(true, false, false, true);
-        emit BatchedTransfer(from, tokens, to, amounts, nonce);
+        emit BatchedTransfer(from, tokens, to, amounts);
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);

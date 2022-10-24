@@ -13,14 +13,10 @@ interface IAllowanceTransfer {
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
 
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
-    event Approval(
-        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint64 expiration
-    );
+    event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
 
     /// @notice Emits an event when the owner successfully sets permissions on a set of tokens for the spender.
-    event BatchedApproval(
-        address indexed owner, address[] tokens, address indexed spender, uint160[] amount, uint64[] expiration
-    );
+    event BatchedApproval(address indexed owner, address[] tokens, address indexed spender, uint160[] amount);
 
     /// @notice Emits an event when the token is successfully transferred.
     event Transfer(address indexed from, address indexed token, address indexed to, uint160 amount);

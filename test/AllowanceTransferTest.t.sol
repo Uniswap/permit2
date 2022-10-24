@@ -19,12 +19,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     using stdStorage for StdStorage;
 
     event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
-    event Approval(
-        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint64 expiration
-    );
-    event BatchedApproval(
-        address indexed owner, address[] tokens, address indexed spender, uint160[] amount, uint64[] expiration
-    );
+    event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
+    event BatchedApproval(address indexed owner, address[] tokens, address indexed spender, uint160[] amount);
 
     MockPermit2 permit2;
 
@@ -78,7 +74,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     function testApprove() public {
         vm.prank(from);
         vm.expectEmit(true, true, true, true);
-        emit Approval(from, address(token0), address(this), defaultAmount, defaultExpiration);
+        emit Approval(from, address(token0), address(this), defaultAmount);
         permit2.approve(address(token0), address(this), defaultAmount, defaultExpiration);
 
         (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
@@ -147,7 +143,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.expectEmit(true, true, false, true);
-        emit BatchedApproval(from, tokens, address(this), amounts, exps);
+        emit BatchedApproval(from, tokens, address(this), amounts);
         permit2.permitBatch(permit, from, sig);
 
         (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
