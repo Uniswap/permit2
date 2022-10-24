@@ -10,16 +10,10 @@ import {PermitSignature} from "./utils/PermitSignature.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {Permit2} from "../src/Permit2.sol";
-import {
-    PermitTransfer,
-    PermitBatchTransfer,
-    LengthMismatch,
-    InvalidNonce,
-    RecipientLengthMismatch,
-    AmountsLengthMismatch
-} from "../src/Permit2Utils.sol";
 import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
+import {ISignatureTransfer} from "../src/interfaces/ISignatureTransfer.sol";
+import {InvalidNonce, SignatureExpired, LengthMismatch} from "../src/PermitErrors.sol";
 
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnapshot {
     using AddressBuilder for address[];
@@ -36,9 +30,16 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     string public constant _PERMIT_TRANSFER_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline,";
 
+    string public constant _PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB =
+        "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,";
+
     string constant MOCK_WITNESS_TYPE = "MockWitness(uint256 value,address person,bool test)";
     bytes32 constant MOCK_WITNESS_TYPEHASH =
         keccak256(abi.encodePacked(_PERMIT_TRANSFER_TYPEHASH_STUB, "MockWitness", " witness)", MOCK_WITNESS_TYPE));
+
+    bytes32 constant MOCK_BATCH_WITNESS_TYPEHASH = keccak256(
+        abi.encodePacked(_PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB, "MockWitness", " witness)", MOCK_WITNESS_TYPE)
+    );
 
     Permit2 permit2;
 
@@ -66,7 +67,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
     function testPermitTransferFrom() public {
         uint256 nonce = 0;
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
@@ -81,7 +82,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     function testPermitTransferFromToSpender() public {
         uint256 nonce = 0;
         // signed spender is address(this)
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
@@ -99,7 +100,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
     function testPermitTransferFromInvalidNonce() public {
         uint256 nonce = 0;
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
@@ -108,12 +109,44 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
     }
 
+    function testPermitTransferFromRandomNonceAndAmount(uint256 nonce, uint128 amount) public {
+        token0.mint(address(from), amount);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        permit.signedAmount = amount;
+        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address2);
+
+        permit2.permitTransferFrom(permit, from, address2, amount, sig);
+
+        assertEq(token0.balanceOf(from), startBalanceFrom - amount);
+        assertEq(token0.balanceOf(address2), startBalanceTo + amount);
+    }
+
+    function testPermitTransferSpendLessThanFull(uint256 nonce, uint128 amount) public {
+        token0.mint(address(from), amount);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        permit.signedAmount = amount;
+        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address2);
+
+        uint256 amountToSpend = amount / 2;
+        permit2.permitTransferFrom(permit, from, address2, amountToSpend, sig);
+
+        assertEq(token0.balanceOf(from), startBalanceFrom - amountToSpend);
+        assertEq(token0.balanceOf(address2), startBalanceTo + amountToSpend);
+    }
+
     function testPermitBatchTransferFrom() public {
         uint256 nonce = 0;
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
+        // address(0) gets sent to spender
         address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
 
@@ -133,8 +166,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     function testPermitBatchTransferFromSingleRecipient() public {
         uint256 nonce = 0;
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(2, address(address2));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
@@ -158,8 +191,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
         // signed spender is address(this)
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom0 = token0.balanceOf(from);
         uint256 startBalanceFrom1 = token1.balanceOf(from);
@@ -181,8 +214,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(10, address(token0));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom0 = token0.balanceOf(from);
         uint256 startBalanceTo0 = token0.balanceOf(address(this));
@@ -201,13 +234,13 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(1, address(this));
         uint256[] memory amounts = AmountBuilder.fill(1, defaultAmount);
 
-        vm.expectRevert(AmountsLengthMismatch.selector);
+        vm.expectRevert(ISignatureTransfer.AmountsLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
     }
 
@@ -215,13 +248,13 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(2, address(this));
         uint256[] memory amounts = AmountBuilder.fill(3, defaultAmount);
 
-        vm.expectRevert(AmountsLengthMismatch.selector);
+        vm.expectRevert(ISignatureTransfer.AmountsLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
     }
 
@@ -229,19 +262,19 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
 
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(3, address(this));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
 
-        vm.expectRevert(RecipientLengthMismatch.selector);
+        vm.expectRevert(ISignatureTransfer.RecipientLengthMismatch.selector);
         permit2.permitBatchTransferFrom(permit, from, to, amounts, sig);
     }
 
     function testGasSinglePermitTransferFrom() public {
         uint256 nonce = 0;
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), nonce);
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
@@ -257,8 +290,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     function testGasSinglePermitBatchTransferFrom() public {
         uint256 nonce = 0;
         address[] memory tokens = AddressBuilder.fill(1, address(token0));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(1, address(address2));
         uint256[] memory amounts = AmountBuilder.fill(1, defaultAmount);
@@ -277,8 +310,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     function testGasMultiplePermitBatchTransferFrom() public {
         uint256 nonce = 0;
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1)).push(address(token1));
-        PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         address[] memory to = AddressBuilder.fill(2, address(address2)).push(address(this));
         uint256[] memory amounts = AmountBuilder.fill(3, defaultAmount);
@@ -300,8 +333,108 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         assertEq(token1.balanceOf(address(this)), startBalanceToThis1 + defaultAmount);
     }
 
+    function testPermitBatchTransferFromTypedWitness() public {
+        uint256 nonce = 0;
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchWitnessSignature(
+            permit, fromPrivateKey, MOCK_BATCH_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+        );
+
+        // address(0) gets sent to spender
+        address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+
+        uint256 startBalanceFrom0 = token0.balanceOf(from);
+        uint256 startBalanceFrom1 = token1.balanceOf(from);
+        uint256 startBalanceTo0 = token0.balanceOf(address2);
+        uint256 startBalanceTo1 = token1.balanceOf(address0);
+
+        permit2.permitBatchWitnessTransferFrom(
+            permit, from, to, amounts, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
+        );
+
+        assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
+        assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
+        assertEq(token0.balanceOf(address2), startBalanceTo0 + defaultAmount);
+        assertEq(token1.balanceOf(address0), startBalanceTo1 + defaultAmount);
+    }
+
+    function testPermitBatchTransferFromTypedWitnessInvalidType() public {
+        uint256 nonce = 0;
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchWitnessSignature(
+            permit, fromPrivateKey, MOCK_BATCH_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+        );
+
+        address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        permit2.permitBatchWitnessTransferFrom(permit, from, to, amounts, witness, "MockWitness", "fake type", sig);
+    }
+
+    function testPermitBatchTransferFromTypedWitnessInvalidTypeName() public {
+        uint256 nonce = 0;
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchWitnessSignature(
+            permit, fromPrivateKey, MOCK_BATCH_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+        );
+
+        address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        permit2.permitBatchWitnessTransferFrom(permit, from, to, amounts, witness, "fake name", MOCK_WITNESS_TYPE, sig);
+    }
+
+    function testPermitBatchTransferFromTypedWitnessInvalidTypeHash() public {
+        uint256 nonce = 0;
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig =
+            getPermitBatchWitnessSignature(permit, fromPrivateKey, "fake typehash", witness, DOMAIN_SEPARATOR);
+
+        address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        permit2.permitBatchWitnessTransferFrom(
+            permit, from, to, amounts, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
+        );
+    }
+
+    function testPermitBatchTransferFromTypedWitnessInvalidWitness() public {
+        uint256 nonce = 0;
+        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
+        bytes memory sig = getPermitBatchWitnessSignature(
+            permit, fromPrivateKey, MOCK_BATCH_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+        );
+
+        address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
+        uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
+
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        permit2.permitBatchWitnessTransferFrom(
+            permit, from, to, amounts, keccak256(abi.encodePacked("bad witness")), "MockWitness", MOCK_WITNESS_TYPE, sig
+        );
+    }
+
     function testInvalidateUnorderedNonces() public {
-        PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), 0);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitTransfer(address(token0), 0);
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 bitmap = permit2.nonceBitmap(from, 0);
@@ -322,7 +455,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
         MockWitness memory witnessData = MockWitness(10000000, address(5), true);
         bytes32 witness = keccak256(abi.encode(witnessData));
-        PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
         bytes memory sig =
             getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR);
 
@@ -341,7 +474,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
         MockWitness memory witnessData = MockWitness(10000000, address(5), true);
         bytes32 witness = keccak256(abi.encode(witnessData));
-        PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
         bytes memory sig =
             getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR);
 
@@ -355,7 +488,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
         MockWitness memory witnessData = MockWitness(10000000, address(5), true);
         bytes32 witness = keccak256(abi.encode(witnessData));
-        PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
         bytes memory sig =
             getPermitWitnessTransferSignature(permit, fromPrivateKey, "fake typehash", witness, DOMAIN_SEPARATOR);
 
@@ -369,7 +502,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 nonce = 0;
         MockWitness memory witnessData = MockWitness(10000000, address(5), true);
         bytes32 witness = keccak256(abi.encode(witnessData));
-        PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
+        ISignatureTransfer.PermitTransfer memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
         bytes memory sig =
             getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR);
 
