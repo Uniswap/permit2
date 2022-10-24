@@ -69,46 +69,39 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function transferFrom(address token, address from, address to, uint160 amount) external {
-        _transfer(token, from, to, amount);
+    function transferFrom(address from, TransferDetails calldata transferDetails) external {
+        _transfer(from, transferDetails);
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function batchTransferFrom(
-        address[] calldata tokens,
-        address from,
-        address[] calldata to,
-        uint160[] calldata amounts
-    ) external {
-        if (amounts.length != to.length || tokens.length != to.length) revert LengthMismatch();
-
+    function batchTransferFrom(address from, TransferDetails[] calldata transferDetails) external {
         unchecked {
-            for (uint256 i = 0; i < tokens.length; ++i) {
-                _transfer(tokens[i], from, to[i], amounts[i]);
+            for (uint256 i = 0; i < transferDetails.length; ++i) {
+                _transfer(from, transferDetails[i]);
             }
         }
     }
 
     /// @notice Internal function for transferring tokens using stored allowances
     /// @dev Will fail if the allowed timeframe has passed
-    function _transfer(address token, address from, address to, uint160 amount) private {
-        PackedAllowance storage allowed = allowance[from][token][msg.sender];
+    function _transfer(address from, TransferDetails calldata transferDetails) private {
+        PackedAllowance storage allowed = allowance[from][transferDetails.token][msg.sender];
 
         if (block.timestamp > allowed.expiration) revert AllowanceExpired();
 
         uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
-            if (amount > maxAmount) {
+            if (transferDetails.amount > maxAmount) {
                 revert InsufficientAllowance();
             } else {
                 unchecked {
-                    allowed.amount -= amount;
+                    allowed.amount -= transferDetails.amount;
                 }
             }
         }
 
         // Transfer the tokens from the from address to the recipient.
-        ERC20(token).safeTransferFrom(from, to, amount);
+        ERC20(transferDetails.token).safeTransferFrom(from, transferDetails.to, transferDetails.amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
