@@ -430,4 +430,44 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         vm.expectRevert(LengthMismatch.selector);
         permit2.batchTransferFrom(tokens, from, recipients, amounts);
     }
+
+    function testLockdown() public {
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        IAllowanceTransfer.PermitBatch memory permit =
+            defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        permit2.permitBatch(permit, from, sig);
+
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount1, defaultAmount);
+        assertEq(expiration1, defaultExpiration);
+        assertEq(nonce1, 0);
+
+        address[] memory tokensToLock = new address[](2);
+        tokensToLock[0] = address(token0);
+        tokensToLock[1] = address(token1);
+
+        address[] memory spendersToLock = new address[](2);
+        spendersToLock[0] = address(this);
+        spendersToLock[1] = address(this);
+
+        vm.prank(from);
+        snapStart("lockdown");
+        permit2.lockdown(tokensToLock, spendersToLock);
+        snapEnd();
+
+        (amount, expiration, nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, 0);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+        (amount1, expiration1, nonce1) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount1, 0);
+        assertEq(expiration1, defaultExpiration);
+        assertEq(nonce1, 0);
+    }
 }
