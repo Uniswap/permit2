@@ -448,17 +448,13 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 0);
 
-        address[] memory tokensToLock = new address[](2);
-        tokensToLock[0] = address(token0);
-        tokensToLock[1] = address(token1);
-
-        address[] memory spendersToLock = new address[](2);
-        spendersToLock[0] = address(this);
-        spendersToLock[1] = address(this);
+        IAllowanceTransfer.TokenSpenderPair[] memory approvals = new IAllowanceTransfer.TokenSpenderPair[](2);
+        approvals[0] = IAllowanceTransfer.TokenSpenderPair(address(token0), address(this));
+        approvals[1] = IAllowanceTransfer.TokenSpenderPair(address(token1), address(this));
 
         vm.prank(from);
         snapStart("lockdown");
-        permit2.lockdown(tokensToLock, spendersToLock);
+        permit2.lockdown(approvals);
         snapEnd();
 
         (amount, expiration, nonce) = permit2.allowance(from, address(token0), address(this));

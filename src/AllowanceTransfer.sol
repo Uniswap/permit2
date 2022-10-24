@@ -112,14 +112,11 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function lockdown(address[] calldata tokens, address[] calldata spenders) external {
-        // Each index should correspond to an index in the other array.
-        if (tokens.length != spenders.length) revert LengthMismatch();
-
+    function lockdown(TokenSpenderPair[] calldata approvals) external {
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
-            for (uint256 i = 0; i < spenders.length; ++i) {
-                allowance[msg.sender][tokens[i]][spenders[i]].amount = 0;
+            for (uint256 i = 0; i < approvals.length; ++i) {
+                allowance[msg.sender][approvals[i].token][approvals[i].spender].amount = 0;
             }
         }
     }
