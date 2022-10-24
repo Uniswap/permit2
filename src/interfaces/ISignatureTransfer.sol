@@ -25,7 +25,7 @@ interface ISignatureTransfer {
         uint256 deadline;
     }
 
-    struct TokenAmount {
+    struct ToAmountPair {
         address to;
         uint256 requestedAmount;
     }
@@ -88,14 +88,11 @@ interface ISignatureTransfer {
     /// @notice Transfers multiple tokens using a signed permit message
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
     /// @param signature The signature to verify
     function permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata ToAmountPairs,
         bytes calldata signature
     ) external;
 
@@ -103,8 +100,6 @@ interface ISignatureTransfer {
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
     /// @param witness Extra data to include when checking the user signature
     /// @param witnessTypeName The name of the witness type
     /// @param witnessType The EIP-712 type definition for the witness type
@@ -112,8 +107,7 @@ interface ISignatureTransfer {
     function permitBatchWitnessTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata ToAmountPairs,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType,

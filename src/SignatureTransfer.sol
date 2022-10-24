@@ -78,29 +78,24 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function permitBatchTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,
-        TokenAmount[] calldata tokenAmounts,
+        ToAmountPair[] calldata toAmountPairs,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
+        _permitBatchTransferFrom(permit, permit.hash(), owner, toAmountPairs, signature);
     }
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchWitnessTransferFrom(
         PermitBatchTransfer calldata permit,
         address owner,
-        TokenAmount[] calldata tokenAmounts,
+        ToAmountPair[] calldata toAmountPairs,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(
-            permit,
-            permit.hashWithWitness(witness, witnessTypeName, witnessType),
-            owner,
-            to,
-            requestedAmounts,
-            signature
+            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, toAmountPairs, signature
         );
     }
 
@@ -114,12 +109,12 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         PermitBatchTransfer calldata permit,
         bytes32 dataHash,
         address owner,
-        TokenAmount[] calldata tokenAmounts,
+        ToAmountPair[] calldata toAmountPairs,
         bytes calldata signature
     ) internal {
         uint256 permitTokensLength = permit.tokens.length;
         _validatePermit(permit.spender, permit.deadline);
-        _validateInputLengths(permitTokensLength, to.length, permit.signedAmounts.length, requestedAmounts.length);
+        _validateInputLengths(permitTokensLength, toAmountPairs.length, permit.signedAmounts.length);
 
         _useUnorderedNonce(owner, permit.nonce);
 
@@ -127,9 +122,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
         unchecked {
             for (uint256 i = 0; i < permitTokensLength; ++i) {
-                uint256 requestedAmount = requestedAmounts[i];
+                uint256 requestedAmount = toAmountPairs[i].requestedAmount;
                 if (requestedAmount > permit.signedAmounts[i]) revert InvalidAmount();
-                ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmount);
+                ERC20(permit.tokens[i]).safeTransferFrom(owner, toAmountPairs[i].to, requestedAmount);
             }
         }
     }
@@ -174,13 +169,13 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @notice Ensures that permit token arrays are valid with regard to the tokens being spent
     /// @param signedTokensLen The length of the tokens array signed by the user
-    /// @param tokenAmountsLen The length of the given recipients array
+    /// @param toAmountPairsLen The length of the given recipients array
     /// @param signedAmountsLen The length of the amounts length signed by the user
-    function _validateInputLengths(uint256 signedTokensLen, uint256 tokenAmountsLen, uint256 signedAmountsLen)
+    function _validateInputLengths(uint256 signedTokensLen, uint256 toAmountPairsLen, uint256 signedAmountsLen)
         private
         pure
     {
         if (signedAmountsLen != signedTokensLen) revert SignedDetailsLengthMismatch();
-        if (tokenAmountsLen != signedAmountsLen) revert AmountsLengthMismatch();
+        if (toAmountPairsLen != signedAmountsLen) revert AmountsLengthMismatch();
     }
 }
