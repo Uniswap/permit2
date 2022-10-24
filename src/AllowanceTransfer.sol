@@ -85,11 +85,12 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @notice Internal function for transferring tokens using stored allowances
     /// @dev Will fail if the allowed timeframe has passed
     function _transfer(address from, TransferDetails calldata transferDetails) private {
-        PackedAllowance storage allowed = allowance[from][transferDetails.token][msg.sender];
+        address token = transferDetails.token;
+        uint160 transferAmount = transferDetails.amount;
+
+        PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
         if (block.timestamp > allowed.expiration) revert AllowanceExpired();
-
-        uint160 transferAmount = transferDetails.amount;
 
         uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
@@ -103,7 +104,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         }
 
         // Transfer the tokens from the from address to the recipient.
-        ERC20(transferDetails.token).safeTransferFrom(from, transferDetails.to, transferDetails.amount);
+        ERC20(token).safeTransferFrom(from, transferDetails.to, transferAmount);
     }
 
     /// @inheritdoc IAllowanceTransfer
