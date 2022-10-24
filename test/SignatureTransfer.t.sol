@@ -146,6 +146,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         ISignatureTransfer.PermitBatchTransfer memory permit = defaultERC20PermitMultiple(tokens, nonce);
         bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
+        // address(0) gets sent to spender
         address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
 
@@ -342,6 +343,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             permit, fromPrivateKey, MOCK_BATCH_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
         );
 
+        // address(0) gets sent to spender
         address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
         uint256[] memory amounts = AmountBuilder.fill(2, defaultAmount);
 
