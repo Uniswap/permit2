@@ -14,7 +14,7 @@ Permit2 introduces a low-overhead, next generation token approval/meta-tx system
 
 ## Architecture
 
-Permit2 is split between two contracts: AllowanceTransfer and SignatureTransfer. These contracts handle signature based allowances of tokens and signature based transfers of tokens, respectively.
+Permit2 is the union of two contracts: `AllowanceTransfer` and `SignatureTransfer`. These contracts handle signature based allowances of tokens and signature based transfers of tokens, respectively.
 
 ## Contributing
 
