@@ -16,7 +16,7 @@ interface IAllowanceTransfer {
     event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
 
     /// @notice Emits an event when the owner successfully sets permissions on a set of tokens for the spender.
-    event BatchedApproval(address indexed owner, address[] tokens, address indexed spender, uint160[] amount);
+    event BatchedApproval(address indexed owner, address[] tokens, address indexed spender, uint160[] amounts);
 
     /// @notice Emits an event when the token is successfully transferred.
     event Transfer(address indexed from, address indexed token, address indexed to, uint160 amount);
@@ -67,6 +67,14 @@ interface IAllowanceTransfer {
         uint32 nonce;
     }
 
+    /// @notice A token spender pair.
+    struct TokenSpenderPair {
+        // the token the spender is approved
+        address token;
+        // the spender address
+        address spender;
+    }
+
     /// @notice Approves the spender to use up to amount of the specified token up until the expiration
     /// @param token The token to approve
     /// @param spender The spender address to approve
@@ -112,11 +120,8 @@ interface IAllowanceTransfer {
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
     /// by batch revoking approvals
-    /// @param tokens An array of tokens who's corresponding spenders should have their
-    /// approvals revoked. Each index should correspond to an index in the spenders array
-    /// @param spenders An array of addresses to revoke approvals from
-    /// Each index should correspond to an index in the tokens array
-    function lockdown(address[] calldata tokens, address[] calldata spenders) external;
+    /// @param approvals Array of approvals to revoke.
+    function lockdown(TokenSpenderPair[] calldata approvals) external;
 
     /// @notice Invalidate nonces for a given (token, spender) pair
     /// @dev token The token to invalidate nonces for
