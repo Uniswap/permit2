@@ -89,13 +89,15 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
         if (block.timestamp > allowed.expiration) revert AllowanceExpired();
 
+        uint160 transferAmount = transferDetails.amount;
+
         uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
-            if (transferDetails.amount > maxAmount) {
+            if (transferAmount > maxAmount) {
                 revert InsufficientAllowance();
             } else {
                 unchecked {
-                    allowed.amount -= transferDetails.amount;
+                    allowed.amount -= transferAmount;
                 }
             }
         }
