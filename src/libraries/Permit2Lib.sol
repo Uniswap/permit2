@@ -111,6 +111,7 @@ library Permit2Lib {
             (,, uint32 nonce) = PERMIT2.allowance(owner, address(token), spender);
 
             PERMIT2.permit(
+                owner,
                 IAllowanceTransfer.Permit({
                     token: address(token),
                     spender: spender,
@@ -121,7 +122,6 @@ library Permit2Lib {
                     nonce: nonce,
                     sigDeadline: deadline
                 }),
-                owner,
                 bytes.concat(r, s, bytes1(v))
             );
         }

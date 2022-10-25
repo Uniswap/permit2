@@ -7,7 +7,7 @@ import {PermitHash} from "./libraries/PermitHash.sol";
 import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {EIP712} from "./EIP712.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
-import {SignatureExpired, LengthMismatch, InvalidNonce} from "./PermitErrors.sol";
+import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
 import {Allowance} from "./libraries/Allowance.sol";
 
 contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
@@ -30,7 +30,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function permit(Permit calldata permitData, address owner, bytes calldata signature) external {
+    function permit(address owner, Permit calldata permitData, bytes calldata signature) external {
         PackedAllowance storage allowed = allowance[owner][permitData.token][permitData.spender];
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
 
@@ -43,7 +43,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external {
+    function permitBatch(address owner, PermitBatch calldata permitData, bytes calldata signature) external {
         // Use the first token's nonce.
         PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
         _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);

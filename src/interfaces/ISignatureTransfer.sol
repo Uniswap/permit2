@@ -9,13 +9,12 @@ interface ISignatureTransfer {
     error InvalidAmount();
     error SignedDetailsLengthMismatch();
     error AmountsLengthMismatch();
-    error RecipientLengthMismatch();
 
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
     /// @notice The signed permit message for a single token transfer
-    struct PermitTransfer {
+    struct PermitTransferFrom {
         // ERC20 token address
         address token;
         // address permissioned to spend token
@@ -35,7 +34,7 @@ interface ISignatureTransfer {
     }
 
     /// @notice The signed permit message for multiple token transfers
-    struct PermitBatchTransfer {
+    struct PermitBatchTransferFrom {
         // ERC20 token addresses
         address[] tokens;
         // address permissioned to spend tokens
@@ -60,7 +59,7 @@ interface ISignatureTransfer {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function permitTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransferFrom calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -79,7 +78,7 @@ interface ISignatureTransfer {
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransferFrom calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -94,7 +93,7 @@ interface ISignatureTransfer {
     /// @param owner The owner of the tokens to transfer
     /// @param signature The signature to verify
     function permitBatchTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransferFrom calldata permit,
         address owner,
         ToAmountPair[] calldata ToAmountPairs,
         bytes calldata signature
@@ -109,7 +108,7 @@ interface ISignatureTransfer {
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitBatchWitnessTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransferFrom calldata permit,
         address owner,
         ToAmountPair[] calldata ToAmountPairs,
         bytes32 witness,
