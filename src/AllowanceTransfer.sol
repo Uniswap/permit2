@@ -7,7 +7,7 @@ import {PermitHash} from "./libraries/PermitHash.sol";
 import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {EIP712} from "./EIP712.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
-import {SignatureExpired, LengthMismatch, InvalidNonce} from "./PermitErrors.sol";
+import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
 import {Allowance} from "./libraries/Allowance.sol";
 
 contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
@@ -75,17 +75,11 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function batchTransferFrom(
-        address[] calldata tokens,
-        address from,
-        address[] calldata to,
-        uint160[] calldata amounts
-    ) external {
-        if (amounts.length != to.length || tokens.length != to.length) revert LengthMismatch();
-
+    function batchTransferFrom(address from, TransferDetail[] calldata transferDetails) external {
         unchecked {
-            for (uint256 i = 0; i < tokens.length; ++i) {
-                _transfer(tokens[i], from, to[i], amounts[i]);
+            for (uint256 i = 0; i < transferDetails.length; ++i) {
+                TransferDetail memory transferDetail = transferDetails[i];
+                _transfer(transferDetail.token, from, transferDetail.to, transferDetail.amount);
             }
         }
     }

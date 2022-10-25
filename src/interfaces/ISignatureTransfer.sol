@@ -9,7 +9,6 @@ interface ISignatureTransfer {
     error InvalidAmount();
     error SignedDetailsLengthMismatch();
     error AmountsLengthMismatch();
-    error RecipientLengthMismatch();
 
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
@@ -26,6 +25,12 @@ interface ISignatureTransfer {
         uint256 nonce;
         // deadline on the permit signature
         uint256 deadline;
+    }
+
+    /// @notice A pair holding recipient address and amount for transfers.
+    struct ToAmountPair {
+        address to;
+        uint256 requestedAmount;
     }
 
     /// @notice The signed permit message for multiple token transfers
@@ -86,14 +91,11 @@ interface ISignatureTransfer {
     /// @notice Transfers multiple tokens using a signed permit message
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
     /// @param signature The signature to verify
     function permitBatchTransferFrom(
         PermitBatchTransferFrom calldata permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata ToAmountPairs,
         bytes calldata signature
     ) external;
 
@@ -101,8 +103,6 @@ interface ISignatureTransfer {
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
     /// @param witness Extra data to include when checking the user signature
     /// @param witnessTypeName The name of the witness type
     /// @param witnessType The EIP-712 type definition for the witness type
@@ -110,8 +110,7 @@ interface ISignatureTransfer {
     function permitBatchWitnessTransferFrom(
         PermitBatchTransferFrom calldata permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata ToAmountPairs,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType,

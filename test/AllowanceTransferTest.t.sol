@@ -7,9 +7,10 @@ import {Permit2} from "../src/Permit2.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
+import {StructBuilder} from "./utils/StructBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {AllowanceTransfer} from "../src/AllowanceTransfer.sol";
-import {SignatureExpired, InvalidNonce, LengthMismatch} from "../src/PermitErrors.sol";
+import {SignatureExpired, InvalidNonce} from "../src/PermitErrors.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
 import {MockPermit2} from "./mocks/MockPermit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
@@ -194,6 +195,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount);
 
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
+
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
     }
@@ -214,6 +216,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         snapStart("transferFrom");
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
+
         snapEnd();
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
@@ -232,12 +235,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
 
-        // permit token0 for 10 ** 18
-        address[] memory tokens = AddressBuilder.fill(3, address(token0));
-        uint160[] memory amounts = AmountBuilder.fillUInt160(3, 1 ** 18);
-        address[] memory recipients = AddressBuilder.fill(3, address0);
+        // permit token0 for 1 ** 18
+        IAllowanceTransfer.TransferDetail[] memory transferDetails =
+            StructBuilder.fillTransferDetail(3, address(token0), 1 ** 18, address0);
         snapStart("batchTransferFrom");
-        permit2.batchTransferFrom(tokens, from, recipients, amounts);
+        permit2.batchTransferFrom(from, transferDetails);
         snapEnd();
         assertEq(token0.balanceOf(from), startBalanceFrom - 3 * 1 ** 18);
         assertEq(token0.balanceOf(address0), startBalanceTo + 3 * 1 ** 18);
@@ -264,6 +266,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount);
 
         permit2.transferFrom(address(token0), fromDirty, address3, defaultAmount);
+
         assertEq(token0.balanceOf(fromDirty), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address3), startBalanceTo + defaultAmount);
     }
@@ -308,6 +311,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(startAllowedAmount0, type(uint160).max);
 
         permit2.transferFrom(address(token0), from, address0, defaultAmount);
+
         (uint160 endAllowedAmount0,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(endAllowedAmount0, type(uint160).max);
 
@@ -332,6 +336,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(startAllowedAmount0, type(uint160).max);
 
         permit2.transferFrom(address(token0), fromDirty, address0, defaultAmount);
+
         (uint160 endAllowedAmount0,,) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(endAllowedAmount0, type(uint160).max);
 
@@ -354,7 +359,6 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         uint160 transferAmount = 5 ** 18;
         permit2.transferFrom(address(token0), from, address0, transferAmount);
-
         (uint160 endAllowedAmount0,,) = permit2.allowance(from, address(token0), address(this));
         // ensure the allowance was deducted
         assertEq(endAllowedAmount0, defaultAmount - transferAmount);
@@ -426,37 +430,17 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
 
-        // permit token0 for 10 ** 18
-        address[] memory tokens = AddressBuilder.fill(3, address(token0));
-        uint160[] memory amounts = AmountBuilder.fillUInt160(3, 1 ** 18);
-        address[] memory recipients = AddressBuilder.fill(3, address0);
+        // permit token0 for 1 ** 18
+        IAllowanceTransfer.TransferDetail[] memory transferDetails =
+            StructBuilder.fillTransferDetail(3, address(token0), 1 ** 18, address0);
 
         snapStart("batchTransferFrom");
-        permit2.batchTransferFrom(tokens, from, recipients, amounts);
+        permit2.batchTransferFrom(from, transferDetails);
         snapEnd();
         assertEq(token0.balanceOf(from), startBalanceFrom - 3 * 1 ** 18);
         assertEq(token0.balanceOf(address0), startBalanceTo + 3 * 1 ** 18);
         (amount,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount - 3 * 1 ** 18);
-    }
-
-    function testBatchTransferFromLengthMismatch() public {
-        IAllowanceTransfer.Permit memory permit =
-            defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
-        bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
-
-        permit2.permit(from, permit, sig);
-
-        (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
-        assertEq(amount, defaultAmount);
-
-        // permit token0 for 10 ** 18
-        address[] memory tokens = AddressBuilder.fill(3, address(token0));
-        uint160[] memory amounts = AmountBuilder.fillUInt160(3, 1 ** 18);
-        address[] memory recipients = AddressBuilder.fill(4, address0);
-
-        vm.expectRevert(LengthMismatch.selector);
-        permit2.batchTransferFrom(tokens, from, recipients, amounts);
     }
 
     function testLockdown() public {
