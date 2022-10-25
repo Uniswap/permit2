@@ -6,7 +6,7 @@ import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 library Allowance {
     /// @notice Sets the allowed amount, expiry, and nonce of the spender's permissions on owner's token.
     /// @dev Nonce is incremented.
-    /// @dev If the inputted expiration is 0, the stored expiration is set to block.timetamp
+    /// @dev If the inputted expiration is 0, the stored expiration is set to block.timestamp
     function updateAll(
         IAllowanceTransfer.PackedAllowance storage allowed,
         uint160 amount,
