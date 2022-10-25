@@ -12,15 +12,15 @@ import {EIP712} from "./EIP712.sol";
 contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-    using PermitHash for PermitTransfer;
-    using PermitHash for PermitBatchTransfer;
+    using PermitHash for PermitTransferFrom;
+    using PermitHash for PermitBatchTransferFrom;
 
     /// @inheritdoc ISignatureTransfer
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
     /// @inheritdoc ISignatureTransfer
     function permitTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransferFrom calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -31,7 +31,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitWitnessTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransferFrom calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -54,7 +54,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function _permitTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransferFrom calldata permit,
         bytes32 dataHash,
         address owner,
         address to,
@@ -74,7 +74,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransferFrom calldata permit,
         address owner,
         address[] calldata to,
         uint256[] calldata requestedAmounts,
@@ -85,7 +85,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchWitnessTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransferFrom calldata permit,
         address owner,
         address[] calldata to,
         uint256[] calldata requestedAmounts,
@@ -113,7 +113,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param requestedAmounts An array with the amount of each token to transfer
     /// @param signature The signature to verify
     function _permitBatchTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransferFrom calldata permit,
         bytes32 dataHash,
         address owner,
         address[] calldata to,
