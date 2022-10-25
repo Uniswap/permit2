@@ -28,6 +28,7 @@ interface ISignatureTransfer {
         uint256 deadline;
     }
 
+    /// @notice A pair holding recipient address and amount for transfers.
     struct ToAmountPair {
         address to;
         uint256 requestedAmount;
