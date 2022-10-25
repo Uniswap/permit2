@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
 
-/// @notice utilities for hashing permit structs
 library PermitHash {
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
