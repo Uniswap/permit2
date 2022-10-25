@@ -52,4 +52,4 @@ forge snapshot
 
 ## Acknowledgments
 
-Inspired by [permit-everywhere](https://github.com/merklejerk/permit-everywhere).
+Inspired by [merklejerk](https://github.com/merklejerk)'s [permit-everywhere](https://github.com/merklejerk/permit-everywhere) contracts which introduce permit based approvals for all tokens regardless of EIP2612 support.
