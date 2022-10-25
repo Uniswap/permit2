@@ -76,17 +76,17 @@ interface IAllowanceTransfer {
 
     /// @notice Permit a spender to a given amount of the owners token via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
-    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param owner The owner of the tokens being approved
+    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param signature The owner's signature over the permit data
-    function permit(Permit calldata permitData, address owner, bytes calldata signature) external;
+    function permit(address owner, Permit calldata permitData, bytes calldata signature) external;
 
     /// @notice Permit a spender to the signed amounts of the owners tokens via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
-    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param owner The owner of the tokens being approved
+    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param signature The owner's signature over the permit data
-    function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external;
+    function permitBatch(address owner, PermitBatch calldata permitData, bytes calldata signature) external;
 
     /// @notice Transfer approved tokens from one address to another.
     /// @param token The token to transfer.
