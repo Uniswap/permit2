@@ -13,7 +13,7 @@ contract PermitSignature is Test {
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "Permit(address[] token,address spender,uint160[] amount,uint64[] expiration,uint32 nonce,uint256 sigDeadline)"
+        "PermitBatch(address[] tokens,address spender,uint160[] amounts,uint64[] expirations,uint32 nonce,uint256 sigDeadline)"
     );
     bytes32 public constant _PERMIT_TRANSFER_TYPEHASH =
         keccak256("PermitTransferFrom(address token,address spender,uint256 maxAmount,uint256 nonce,uint256 deadline)");
