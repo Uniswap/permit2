@@ -8,8 +8,14 @@ interface IAllowanceTransfer {
     error AllowanceExpired();
     error InsufficientAllowance();
     error ExcessiveInvalidation();
-    /// @notice The signed permit message for a single token allowance
 
+    /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
+    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+
+    /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
+    event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
+
+    /// @notice The signed permit message for a single token allowance
     struct Permit {
         // ERC20 token address
         address token;
@@ -52,6 +58,24 @@ interface IAllowanceTransfer {
         uint32 nonce;
     }
 
+    /// @notice A token spender pair.
+    struct TokenSpenderPair {
+        // the token the spender is approved
+        address token;
+        // the spender address
+        address spender;
+    }
+
+    /// @notice Details for a token transfer.
+    struct TransferDetail {
+        // the token to be transferred
+        address token;
+        // the amount of the token
+        uint160 amount;
+        // the recipient of the token
+        address to;
+    }
+
     /// @notice Approves the spender to use up to amount of the specified token up until the expiration
     /// @param token The token to approve
     /// @param spender The spender address to approve
@@ -62,46 +86,33 @@ interface IAllowanceTransfer {
 
     /// @notice Permit a spender to a given amount of the owners token via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
-    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param owner The owner of the tokens being approved
+    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param signature The owner's signature over the permit data
-    function permit(Permit calldata permitData, address owner, bytes calldata signature) external;
+    function permit(address owner, Permit calldata permitData, bytes calldata signature) external;
 
     /// @notice Permit a spender to the signed amounts of the owners tokens via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
-    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param owner The owner of the tokens being approved
+    /// @param permitData Data signed over by the owner specifying the terms of approval
     /// @param signature The owner's signature over the permit data
-    function permitBatch(PermitBatch calldata permitData, address owner, bytes calldata signature) external;
+    function permitBatch(address owner, PermitBatch calldata permitData, bytes calldata signature) external;
 
     /// @notice Transfer approved tokens from one address to another.
-    /// @param token The token to transfer.
     /// @param from The address to transfer from.
-    /// @param to The address to transfer to.
-    /// @param amount The amount of tokens to transfer.
     /// @dev Requires either the from address to have approved at least the desired amount
     /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
     function transferFrom(address token, address from, address to, uint160 amount) external;
 
     /// @notice Transfer approved tokens in a batch
-    /// @param tokens Array of token addresses to transfer
     /// @param from The address to transfer tokens from
-    /// @param to Array of recipients for the transfers
-    /// @param amounts Array of token amounts to transfer
-    function batchTransferFrom(
-        address[] calldata tokens,
-        address from,
-        address[] calldata to,
-        uint160[] calldata amounts
-    ) external;
+    /// @param transferDetails Array of recipients for the transfers
+    function batchTransferFrom(address from, TransferDetail[] calldata transferDetails) external;
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
     /// by batch revoking approvals
-    /// @param tokens An array of tokens who's corresponding spenders should have their
-    /// approvals revoked. Each index should correspond to an index in the spenders array
-    /// @param spenders An array of addresses to revoke approvals from
-    /// Each index should correspond to an index in the tokens array
-    function lockdown(address[] calldata tokens, address[] calldata spenders) external;
+    /// @param approvals Array of approvals to revoke.
+    function lockdown(TokenSpenderPair[] calldata approvals) external;
 
     /// @notice Invalidate nonces for a given (token, spender) pair
     /// @dev token The token to invalidate nonces for

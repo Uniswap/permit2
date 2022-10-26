@@ -12,17 +12,15 @@ import {EIP712} from "./EIP712.sol";
 contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-    using PermitHash for PermitTransfer;
-    using PermitHash for PermitBatchTransfer;
-
-    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
+    using PermitHash for PermitTransferFrom;
+    using PermitHash for PermitBatchTransferFrom;
 
     /// @inheritdoc ISignatureTransfer
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
     /// @inheritdoc ISignatureTransfer
     function permitTransferFrom(
-        PermitTransfer memory permit,
+        PermitTransferFrom memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -33,7 +31,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitWitnessTransferFrom(
-        PermitTransfer memory permit,
+        PermitTransferFrom memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -56,7 +54,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function _permitTransferFrom(
-        PermitTransfer memory permit,
+        PermitTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
         address to,
@@ -76,76 +74,55 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchTransferFrom(
-        PermitBatchTransfer memory permit,
+        PermitBatchTransferFrom memory permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata toAmountPairs,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(permit, permit.hash(), owner, to, requestedAmounts, signature);
+        _permitBatchTransferFrom(permit, permit.hash(), owner, toAmountPairs, signature);
     }
 
-    /// @notice Transfers tokens using a signed permit message.
-    /// @notice Includes extra data provided by the caller to verify signature over.
-    /// @dev If to is the zero address, the tokens are sent to the spender.
-    /// @param permit The permit data signed over by the owner
-    /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
-    /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeName The name of the witness type
-    /// @param witnessType The EIP-712 type definition for the witness type
-    /// @param signature The signature to verify
+    /// @inheritdoc ISignatureTransfer
     function permitBatchWitnessTransferFrom(
-        PermitBatchTransfer memory permit,
+        PermitBatchTransferFrom memory permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata toAmountPairs,
         bytes32 witness,
         string memory witnessTypeName,
         string memory witnessType,
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(
-            permit,
-            permit.hashWithWitness(witness, witnessTypeName, witnessType),
-            owner,
-            to,
-            requestedAmounts,
-            signature
+            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, toAmountPairs, signature
         );
     }
 
-    /// @notice Transfers tokens using a signed permit message.
-    /// @dev If to is the zero address, the tokens are sent to the spender.
+    /// @notice Transfers tokens using a signed permit messages
+    /// @dev If to is the zero address, the tokens are sent to the spender
     /// @param permit The permit data signed over by the owner
+    /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
     /// @param signature The signature to verify
     function _permitBatchTransferFrom(
-        PermitBatchTransfer memory permit,
+        PermitBatchTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata toAmountPairs,
         bytes calldata signature
     ) internal {
+        uint256 permitTokensLength = permit.tokens.length;
         _validatePermit(permit.spender, permit.deadline);
-        _validateInputLengths(permit.tokens.length, to.length, permit.signedAmounts.length, requestedAmounts.length);
-        unchecked {
-            for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                if (requestedAmounts[i] > permit.signedAmounts[i]) revert InvalidAmount();
-            }
-        }
+        _validateInputLengths(permitTokensLength, toAmountPairs.length, permit.signedAmounts.length);
 
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(_hashTypedData(dataHash), owner);
 
         unchecked {
-            for (uint256 i = 0; i < permit.tokens.length; ++i) {
-                ERC20(permit.tokens[i]).safeTransferFrom(owner, to[i], requestedAmounts[i]);
+            for (uint256 i = 0; i < permitTokensLength; ++i) {
+                uint256 requestedAmount = toAmountPairs[i].requestedAmount;
+                if (requestedAmount > permit.signedAmounts[i]) revert InvalidAmount();
+                ERC20(permit.tokens[i]).safeTransferFrom(owner, toAmountPairs[i].to, requestedAmount);
             }
         }
     }
@@ -153,6 +130,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @inheritdoc ISignatureTransfer
     function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
+
         emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
     }
 
@@ -173,9 +151,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function _useUnorderedNonce(address from, uint256 nonce) internal {
         (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
-        if ((bitmap >> bitPos) & 1 == 1) {
-            revert InvalidNonce();
-        }
+
+        if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce();
+
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }
 
@@ -189,17 +167,13 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @notice Ensures that permit token arrays are valid with regard to the tokens being spent
     /// @param signedTokensLen The length of the tokens array signed by the user
-    /// @param recipientLen The length of the given recipients array
+    /// @param toAmountPairsLen The length of the given recipients array
     /// @param signedAmountsLen The length of the amounts length signed by the user
-    /// @param requestedAmountsLen The length of the given amounts array
-    function _validateInputLengths(
-        uint256 signedTokensLen,
-        uint256 recipientLen,
-        uint256 signedAmountsLen,
-        uint256 requestedAmountsLen
-    ) private pure {
+    function _validateInputLengths(uint256 signedTokensLen, uint256 toAmountPairsLen, uint256 signedAmountsLen)
+        private
+        pure
+    {
         if (signedAmountsLen != signedTokensLen) revert SignedDetailsLengthMismatch();
-        if (requestedAmountsLen != signedAmountsLen) revert AmountsLengthMismatch();
-        if (recipientLen != 1 && recipientLen != signedTokensLen) revert RecipientLengthMismatch();
+        if (toAmountPairsLen != signedAmountsLen) revert AmountsLengthMismatch();
     }
 }

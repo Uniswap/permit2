@@ -9,10 +9,12 @@ interface ISignatureTransfer {
     error InvalidAmount();
     error SignedDetailsLengthMismatch();
     error AmountsLengthMismatch();
-    error RecipientLengthMismatch();
+
+    /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
+    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
     /// @notice The signed permit message for a single token transfer
-    struct PermitTransfer {
+    struct PermitTransferFrom {
         // ERC20 token address
         address token;
         // address permissioned to spend token
@@ -25,8 +27,14 @@ interface ISignatureTransfer {
         uint256 deadline;
     }
 
+    /// @notice A pair holding recipient address and amount for transfers.
+    struct ToAmountPair {
+        address to;
+        uint256 requestedAmount;
+    }
+
     /// @notice The signed permit message for multiple token transfers
-    struct PermitBatchTransfer {
+    struct PermitBatchTransferFrom {
         // ERC20 token addresses
         address[] tokens;
         // address permissioned to spend tokens
@@ -51,7 +59,7 @@ interface ISignatureTransfer {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function permitTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransferFrom calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -70,7 +78,7 @@ interface ISignatureTransfer {
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransferFrom calldata permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -80,19 +88,32 @@ interface ISignatureTransfer {
         bytes calldata signature
     ) external;
 
-    /// @notice Transfers tokens using a signed permit message
-    /// @notice Allows transferring any number of tokens to any number of addresses requested by the owner
-    /// @dev If to is the zero address, the tokens are sent to the spender
+    /// @notice Transfers multiple tokens using a signed permit message
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipients of the tokens
-    /// @param requestedAmounts The amount of tokens to transfer
     /// @param signature The signature to verify
     function permitBatchTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransferFrom calldata permit,
         address owner,
-        address[] calldata to,
-        uint256[] calldata requestedAmounts,
+        ToAmountPair[] calldata ToAmountPairs,
+        bytes calldata signature
+    ) external;
+
+    /// @notice Transfers multiple tokens using a signed permit message
+    /// @notice Includes extra data provided by the caller to verify signature over
+    /// @param permit The permit data signed over by the owner
+    /// @param owner The owner of the tokens to transfer
+    /// @param witness Extra data to include when checking the user signature
+    /// @param witnessTypeName The name of the witness type
+    /// @param witnessType The EIP-712 type definition for the witness type
+    /// @param signature The signature to verify
+    function permitBatchWitnessTransferFrom(
+        PermitBatchTransferFrom calldata permit,
+        address owner,
+        ToAmountPair[] calldata ToAmountPairs,
+        bytes32 witness,
+        string calldata witnessTypeName,
+        string calldata witnessType,
         bytes calldata signature
     ) external;
 
