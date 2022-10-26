@@ -27,7 +27,7 @@ library PermitHash {
     string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
         "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] signedAmounts,uint256 nonce,uint256 deadline,";
 
-    function hash(IAllowanceTransfer.Permit calldata permit) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer.Permit memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_TYPEHASH,
@@ -41,7 +41,7 @@ library PermitHash {
         );
     }
 
-    function hash(IAllowanceTransfer.PermitBatch calldata permit) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer.PermitBatch memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TYPEHASH,
@@ -55,7 +55,7 @@ library PermitHash {
         );
     }
 
-    function hash(ISignatureTransfer.PermitTransferFrom calldata permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitTransferFrom memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_TRANSFER_FROM_TYPEHASH,
@@ -68,7 +68,7 @@ library PermitHash {
         );
     }
 
-    function hash(ISignatureTransfer.PermitBatchTransferFrom calldata permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitBatchTransferFrom memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
@@ -82,7 +82,7 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        ISignatureTransfer.PermitTransferFrom calldata permit,
+        ISignatureTransfer.PermitTransferFrom memory permit,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType
@@ -99,7 +99,7 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        ISignatureTransfer.PermitBatchTransferFrom calldata permit,
+        ISignatureTransfer.PermitBatchTransferFrom memory permit,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType

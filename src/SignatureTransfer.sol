@@ -20,7 +20,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitTransferFrom(
-        PermitTransferFrom calldata permit,
+        PermitTransferFrom memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -31,7 +31,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitWitnessTransferFrom(
-        PermitTransferFrom calldata permit,
+        PermitTransferFrom memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -54,7 +54,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function _permitTransferFrom(
-        PermitTransferFrom calldata permit,
+        PermitTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
         address to,
@@ -74,7 +74,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchTransferFrom(
-        PermitBatchTransferFrom calldata permit,
+        PermitBatchTransferFrom memory permit,
         address owner,
         ToAmountPair[] calldata toAmountPairs,
         bytes calldata signature
@@ -84,7 +84,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchWitnessTransferFrom(
-        PermitBatchTransferFrom calldata permit,
+        PermitBatchTransferFrom memory permit,
         address owner,
         ToAmountPair[] calldata toAmountPairs,
         bytes32 witness,
@@ -104,7 +104,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param owner The owner of the tokens to transfer
     /// @param signature The signature to verify
     function _permitBatchTransferFrom(
-        PermitBatchTransferFrom calldata permit,
+        PermitBatchTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
         ToAmountPair[] calldata toAmountPairs,
