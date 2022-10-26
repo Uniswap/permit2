@@ -27,7 +27,7 @@ library PermitHash {
     string public constant _PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB =
         "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] maxAmounts,uint256 nonce,uint256 deadline,";
 
-    function hash(IAllowanceTransfer.Permit calldata permit) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer.Permit memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_TYPEHASH,
@@ -41,7 +41,7 @@ library PermitHash {
         );
     }
 
-    function hash(IAllowanceTransfer.PermitBatch calldata permit) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer.PermitBatch memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TYPEHASH,
@@ -55,7 +55,7 @@ library PermitHash {
         );
     }
 
-    function hash(ISignatureTransfer.PermitTransfer calldata permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitTransfer memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_TRANSFER_TYPEHASH,
@@ -68,7 +68,7 @@ library PermitHash {
         );
     }
 
-    function hash(ISignatureTransfer.PermitBatchTransfer calldata permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitBatchTransfer memory permit) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TRANSFER_TYPEHASH,
@@ -82,10 +82,10 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        ISignatureTransfer.PermitTransfer calldata permit,
+        ISignatureTransfer.PermitTransfer memory permit,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType
+        string memory witnessTypeName,
+        string memory witnessType
     ) internal pure returns (bytes32) {
         bytes32 typeHash = keccak256(
             abi.encodePacked(_PERMIT_TRANSFER_WITNESS_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
@@ -99,10 +99,10 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        ISignatureTransfer.PermitBatchTransfer calldata permit,
+        ISignatureTransfer.PermitBatchTransfer memory permit,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType
+        string memory witnessTypeName,
+        string memory witnessType
     ) internal pure returns (bytes32) {
         bytes32 typeHash = keccak256(
             abi.encodePacked(_PERMIT_BATCH_WITNESS_TRANSFER_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)

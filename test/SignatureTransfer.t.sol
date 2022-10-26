@@ -350,9 +350,11 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo0 = token0.balanceOf(address2);
         uint256 startBalanceTo1 = token1.balanceOf(address0);
 
+        snapStart("permitTransferFromBatchTypedWitness");
         permit2.permitBatchWitnessTransferFrom(
             permit, from, to, amounts, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
         );
+        snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
@@ -460,9 +462,11 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
 
+        snapStart("permitTransferFromTypedWitness");
         permit2.permitWitnessTransferFrom(
             permit, from, address2, defaultAmount, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
         );
+        snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);

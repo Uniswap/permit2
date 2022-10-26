@@ -22,7 +22,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransfer memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -33,13 +33,13 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitWitnessTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransfer memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
+        string memory witnessTypeName,
+        string memory witnessType,
         bytes calldata signature
     ) external {
         _permitTransferFrom(
@@ -56,7 +56,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function _permitTransferFrom(
-        PermitTransfer calldata permit,
+        PermitTransfer memory permit,
         bytes32 dataHash,
         address owner,
         address to,
@@ -76,7 +76,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransfer memory permit,
         address owner,
         address[] calldata to,
         uint256[] calldata requestedAmounts,
@@ -97,13 +97,13 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitBatchWitnessTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransfer memory permit,
         address owner,
         address[] calldata to,
         uint256[] calldata requestedAmounts,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
+        string memory witnessTypeName,
+        string memory witnessType,
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(
@@ -124,7 +124,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param requestedAmounts The amount of tokens to transfer
     /// @param signature The signature to verify
     function _permitBatchTransferFrom(
-        PermitBatchTransfer calldata permit,
+        PermitBatchTransfer memory permit,
         bytes32 dataHash,
         address owner,
         address[] calldata to,
