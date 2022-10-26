@@ -36,8 +36,8 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address to,
         uint256 requestedAmount,
         bytes32 witness,
-        string memory witnessTypeName,
-        string memory witnessType,
+        string calldata witnessTypeName,
+        string calldata witnessType,
         bytes calldata signature
     ) external {
         _permitTransferFrom(
@@ -88,8 +88,8 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address owner,
         ToAmountPair[] calldata toAmountPairs,
         bytes32 witness,
-        string memory witnessTypeName,
-        string memory witnessType,
+        string calldata witnessTypeName,
+        string calldata witnessType,
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(
