@@ -133,7 +133,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(nonce1, 0);
     }
 
-    function testSetAllowanceBatchEvent() public {
+    function testaSetAllowanceBatchEvent() public {
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
         uint160[] memory amounts = AmountBuilder.fillUInt160(2, defaultAmount);
 
@@ -158,7 +158,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(nonce1, 0);
     }
 
-    function testSetAllowanceBatchDirtyWrite() public {
+    function testaSetAllowanceBatchDirtyWrite() public {
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
         IAllowanceTransfer.PermitBatch memory permit =
             defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, dirtyNonce);
