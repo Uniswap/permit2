@@ -115,8 +115,9 @@ interface IAllowanceTransfer {
     function lockdown(TokenSpenderPair[] calldata approvals) external;
 
     /// @notice Invalidate nonces for a given (token, spender) pair
-    /// @dev token The token to invalidate nonces for
-    /// @dev spender The spender to invalidate nonces for
-    /// @dev newNonce The number of nonces to invalidate. Capped at 2**16
+    /// @param token The token to invalidate nonces for
+    /// @param spender The spender to invalidate nonces for
+    /// @param newNonce The new nonce to set. Invalidates all nonces less than it.
+    /// @dev Can't invalidate more than 2**16 nonces per transaction.
     function invalidateNonces(address token, address spender, uint32 newNonce) external;
 }
