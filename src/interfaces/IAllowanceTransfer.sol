@@ -117,8 +117,6 @@ interface IAllowanceTransfer {
     /// @notice Invalidate nonces for a given (token, spender) pair
     /// @dev token The token to invalidate nonces for
     /// @dev spender The spender to invalidate nonces for
-    /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16
-    function invalidateNonces(address token, address spender, uint32 amountToInvalidate)
-        external
-        returns (uint32 newNonce);
+    /// @dev newNonce The number of nonces to invalidate. Capped at 2**16
+    function invalidateNonces(address token, address spender, uint32 newNonce) external;
 }

@@ -389,7 +389,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        // just need to invalidate 1 nonce on from address
+        // Invalidates the 0th nonce by setting the new nonce to 1.
         vm.prank(from);
         vm.expectEmit(true, true, false, true);
         emit InvalidateNonces(from, 1, address(token0), address(this));
@@ -399,6 +399,39 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         vm.expectRevert(InvalidNonce.selector);
         permit2.permit(from, permit, sig);
+    }
+
+    function testInvalidateMultipleNonces() public {
+        IAllowanceTransfer.Permit memory permit =
+            defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        // Valid permit, uses nonce 0.
+        permit2.permit(from, permit, sig);
+        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce, 1);
+
+        permit = defaultERC20PermitAllowance(address(token1), defaultAmount, defaultExpiration, nonce);
+        sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        // Invalidates the 9 nonces by setting the new nonce to 33.
+        vm.prank(from);
+        vm.expectEmit(true, true, false, true);
+        emit InvalidateNonces(from, 33, address(token0), address(this));
+        permit2.invalidateNonces(address(token0), address(this), 33);
+        (,, nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce, 33);
+
+        vm.expectRevert(InvalidNonce.selector);
+        permit2.permit(from, permit, sig);
+    }
+
+    function testInvalidateNoncesInvalid() public {
+        // fromDirty nonce is 1
+        vm.prank(fromDirty);
+        vm.expectRevert(InvalidNonce.selector);
+        // setting nonce to 0 should revert
+        permit2.invalidateNonces(address(token0), address(this), 0);
     }
 
     function testExcessiveInvalidation() public {
