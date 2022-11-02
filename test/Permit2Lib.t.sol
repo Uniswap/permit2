@@ -120,6 +120,23 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
+    function testPermit2InvalidAmount() public {
+        (,, uint32 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
+
+        IAllowanceTransfer.Permit memory permit = IAllowanceTransfer.Permit({
+            token: address(nonPermitToken),
+            spender: address(0xCAFE),
+            amount: type(uint160).max,
+            expiration: type(uint64).max,
+            nonce: nonce,
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+        vm.expectRevert(bytes("SafeCast: value doesn't fit in 160 bits"));
+        Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 2 ** 170, block.timestamp, v, r, s);
+    }
+
     /*//////////////////////////////////////////////////////////////
                      BASIC TRANSFERFROM2 BENCHMARKS
     //////////////////////////////////////////////////////////////*/
