@@ -19,7 +19,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     using AddressBuilder for address[];
     using stdStorage for StdStorage;
 
-    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+    event InvalidateNonces(
+        address indexed owner, uint32 indexed newNonce, uint32 oldNonce, address token, address spender
+    );
     event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
 
     MockPermit2 permit2;
@@ -392,7 +394,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         // Invalidates the 0th nonce by setting the new nonce to 1.
         vm.prank(from);
         vm.expectEmit(true, true, false, true);
-        emit InvalidateNonces(from, 1, address(token0), address(this));
+        emit InvalidateNonces(from, 1, defaultNonce, address(token0), address(this));
         permit2.invalidateNonces(address(token0), address(this), 1);
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
@@ -417,7 +419,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         // Invalidates the 9 nonces by setting the new nonce to 33.
         vm.prank(from);
         vm.expectEmit(true, true, false, true);
-        emit InvalidateNonces(from, 33, address(token0), address(this));
+        emit InvalidateNonces(from, 33, nonce, address(token0), address(this));
         permit2.invalidateNonces(address(token0), address(this), 33);
         (,, nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 33);

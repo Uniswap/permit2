@@ -10,7 +10,9 @@ interface IAllowanceTransfer {
     error ExcessiveInvalidation();
 
     /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
-    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+    event InvalidateNonces(
+        address indexed owner, uint32 indexed newNonce, uint32 oldNonce, address token, address spender
+    );
 
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
     event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);

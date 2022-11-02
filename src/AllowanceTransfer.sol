@@ -123,14 +123,12 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         if (newNonce <= oldNonce) revert InvalidNonce();
 
         // Limit the amount of nonces that can be invalidated in one transaction.
-        uint32 delta;
         unchecked {
-            delta = newNonce - oldNonce;
+            uint32 delta = newNonce - oldNonce;
+            if (delta > type(uint16).max) revert ExcessiveInvalidation();
         }
 
-        if (delta > type(uint16).max) revert ExcessiveInvalidation();
-
         allowance[msg.sender][token][spender].nonce = newNonce;
-        emit InvalidateNonces(msg.sender, newNonce, token, spender);
+        emit InvalidateNonces(msg.sender, newNonce, oldNonce, token, spender);
     }
 }
