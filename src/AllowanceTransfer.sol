@@ -117,17 +117,18 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function invalidateNonces(address token, address spender, uint32 amountToInvalidate)
-        public
-        returns (uint32 newNonce)
-    {
-        if (amountToInvalidate > type(uint16).max) revert ExcessiveInvalidation();
+    function invalidateNonces(address token, address spender, uint32 newNonce) public {
+        uint32 oldNonce = allowance[msg.sender][token][spender].nonce;
 
+        if (newNonce <= oldNonce) revert InvalidNonce();
+
+        // Limit the amount of nonces that can be invalidated in one transaction.
         unchecked {
-            // Overflow is impossible on human timescales.
-            newNonce = allowance[msg.sender][token][spender].nonce += amountToInvalidate;
+            uint32 delta = newNonce - oldNonce;
+            if (delta > type(uint16).max) revert ExcessiveInvalidation();
         }
 
-        emit InvalidateNonces(msg.sender, newNonce, token, spender);
+        allowance[msg.sender][token][spender].nonce = newNonce;
+        emit InvalidateNonces(msg.sender, newNonce, oldNonce, token, spender);
     }
 }

@@ -10,7 +10,9 @@ interface IAllowanceTransfer {
     error ExcessiveInvalidation();
 
     /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
-    event InvalidateNonces(address indexed owner, uint32 indexed toNonce, address token, address spender);
+    event InvalidateNonces(
+        address indexed owner, uint32 indexed newNonce, uint32 oldNonce, address token, address spender
+    );
 
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
     event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
@@ -115,10 +117,9 @@ interface IAllowanceTransfer {
     function lockdown(TokenSpenderPair[] calldata approvals) external;
 
     /// @notice Invalidate nonces for a given (token, spender) pair
-    /// @dev token The token to invalidate nonces for
-    /// @dev spender The spender to invalidate nonces for
-    /// @dev amountToInvalidate The number of nonces to invalidate. Capped at 2**16
-    function invalidateNonces(address token, address spender, uint32 amountToInvalidate)
-        external
-        returns (uint32 newNonce);
+    /// @param token The token to invalidate nonces for
+    /// @param spender The spender to invalidate nonces for
+    /// @param newNonce The new nonce to set. Invalidates all nonces less than it.
+    /// @dev Can't invalidate more than 2**16 nonces per transaction.
+    function invalidateNonces(address token, address spender, uint32 newNonce) external;
 }
