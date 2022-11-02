@@ -6,11 +6,13 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Permit2} from "../Permit2.sol";
 import {IDAIPermit} from "../interfaces/IDAIPermit.sol";
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
+import {SafeCast160} from "./SafeCast160.sol";
 
 /// @title Permit2Lib
 /// @notice Enables efficient transfers and EIP-2612/DAI
 /// permits for any token by falling back to Permit2.
 library Permit2Lib {
+    using SafeCast160 for uint256;
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -45,7 +47,7 @@ library Permit2Lib {
         }
 
         // We'll fall back to using Permit2 if calling transferFrom on the token directly reverted.
-        if (!success) PERMIT2.transferFrom(address(token), from, to, uint160(amount));
+        if (!success) PERMIT2.transferFrom(address(token), from, to, amount.toUint160());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -115,7 +117,7 @@ library Permit2Lib {
                 IAllowanceTransfer.Permit({
                     token: address(token),
                     spender: spender,
-                    amount: uint160(amount),
+                    amount: amount.toUint160(),
                     // Use an unlimited expiration because it most
                     // closely mimics how a standard approval works.
                     expiration: type(uint64).max,
