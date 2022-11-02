@@ -6,13 +6,13 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Permit2} from "../Permit2.sol";
 import {IDAIPermit} from "../interfaces/IDAIPermit.sol";
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
-import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {SafeCast160} from "./SafeCast160.sol";
 
 /// @title Permit2Lib
 /// @notice Enables efficient transfers and EIP-2612/DAI
 /// permits for any token by falling back to Permit2.
 library Permit2Lib {
-    using SafeCast for uint256;
+    using SafeCast160 for uint256;
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/

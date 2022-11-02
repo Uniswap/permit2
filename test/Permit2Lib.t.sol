@@ -13,6 +13,7 @@ import {PermitSignature} from "./utils/PermitSignature.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
 import {MockPermit2Lib} from "./mocks/MockPermit2Lib.sol";
+import {SafeCast160} from "../src/libraries/SafeCast160.sol";
 
 contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     bytes32 constant PERMIT_TYPEHASH =
@@ -25,7 +26,8 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     address immutable PK_OWNER;
 
     Permit2 immutable permit2 = new Permit2();
-    // need to wrap lib in contract to catch errors
+
+    // Use to test errors in Permit2Lib calls.
     MockPermit2Lib immutable permit2Lib = new MockPermit2Lib();
 
     MockERC20 immutable token = new MockERC20("Mock Token", "MOCK", 18);
@@ -136,7 +138,7 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         });
 
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
-        vm.expectRevert(bytes("SafeCast: value doesn't fit in 160 bits"));
+        vm.expectRevert(SafeCast160.UnsafeCast.selector);
         permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 2 ** 170, block.timestamp, v, r, s);
     }
 
@@ -208,6 +210,12 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         vm.startPrank(address(0xCAFE));
 
         Permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+    }
+
+    function testTransferFrom2InvalidAmount() public {
+        vm.startPrank(address(0xCAFE));
+        vm.expectRevert(SafeCast160.UnsafeCast.selector);
+        permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 2 ** 170);
     }
 
     /*//////////////////////////////////////////////////////////////
