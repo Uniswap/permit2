@@ -55,12 +55,12 @@ library PermitHash {
         );
     }
 
-    function hash(ISignatureTransfer.PermitTransferFrom memory permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitTransferFrom memory permit) internal view returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_TRANSFER_FROM_TYPEHASH,
                 permit.token,
-                permit.spender,
+                msg.sender,
                 permit.signedAmount,
                 permit.nonce,
                 permit.deadline
@@ -68,12 +68,12 @@ library PermitHash {
         );
     }
 
-    function hash(ISignatureTransfer.PermitBatchTransferFrom memory permit) internal pure returns (bytes32) {
+    function hash(ISignatureTransfer.PermitBatchTransferFrom memory permit) internal view returns (bytes32) {
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
                 keccak256(abi.encodePacked(permit.tokens)),
-                permit.spender,
+                msg.sender,
                 keccak256(abi.encodePacked(permit.signedAmounts)),
                 permit.nonce,
                 permit.deadline
@@ -86,15 +86,13 @@ library PermitHash {
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType
-    ) internal pure returns (bytes32) {
+    ) internal view returns (bytes32) {
         bytes32 typeHash = keccak256(
             abi.encodePacked(_PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
         );
 
         return keccak256(
-            abi.encode(
-                typeHash, permit.token, permit.spender, permit.signedAmount, permit.nonce, permit.deadline, witness
-            )
+            abi.encode(typeHash, permit.token, msg.sender, permit.signedAmount, permit.nonce, permit.deadline, witness)
         );
     }
 
@@ -103,7 +101,7 @@ library PermitHash {
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType
-    ) internal pure returns (bytes32) {
+    ) internal view returns (bytes32) {
         bytes32 typeHash = keccak256(
             abi.encodePacked(
                 _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType
@@ -114,7 +112,7 @@ library PermitHash {
             abi.encode(
                 typeHash,
                 keccak256(abi.encodePacked(permit.tokens)),
-                permit.spender,
+                msg.sender,
                 keccak256(abi.encodePacked(permit.signedAmounts)),
                 permit.nonce,
                 permit.deadline,

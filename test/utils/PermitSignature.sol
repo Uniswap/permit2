@@ -97,7 +97,7 @@ contract PermitSignature is Test {
                     abi.encode(
                         _PERMIT_TRANSFER_FROM_TYPEHASH,
                         permit.token,
-                        permit.spender,
+                        address(this),
                         permit.signedAmount,
                         permit.nonce,
                         permit.deadline
@@ -125,7 +125,7 @@ contract PermitSignature is Test {
                     abi.encode(
                         typehash,
                         permit.token,
-                        permit.spender,
+                        address(this),
                         permit.signedAmount,
                         permit.nonce,
                         permit.deadline,
@@ -152,7 +152,7 @@ contract PermitSignature is Test {
                     abi.encode(
                         _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
                         keccak256(abi.encodePacked(permit.tokens)),
-                        permit.spender,
+                        address(this),
                         keccak256(abi.encodePacked(permit.signedAmounts)),
                         permit.nonce,
                         permit.deadline
@@ -180,7 +180,7 @@ contract PermitSignature is Test {
                     abi.encode(
                         typeHash,
                         keccak256(abi.encodePacked(permit.tokens)),
-                        permit.spender,
+                        address(this),
                         keccak256(abi.encodePacked(permit.signedAmounts)),
                         permit.nonce,
                         permit.deadline,
@@ -237,7 +237,6 @@ contract PermitSignature is Test {
     {
         return ISignatureTransfer.PermitTransferFrom({
             token: token0,
-            spender: address(this),
             signedAmount: 10 ** 18,
             nonce: nonce,
             deadline: block.timestamp + 100
@@ -251,7 +250,6 @@ contract PermitSignature is Test {
     {
         return ISignatureTransfer.PermitTransferFrom({
             token: token0,
-            spender: address(this),
             signedAmount: 10 ** 18,
             nonce: nonce,
             deadline: block.timestamp + 100
@@ -269,7 +267,6 @@ contract PermitSignature is Test {
         }
         return ISignatureTransfer.PermitBatchTransferFrom({
             tokens: tokens,
-            spender: address(this),
             signedAmounts: maxAmounts,
             nonce: nonce,
             deadline: block.timestamp + 100

@@ -61,10 +61,10 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         uint256 requestedAmount,
         bytes calldata signature
     ) internal {
-        _validatePermit(permit.spender, permit.deadline);
+        if (block.timestamp > permit.deadline) revert SignatureExpired();
         if (requestedAmount > permit.signedAmount) revert InvalidAmount();
-        _useUnorderedNonce(owner, permit.nonce);
 
+        _useUnorderedNonce(owner, permit.nonce);
         signature.verify(_hashTypedData(dataHash), owner);
 
         ERC20(permit.token).safeTransferFrom(owner, to, requestedAmount);
@@ -109,11 +109,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes calldata signature
     ) internal {
         uint256 permitTokensLength = permit.tokens.length;
-        _validatePermit(permit.spender, permit.deadline);
+
+        if (block.timestamp > permit.deadline) revert SignatureExpired();
         _validateInputLengths(permitTokensLength, toAmountPairs.length, permit.signedAmounts.length);
 
         _useUnorderedNonce(owner, permit.nonce);
-
         signature.verify(_hashTypedData(dataHash), owner);
 
         unchecked {
@@ -153,14 +153,6 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce();
 
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
-    }
-
-    /// @notice Ensures that the caller is the signed permit spender and the deadline has not passed
-    /// @param spender The expected spender
-    /// @param deadline The user-provided deadline of the signed permit
-    function _validatePermit(address spender, uint256 deadline) private view {
-        if (msg.sender != spender) revert NotSpender();
-        if (block.timestamp > deadline) revert SignatureExpired();
     }
 
     /// @notice Ensures that permit token arrays are valid with regard to the tokens being spent
