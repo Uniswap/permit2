@@ -67,9 +67,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
         signature.verify(_hashTypedData(dataHash), owner);
 
-        // send to spender if the inputted to address is 0
-        address recipient = to == address(0) ? permit.spender : to;
-        ERC20(permit.token).safeTransferFrom(owner, recipient, requestedAmount);
+        ERC20(permit.token).safeTransferFrom(owner, to, requestedAmount);
     }
 
     /// @inheritdoc ISignatureTransfer
