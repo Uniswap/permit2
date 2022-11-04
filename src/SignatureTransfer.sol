@@ -24,7 +24,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address owner,
         address to,
         uint256 requestedAmount,
-        bytes calldata signature
+        bytes memory signature
     ) external {
         _permitTransferFrom(permit, permit.hash(), owner, to, requestedAmount, signature);
     }
@@ -36,9 +36,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address to,
         uint256 requestedAmount,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
-        bytes calldata signature
+        string memory witnessTypeName,
+        string memory witnessType,
+        bytes memory signature
     ) external {
         _permitTransferFrom(
             permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmount, signature
@@ -59,7 +59,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address owner,
         address to,
         uint256 requestedAmount,
-        bytes calldata signature
+        bytes memory signature
     ) internal {
         _validatePermit(permit.spender, permit.deadline);
         if (requestedAmount > permit.signedAmount) revert InvalidAmount();
@@ -76,8 +76,8 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function permitBatchTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
-        ToAmountPair[] calldata toAmountPairs,
-        bytes calldata signature
+        ToAmountPair[] memory toAmountPairs,
+        bytes memory signature
     ) external {
         _permitBatchTransferFrom(permit, permit.hash(), owner, toAmountPairs, signature);
     }
@@ -86,11 +86,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function permitBatchWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
-        ToAmountPair[] calldata toAmountPairs,
+        ToAmountPair[] memory toAmountPairs,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
-        bytes calldata signature
+        string memory witnessTypeName,
+        string memory witnessType,
+        bytes memory signature
     ) external {
         _permitBatchTransferFrom(
             permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, toAmountPairs, signature
@@ -107,8 +107,8 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         PermitBatchTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
-        ToAmountPair[] calldata toAmountPairs,
-        bytes calldata signature
+        ToAmountPair[] memory toAmountPairs,
+        bytes memory signature
     ) internal {
         uint256 permitTokensLength = permit.tokens.length;
         _validatePermit(permit.spender, permit.deadline);

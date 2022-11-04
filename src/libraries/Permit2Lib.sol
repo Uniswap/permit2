@@ -111,21 +111,18 @@ library Permit2Lib {
             // subsequent call to permit failed, fall back to using Permit2.
 
             (,, uint32 nonce) = PERMIT2.allowance(owner, address(token), spender);
+            IAllowanceTransfer.Permit memory permit = IAllowanceTransfer.Permit({
+                token: address(token),
+                spender: spender,
+                amount: amount.toUint160(),
+                // Use an unlimited expiration because it most
+                // closely mimics how a standard approval works.
+                expiration: type(uint64).max,
+                nonce: nonce,
+                sigDeadline: deadline
+            });
 
-            PERMIT2.permit(
-                owner,
-                IAllowanceTransfer.Permit({
-                    token: address(token),
-                    spender: spender,
-                    amount: amount.toUint160(),
-                    // Use an unlimited expiration because it most
-                    // closely mimics how a standard approval works.
-                    expiration: type(uint64).max,
-                    nonce: nonce,
-                    sigDeadline: deadline
-                }),
-                bytes.concat(r, s, bytes1(v))
-            );
+            PERMIT2.permit(owner, permit, bytes.concat(r, s, bytes1(v)));
         }
     }
 }

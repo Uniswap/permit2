@@ -8,7 +8,7 @@ library SignatureVerification {
     error InvalidSigner();
     error InvalidContractSignature();
 
-    function verify(bytes calldata signature, bytes32 hash, address claimedSigner) internal view {
+    function verify(bytes memory signature, bytes32 hash, address claimedSigner) internal view {
         if (claimedSigner.code.length == 0) {
             (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
             uint8 v = uint8(signature[64]);
