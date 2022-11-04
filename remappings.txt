@@ -1,3 +1,4 @@
 forge-std/=lib/forge-std/src/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 solmate/=lib/solmate/src/
+solidity-stringutils/=lib/solidity-stringutils/src/

@@ -348,9 +348,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo1 = token1.balanceOf(address0);
 
         snapStart("permitTransferFromBatchTypedWitness");
-        permit2.permitBatchWitnessTransferFrom(
-            permit, from, toAmountPairs, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitBatchWitnessTransferFrom(permit, from, toAmountPairs, witness, MOCK_WITNESS_TYPE, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
@@ -374,27 +372,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             StructBuilder.fillToAmountPairDifferentAddresses(defaultAmount, to);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitBatchWitnessTransferFrom(permit, from, toAmountPairs, witness, "MockWitness", "fake type", sig);
-    }
-
-    function testPermitBatchTransferFromTypedWitnessInvalidTypeName() public {
-        uint256 nonce = 0;
-        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
-        bytes32 witness = keccak256(abi.encode(witnessData));
-        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
-        ISignatureTransfer.PermitBatchTransferFrom memory permit = defaultERC20PermitMultiple(tokens, nonce);
-        bytes memory sig = getPermitBatchWitnessSignature(
-            permit, fromPrivateKey, MOCK_BATCH_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
-        );
-
-        address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
-        ISignatureTransfer.ToAmountPair[] memory toAmountPairs =
-            StructBuilder.fillToAmountPairDifferentAddresses(defaultAmount, to);
-
-        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitBatchWitnessTransferFrom(
-            permit, from, toAmountPairs, witness, "fake name", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitBatchWitnessTransferFrom(permit, from, toAmountPairs, witness, "fake type", sig);
     }
 
     function testPermitBatchTransferFromTypedWitnessInvalidTypeHash() public {
@@ -411,9 +389,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             StructBuilder.fillToAmountPairDifferentAddresses(defaultAmount, to);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitBatchWitnessTransferFrom(
-            permit, from, toAmountPairs, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitBatchWitnessTransferFrom(permit, from, toAmountPairs, witness, MOCK_WITNESS_TYPE, sig);
     }
 
     function testPermitBatchTransferFromTypedWitnessInvalidWitness() public {
@@ -432,13 +408,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         permit2.permitBatchWitnessTransferFrom(
-            permit,
-            from,
-            toAmountPairs,
-            keccak256(abi.encodePacked("bad witness")),
-            "MockWitness",
-            MOCK_WITNESS_TYPE,
-            sig
+            permit, from, toAmountPairs, keccak256(abi.encodePacked("bad witness")), MOCK_WITNESS_TYPE, sig
         );
     }
 
@@ -472,9 +442,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo = token0.balanceOf(address2);
 
         snapStart("permitTransferFromTypedWitness");
-        permit2.permitWitnessTransferFrom(
-            permit, from, address2, defaultAmount, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, witness, MOCK_WITNESS_TYPE, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
@@ -490,9 +458,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitWitnessTransferFrom(
-            permit, from, address2, defaultAmount, witness, "MockWitness", "fake typedef", sig
-        );
+        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, witness, "fake typehash", sig);
     }
 
     function testPermitTransferFromTypedWitnessInvalidTypehash() public {
@@ -504,22 +470,6 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             getPermitWitnessTransferSignature(permit, fromPrivateKey, "fake typehash", witness, DOMAIN_SEPARATOR);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitWitnessTransferFrom(
-            permit, from, address2, defaultAmount, witness, "MockWitness", MOCK_WITNESS_TYPE, sig
-        );
-    }
-
-    function testPermitTransferFromTypedWitnessInvalidTypeName() public {
-        uint256 nonce = 0;
-        MockWitness memory witnessData = MockWitness(10000000, address(5), true);
-        bytes32 witness = keccak256(abi.encode(witnessData));
-        ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
-        bytes memory sig =
-            getPermitWitnessTransferSignature(permit, fromPrivateKey, MOCK_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR);
-
-        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitWitnessTransferFrom(
-            permit, from, address2, defaultAmount, witness, "fake name", MOCK_WITNESS_TYPE, sig
-        );
+        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, witness, MOCK_WITNESS_TYPE, sig);
     }
 }

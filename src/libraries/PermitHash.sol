@@ -3,8 +3,11 @@ pragma solidity 0.8.17;
 
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
+import {strings} from "solidity-stringutils/strings.sol";
 
 library PermitHash {
+    using strings for *;
+
     bytes32 public constant _PERMIT_TYPEHASH = keccak256(
         "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
     );
@@ -84,9 +87,10 @@ library PermitHash {
     function hashWithWitness(
         ISignatureTransfer.PermitTransferFrom memory permit,
         bytes32 witness,
-        string calldata witnessTypeName,
         string calldata witnessType
     ) internal pure returns (bytes32) {
+        // retrieves the name of the witness type which is specified before "("
+        string memory witnessTypeName = witnessType.toSlice().split("(".toSlice()).toString();
         bytes32 typeHash = keccak256(
             abi.encodePacked(_PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
         );
@@ -101,9 +105,10 @@ library PermitHash {
     function hashWithWitness(
         ISignatureTransfer.PermitBatchTransferFrom memory permit,
         bytes32 witness,
-        string calldata witnessTypeName,
         string calldata witnessType
     ) internal pure returns (bytes32) {
+        // retrieves the name of the witness type which is specified before "("
+        string memory witnessTypeName = witnessType.toSlice().split("(".toSlice()).toString();
         bytes32 typeHash = keccak256(
             abi.encodePacked(
                 _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType

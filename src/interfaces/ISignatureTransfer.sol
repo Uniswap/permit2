@@ -74,7 +74,6 @@ interface ISignatureTransfer {
     /// @param to The recipient of the tokens
     /// @param requestedAmount The amount of tokens to transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeName The name of the witness type
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
@@ -83,7 +82,6 @@ interface ISignatureTransfer {
         address to,
         uint256 requestedAmount,
         bytes32 witness,
-        string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
     ) external;
@@ -104,7 +102,6 @@ interface ISignatureTransfer {
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeName The name of the witness type
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitBatchWitnessTransferFrom(
@@ -112,7 +109,6 @@ interface ISignatureTransfer {
         address owner,
         ToAmountPair[] calldata ToAmountPairs,
         bytes32 witness,
-        string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
     ) external;
