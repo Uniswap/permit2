@@ -88,16 +88,12 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token0.balanceOf(from);
-        uint256 startBalanceAddr0 = token0.balanceOf(address0);
-        uint256 startBalanceTo = token0.balanceOf(address(this));
+        uint256 startBalanceTo = token0.balanceOf(address0);
 
-        // if to is address0, tokens sent to signed spender
         permit2.permitTransferFrom(permit, from, address0, defaultAmount, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
-        assertEq(token0.balanceOf(address(this)), startBalanceTo + defaultAmount);
-        // should not effect address0
-        assertEq(token0.balanceOf(address0), startBalanceAddr0);
+        assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
     }
 
     function testPermitTransferFromInvalidNonce() public {
