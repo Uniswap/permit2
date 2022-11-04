@@ -36,13 +36,10 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address to,
         uint256 requestedAmount,
         bytes32 witness,
-        string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
     ) external {
-        _permitTransferFrom(
-            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmount, signature
-        );
+        _permitTransferFrom(permit, permit.hashWithWitness(witness, witnessType), owner, to, requestedAmount, signature);
     }
 
     /// @notice Transfers a token using a signed permit message.
@@ -88,13 +85,10 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address owner,
         ToAmountPair[] calldata toAmountPairs,
         bytes32 witness,
-        string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(
-            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, toAmountPairs, signature
-        );
+        _permitBatchTransferFrom(permit, permit.hashWithWitness(witness, witnessType), owner, toAmountPairs, signature);
     }
 
     /// @notice Transfers tokens using a signed permit messages
