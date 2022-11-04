@@ -13,12 +13,12 @@ interface ISignatureTransfer {
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
-    /// @notice The signed permit message for a single token transfer
+    /// @notice Used to reconstruct the signed permit message for a single token transfer
+    /// @dev Do not need to pass in spender address as it is required that it is msg.sender
+    /// @dev Note that a user still signs over a spender address
     struct PermitTransferFrom {
         // ERC20 token address
         address token;
-        // address permissioned to spend token
-        address spender;
         // the maximum amount that can be spent
         uint256 signedAmount;
         // a unique value for each signature
@@ -33,12 +33,12 @@ interface ISignatureTransfer {
         uint256 requestedAmount;
     }
 
-    /// @notice The signed permit message for multiple token transfers
+    /// @notice Used to reconstruct the signed permit message for multiple token transfers
+    /// @dev Do not need to pass in spender address as it is required that it is msg.sender
+    /// @dev Note that a user still signs over a spender address
     struct PermitBatchTransferFrom {
         // ERC20 token addresses
         address[] tokens;
-        // address permissioned to spend tokens
-        address spender;
         // the maximum amounts that can be spent per token
         uint256[] signedAmounts;
         // a unique value for each signature

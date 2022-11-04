@@ -333,7 +333,6 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             permit, fromPrivateKey, MOCK_BATCH_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
         );
 
-        // address(0) gets sent to spender
         address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
         ISignatureTransfer.ToAmountPair[] memory toAmountPairs =
             StructBuilder.fillToAmountPairDifferentAddresses(defaultAmount, to);
