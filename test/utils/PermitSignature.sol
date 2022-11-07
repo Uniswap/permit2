@@ -9,12 +9,17 @@ import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
 
 contract PermitSignature is Test {
-    bytes32 public constant _PERMIT_TYPEHASH = keccak256(
-        "Permit(address token,address spender,uint160 amount,uint64 expiration,uint32 nonce,uint256 sigDeadline)"
+    bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
+        keccak256("PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)");
+
+    bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
+        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
     );
+
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "PermitBatch(address[] tokens,address spender,uint160[] amounts,uint64[] expirations,uint32 nonce,uint256 sigDeadline)"
+        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
     );
+
     bytes32 public constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
         "PermitTransferFrom(address token,address spender,uint256 signedAmount,uint256 nonce,uint256 deadline)"
     );
@@ -23,35 +28,29 @@ contract PermitSignature is Test {
         "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] signedAmounts,uint256 nonce,uint256 deadline)"
     );
 
-    function getPermitSignatureRaw(IAllowanceTransfer.Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (uint8 v, bytes32 r, bytes32 s)
-    {
+    function getPermitSignatureRaw(
+        IAllowanceTransfer.PermitSingle memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 permitHash = keccak256(abi.encode(_PERMIT_DETAILS_TYPEHASH, permit.details));
+
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
-                keccak256(
-                    abi.encode(
-                        _PERMIT_TYPEHASH,
-                        permit.token,
-                        permit.spender,
-                        permit.amount,
-                        permit.expiration,
-                        permit.nonce,
-                        permit.sigDeadline
-                    )
-                )
+                keccak256(abi.encode(_PERMIT_SINGLE_TYPEHASH, permitHash, permit.spender, permit.sigDeadline))
             )
         );
 
         (v, r, s) = vm.sign(privateKey, msgHash);
     }
 
-    function getPermitSignature(IAllowanceTransfer.Permit memory permit, uint256 privateKey, bytes32 domainSeparator)
-        internal
-        returns (bytes memory sig)
-    {
+    function getPermitSignature(
+        IAllowanceTransfer.PermitSingle memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
 
         return bytes.concat(r, s, bytes1(v));
@@ -62,6 +61,10 @@ contract PermitSignature is Test {
         uint256 privateKey,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
+        bytes32[] memory permitHashes = new bytes32[](permit.details.length);
+        for (uint256 i = 0; i < permit.details.length; ++i) {
+            permitHashes[i] = keccak256(abi.encode(_PERMIT_DETAILS_TYPEHASH, permit.details[i]));
+        }
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -69,11 +72,8 @@ contract PermitSignature is Test {
                 keccak256(
                     abi.encode(
                         _PERMIT_BATCH_TYPEHASH,
-                        keccak256(abi.encodePacked(permit.tokens)),
+                        keccak256(abi.encodePacked(permitHashes)),
                         permit.spender,
-                        keccak256(abi.encodePacked(permit.amounts)),
-                        keccak256(abi.encodePacked(permit.expirations)),
-                        permit.nonce,
                         permit.sigDeadline
                     )
                 )
@@ -197,14 +197,13 @@ contract PermitSignature is Test {
     function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration, uint32 nonce)
         internal
         view
-        returns (IAllowanceTransfer.Permit memory)
+        returns (IAllowanceTransfer.PermitSingle memory)
     {
-        return IAllowanceTransfer.Permit({
-            token: token0,
+        IAllowanceTransfer.PermitDetails memory details =
+            IAllowanceTransfer.PermitDetails({token: token0, amount: amount, expiration: expiration, nonce: nonce});
+        return IAllowanceTransfer.PermitSingle({
+            details: details,
             spender: address(this),
-            amount: amount,
-            expiration: expiration,
-            nonce: nonce,
             sigDeadline: block.timestamp + 100
         });
     }
@@ -214,18 +213,20 @@ contract PermitSignature is Test {
         view
         returns (IAllowanceTransfer.PermitBatch memory)
     {
-        uint160[] memory maxAmounts = new uint160[](tokens.length);
-        uint64[] memory expirations = new uint64[](tokens.length);
+        IAllowanceTransfer.PermitDetails[] memory details = new IAllowanceTransfer.PermitDetails[](tokens.length);
+
         for (uint256 i = 0; i < tokens.length; ++i) {
-            maxAmounts[i] = amount;
-            expirations[i] = expiration;
+            details[i] = IAllowanceTransfer.PermitDetails({
+                token: tokens[i],
+                amount: amount,
+                expiration: expiration,
+                nonce: nonce
+            });
         }
+
         return IAllowanceTransfer.PermitBatch({
-            tokens: tokens,
+            details: details,
             spender: address(this),
-            amounts: maxAmounts,
-            expirations: expirations,
-            nonce: nonce,
             sigDeadline: block.timestamp + 100
         });
     }

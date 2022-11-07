@@ -17,34 +17,34 @@ interface IAllowanceTransfer {
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
     event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
 
-    /// @notice The signed permit message for a single token allowance
-    struct Permit {
+    /// @notice The permit data for a token
+    struct PermitDetails {
         // ERC20 token address
         address token;
-        // address permissioned on the allowed tokens
-        address spender;
         // the maximum amount allowed to spend
         uint160 amount;
         // timestamp at which a spender's token allowances become invalid
         uint64 expiration;
         // a unique value for each signature
         uint32 nonce;
+    }
+
+    /// @notice The permit message signed for a single token allownce
+    struct PermitSingle {
+        // the permit data for a single token alownce
+        PermitDetails details;
+        // address permissioned on the allowed tokens
+        address spender;
         // deadline on the permit signature
         uint256 sigDeadline;
     }
 
-    /// @notice The signed permit message for multiple token allowances
+    /// @notice The permit message signed for multiple token allowances
     struct PermitBatch {
-        // ERC20 token addresses
-        address[] tokens;
+        // the permit data for multiple token allowances
+        PermitDetails[] details;
         // address permissioned on the allowed tokens
         address spender;
-        // the maximum amounts allowed to spend per token
-        uint160[] amounts;
-        // timestamp at which a spender's token allowances become invalid, assigned per token
-        uint64[] expirations;
-        // a unique value for each signature
-        uint32 nonce;
         // deadline on the permit signature
         uint256 sigDeadline;
     }
@@ -89,16 +89,16 @@ interface IAllowanceTransfer {
     /// @notice Permit a spender to a given amount of the owners token via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
     /// @param owner The owner of the tokens being approved
-    /// @param permitData Data signed over by the owner specifying the terms of approval
+    /// @param permitSingle Data signed over by the owner specifying the terms of approval
     /// @param signature The owner's signature over the permit data
-    function permit(address owner, Permit calldata permitData, bytes calldata signature) external;
+    function permit(address owner, PermitSingle calldata permitSingle, bytes calldata signature) external;
 
     /// @notice Permit a spender to the signed amounts of the owners tokens via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
     /// @param owner The owner of the tokens being approved
-    /// @param permitData Data signed over by the owner specifying the terms of approval
+    /// @param permitBatch Data signed over by the owner specifying the terms of approval
     /// @param signature The owner's signature over the permit data
-    function permitBatch(address owner, PermitBatch calldata permitData, bytes calldata signature) external;
+    function permit(address owner, PermitBatch calldata permitBatch, bytes calldata signature) external;
 
     /// @notice Transfer approved tokens from one address to another.
     /// @param from The address to transfer from.

@@ -13,7 +13,7 @@ import {Allowance} from "./libraries/Allowance.sol";
 contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-    using PermitHash for Permit;
+    using PermitHash for PermitSingle;
     using PermitHash for PermitBatch;
     using Allowance for PackedAllowance;
 
@@ -30,43 +30,41 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function permit(address owner, Permit memory permitData, bytes calldata signature) external {
-        PackedAllowance storage allowed = allowance[owner][permitData.token][permitData.spender];
-        _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
+    function permit(address owner, PermitSingle memory permitSingle, bytes calldata signature) external {
+        PermitDetails memory details = permitSingle.details;
+        PackedAllowance storage allowed = allowance[owner][details.token][permitSingle.spender];
+
+        if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired();
+        if (allowed.nonce != details.nonce) revert InvalidNonce();
 
         // Verify the signer address from the signature.
-        signature.verify(_hashTypedData(permitData.hash()), owner);
+        signature.verify(_hashTypedData(permitSingle.hash()), owner);
 
         // Increments the nonce, and sets the new values for amount and expiration.
-        allowed.updateAll(permitData.amount, permitData.expiration, permitData.nonce);
-        emit Approval(owner, permitData.token, permitData.spender, permitData.amount);
+        allowed.updateAll(details.amount, details.expiration, details.nonce);
+        emit Approval(owner, details.token, permitSingle.spender, details.amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function permitBatch(address owner, PermitBatch memory permitData, bytes calldata signature) external {
-        // Use the first token's nonce.
-        PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
-        _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
+    function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external {
+        if (block.timestamp > permitBatch.sigDeadline) revert SignatureExpired();
 
         // Verify the signer address from the signature.
-        signature.verify(_hashTypedData(permitData.hash()), owner);
+        signature.verify(_hashTypedData(permitBatch.hash()), owner);
 
-        // Increments the nonce, and sets the new values for amount and expiration for the first token.
-        allowed.updateAll(permitData.amounts[0], permitData.expirations[0], permitData.nonce);
-
+        address spender = permitBatch.spender;
+        // Verifies the signed nonce, sets the new values for amount, expiration, and incremements the nonce.
         unchecked {
-            for (uint256 i = 1; i < permitData.tokens.length; ++i) {
-                allowed = allowance[owner][permitData.tokens[i]][permitData.spender];
-                allowed.updateAmountAndExpiration(permitData.amounts[i], permitData.expirations[i]);
-                emit Approval(owner, permitData.tokens[i], permitData.spender, permitData.amounts[i]);
+            for (uint256 i = 0; i < permitBatch.details.length; ++i) {
+                PermitDetails memory details = permitBatch.details[i];
+                PackedAllowance storage allowed = allowance[owner][details.token][spender];
+
+                if (allowed.nonce != details.nonce) revert InvalidNonce();
+
+                allowed.updateAll(details.amount, details.expiration, details.nonce);
+                emit Approval(owner, details.token, spender, details.amount);
             }
         }
-    }
-
-    /// @notice Ensures that the deadline on the signature has not passed, and that the nonce hasn't been used
-    function _validatePermit(uint32 nonce, uint32 signedNonce, uint256 sigDeadline) private view {
-        if (block.timestamp > sigDeadline) revert SignatureExpired();
-        if (nonce != signedNonce) revert InvalidNonce();
     }
 
     /// @inheritdoc IAllowanceTransfer
