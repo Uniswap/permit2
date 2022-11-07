@@ -118,12 +118,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
         unchecked {
             for (uint256 i = 0; i < numPermitted; ++i) {
-                TokenPermissions memory permitted = permit.permitted[i];
                 SignatureTransferDetails memory transfer = transferDetails[i];
 
-                if (transfer.requestedAmount > permitted.amount) revert InvalidAmount();
+                if (transfer.requestedAmount > permit.permitted[i].amount) revert InvalidAmount();
 
-                ERC20(permitted.token).safeTransferFrom(owner, transfer.to, transfer.requestedAmount);
+                ERC20(permit.permitted[i].token).safeTransferFrom(owner, transfer.to, transfer.requestedAmount);
             }
         }
     }

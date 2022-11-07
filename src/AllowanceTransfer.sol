@@ -31,18 +31,12 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function permit(address owner, PermitSingle memory permitSingle, bytes calldata signature) external {
-        PermitDetails memory details = permitSingle.details;
-        PackedAllowance storage allowed = allowance[owner][details.token][permitSingle.spender];
-
         if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired();
-        if (allowed.nonce != details.nonce) revert InvalidNonce();
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitSingle.hash()), owner);
 
-        // Increments the nonce, and sets the new values for amount and expiration.
-        allowed.updateAll(details.amount, details.expiration, details.nonce);
-        emit Approval(owner, details.token, permitSingle.spender, details.amount);
+        _updateApproval(permitSingle.details, owner, permitSingle.spender);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -53,16 +47,9 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         signature.verify(_hashTypedData(permitBatch.hash()), owner);
 
         address spender = permitBatch.spender;
-        // Verifies the signed nonce, sets the new values for amount, expiration, and incremements the nonce.
         unchecked {
             for (uint256 i = 0; i < permitBatch.details.length; ++i) {
-                PermitDetails memory details = permitBatch.details[i];
-                PackedAllowance storage allowed = allowance[owner][details.token][spender];
-
-                if (allowed.nonce != details.nonce) revert InvalidNonce();
-
-                allowed.updateAll(details.amount, details.expiration, details.nonce);
-                emit Approval(owner, details.token, spender, details.amount);
+                _updateApproval(permitBatch.details[i], owner, spender);
             }
         }
     }
@@ -128,5 +115,17 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
         allowance[msg.sender][token][spender].nonce = newNonce;
         emit InvalidateNonces(msg.sender, newNonce, oldNonce, token, spender);
+    }
+
+    /// @notice Sets the new values for amount, expiration, and nonce.
+    /// @dev Will check that the signed nonce is equal to the current nonce and then incrememnt the nonce value by 1.
+    /// @dev Emits an approval event.
+    function _updateApproval(PermitDetails memory details, address owner, address spender) private {
+        PackedAllowance storage allowed = allowance[owner][details.token][spender];
+
+        if (allowed.nonce != details.nonce) revert InvalidNonce();
+
+        allowed.updateAll(details.amount, details.expiration, details.nonce);
+        emit Approval(owner, details.token, spender, details.amount);
     }
 }
