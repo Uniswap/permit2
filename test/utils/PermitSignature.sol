@@ -20,12 +20,14 @@ contract PermitSignature is Test {
         "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
     );
 
+    bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
+
     bytes32 public constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
-        "PermitTransferFrom(address token,address spender,uint256 signedAmount,uint256 nonce,uint256 deadline)"
+        "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
     bytes32 public constant _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH = keccak256(
-        "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] signedAmounts,uint256 nonce,uint256 deadline)"
+        "PermitBatchTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
     function getPermitSignatureRaw(
@@ -89,18 +91,14 @@ contract PermitSignature is Test {
         uint256 privateKey,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
+        bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
                 keccak256(
                     abi.encode(
-                        _PERMIT_TRANSFER_FROM_TYPEHASH,
-                        permit.token,
-                        address(this),
-                        permit.signedAmount,
-                        permit.nonce,
-                        permit.deadline
+                        _PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, address(this), permit.nonce, permit.deadline
                     )
                 )
             )
@@ -117,21 +115,13 @@ contract PermitSignature is Test {
         bytes32 witness,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
+        bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
-                keccak256(
-                    abi.encode(
-                        typehash,
-                        permit.token,
-                        address(this),
-                        permit.signedAmount,
-                        permit.nonce,
-                        permit.deadline,
-                        witness
-                    )
-                )
+                keccak256(abi.encode(typehash, tokenPermissions, address(this), permit.nonce, permit.deadline, witness))
             )
         );
 
@@ -144,6 +134,10 @@ contract PermitSignature is Test {
         uint256 privateKey,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
+        bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
+        for (uint256 i = 0; i < permit.permitted.length; ++i) {
+            tokenPermissions[i] = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted[i]));
+        }
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -151,9 +145,8 @@ contract PermitSignature is Test {
                 keccak256(
                     abi.encode(
                         _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
-                        keccak256(abi.encodePacked(permit.tokens)),
+                        keccak256(abi.encodePacked(tokenPermissions)),
                         address(this),
-                        keccak256(abi.encodePacked(permit.signedAmounts)),
                         permit.nonce,
                         permit.deadline
                     )
@@ -172,6 +165,11 @@ contract PermitSignature is Test {
         bytes32 witness,
         bytes32 domainSeparator
     ) internal returns (bytes memory sig) {
+        bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
+        for (uint256 i = 0; i < permit.permitted.length; ++i) {
+            tokenPermissions[i] = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted[i]));
+        }
+
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -179,9 +177,8 @@ contract PermitSignature is Test {
                 keccak256(
                     abi.encode(
                         typeHash,
-                        keccak256(abi.encodePacked(permit.tokens)),
+                        keccak256(abi.encodePacked(tokenPermissions)),
                         address(this),
-                        keccak256(abi.encodePacked(permit.signedAmounts)),
                         permit.nonce,
                         permit.deadline,
                         witness
@@ -237,8 +234,7 @@ contract PermitSignature is Test {
         returns (ISignatureTransfer.PermitTransferFrom memory)
     {
         return ISignatureTransfer.PermitTransferFrom({
-            token: token0,
-            signedAmount: 10 ** 18,
+            permitted: ISignatureTransfer.TokenPermissions({token: token0, amount: 10 ** 18}),
             nonce: nonce,
             deadline: block.timestamp + 100
         });
@@ -250,8 +246,7 @@ contract PermitSignature is Test {
         returns (ISignatureTransfer.PermitTransferFrom memory)
     {
         return ISignatureTransfer.PermitTransferFrom({
-            token: token0,
-            signedAmount: 10 ** 18,
+            permitted: ISignatureTransfer.TokenPermissions({token: token0, amount: 10 ** 18}),
             nonce: nonce,
             deadline: block.timestamp + 100
         });
@@ -262,13 +257,13 @@ contract PermitSignature is Test {
         view
         returns (ISignatureTransfer.PermitBatchTransferFrom memory)
     {
-        uint256[] memory maxAmounts = new uint256[](tokens.length);
+        ISignatureTransfer.TokenPermissions[] memory permitted =
+            new ISignatureTransfer.TokenPermissions[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
-            maxAmounts[i] = 1 ** 18;
+            permitted[i] = ISignatureTransfer.TokenPermissions({token: tokens[i], amount: 1 ** 18});
         }
         return ISignatureTransfer.PermitBatchTransferFrom({
-            tokens: tokens,
-            signedAmounts: maxAmounts,
+            permitted: permitted,
             nonce: nonce,
             deadline: block.timestamp + 100
         });

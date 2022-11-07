@@ -7,29 +7,35 @@ pragma solidity 0.8.17;
 interface ISignatureTransfer {
     error NotSpender();
     error InvalidAmount();
-    error SignedDetailsLengthMismatch();
-    error AmountsLengthMismatch();
+    error LengthMismatch();
 
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
 
-    /// @notice Used to reconstruct the signed permit message for a single token transfer
-    /// @dev Do not need to pass in spender address as it is required that it is msg.sender
-    /// @dev Note that a user still signs over a spender address
-    struct PermitTransferFrom {
+    /// @notice The token and amount details for a transfer signed in the permit transfer signature
+    struct TokenPermissions {
         // ERC20 token address
         address token;
         // the maximum amount that can be spent
-        uint256 signedAmount;
+        uint256 amount;
+    }
+
+    /// @notice The signed permit message for a single token transfer
+    struct PermitTransferFrom {
+        TokenPermissions permitted;
         // a unique value for each signature
         uint256 nonce;
         // deadline on the permit signature
         uint256 deadline;
     }
 
-    /// @notice A pair holding recipient address and amount for transfers.
-    struct ToAmountPair {
+    /// @notice Specifies the recipient address and amount for transfers.
+    /// @dev Used for batch transfers.
+    /// Recipients and amounts correspond to the index of the signed token permissions array.
+    struct SignatureTransferDetails {
+        // recipient address
         address to;
+        // spender requested amount
         uint256 requestedAmount;
     }
 
@@ -37,10 +43,8 @@ interface ISignatureTransfer {
     /// @dev Do not need to pass in spender address as it is required that it is msg.sender
     /// @dev Note that a user still signs over a spender address
     struct PermitBatchTransferFrom {
-        // ERC20 token addresses
-        address[] tokens;
-        // the maximum amounts that can be spent per token
-        uint256[] signedAmounts;
+        // the tokens and corresponding amounts permitted for a transfer
+        TokenPermissions[] permitted;
         // a unique value for each signature
         uint256 nonce;
         // deadline on the permit signature
@@ -95,7 +99,7 @@ interface ISignatureTransfer {
     function permitBatchTransferFrom(
         PermitBatchTransferFrom calldata permit,
         address owner,
-        ToAmountPair[] calldata ToAmountPairs,
+        SignatureTransferDetails[] calldata transferDetails,
         bytes calldata signature
     ) external;
 
@@ -110,7 +114,7 @@ interface ISignatureTransfer {
     function permitBatchWitnessTransferFrom(
         PermitBatchTransferFrom calldata permit,
         address owner,
-        ToAmountPair[] calldata ToAmountPairs,
+        SignatureTransferDetails[] calldata transferDetails,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType,

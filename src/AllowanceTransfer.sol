@@ -73,10 +73,10 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function batchTransferFrom(address from, TransferDetail[] calldata transferDetails) external {
+    function batchTransferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external {
         unchecked {
             for (uint256 i = 0; i < transferDetails.length; ++i) {
-                TransferDetail memory transferDetail = transferDetails[i];
+                AllowanceTransferDetails memory transferDetail = transferDetails[i];
                 _transfer(transferDetail.token, from, transferDetail.to, transferDetail.amount);
             }
         }

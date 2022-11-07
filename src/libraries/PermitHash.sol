@@ -16,19 +16,23 @@ library PermitHash {
         "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
     );
 
+    bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
+
     bytes32 public constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
-        "PermitTransferFrom(address token,address spender,uint256 signedAmount,uint256 nonce,uint256 deadline)"
+        "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
     bytes32 public constant _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH = keccak256(
-        "PermitBatchTransferFrom(address[] tokens,address spender,uint256[] signedAmounts,uint256 nonce,uint256 deadline)"
+        "PermitBatchTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
+    string public constant _TOKEN_PERMISSIONS_TYPESTRING = "TokenPermissions(address token,uint256 amount)";
+
     string public constant _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB =
-        "PermitWitnessTransferFrom(address token,address spender,uint256 signedAmount,uint256 nonce,uint256 deadline,";
+        "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
 
     string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
-        "PermitBatchWitnessTransferFrom(address[] tokens,address spender,uint256[] signedAmounts,uint256 nonce,uint256 deadline,";
+        "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
 
     function hash(IAllowanceTransfer.PermitSingle memory permitSingle) internal pure returns (bytes32) {
         bytes32 permitHash = _hashPermitDetails(permitSingle.details);
@@ -53,25 +57,25 @@ library PermitHash {
     }
 
     function hash(ISignatureTransfer.PermitTransferFrom memory permit) internal view returns (bytes32) {
+        bytes32 tokenPermissionsHash = _hashTokenPermissions(permit.permitted);
         return keccak256(
-            abi.encode(
-                _PERMIT_TRANSFER_FROM_TYPEHASH,
-                permit.token,
-                msg.sender,
-                permit.signedAmount,
-                permit.nonce,
-                permit.deadline
-            )
+            abi.encode(_PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissionsHash, msg.sender, permit.nonce, permit.deadline)
         );
     }
 
     function hash(ISignatureTransfer.PermitBatchTransferFrom memory permit) internal view returns (bytes32) {
+        uint256 numPermitted = permit.permitted.length;
+        bytes32[] memory tokenPermissionHashes = new bytes32[](numPermitted);
+
+        for (uint256 i = 0; i < numPermitted; ++i) {
+            tokenPermissionHashes[i] = _hashTokenPermissions(permit.permitted[i]);
+        }
+
         return keccak256(
             abi.encode(
                 _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
-                keccak256(abi.encodePacked(permit.tokens)),
+                keccak256(abi.encodePacked(tokenPermissionHashes)),
                 msg.sender,
-                keccak256(abi.encodePacked(permit.signedAmounts)),
                 permit.nonce,
                 permit.deadline
             )
@@ -85,12 +89,17 @@ library PermitHash {
         string calldata witnessType
     ) internal view returns (bytes32) {
         bytes32 typeHash = keccak256(
-            abi.encodePacked(_PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType)
+            abi.encodePacked(
+                _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB,
+                witnessTypeName,
+                " witness)",
+                _TOKEN_PERMISSIONS_TYPESTRING,
+                witnessType
+            )
         );
 
-        return keccak256(
-            abi.encode(typeHash, permit.token, msg.sender, permit.signedAmount, permit.nonce, permit.deadline, witness)
-        );
+        bytes32 tokenPermissions = _hashTokenPermissions(permit.permitted);
+        return keccak256(abi.encode(typeHash, tokenPermissions, msg.sender, permit.nonce, permit.deadline, witness));
     }
 
     function hashWithWitness(
@@ -101,16 +110,26 @@ library PermitHash {
     ) internal view returns (bytes32) {
         bytes32 typeHash = keccak256(
             abi.encodePacked(
-                _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB, witnessTypeName, " witness)", witnessType
+                _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB,
+                witnessTypeName,
+                " witness)",
+                _TOKEN_PERMISSIONS_TYPESTRING,
+                witnessType
             )
         );
+
+        uint256 numPermitted = permit.permitted.length;
+        bytes32[] memory tokenPermissions = new bytes32[](numPermitted);
+
+        for (uint256 i = 0; i < numPermitted; ++i) {
+            tokenPermissions[i] = _hashTokenPermissions(permit.permitted[i]);
+        }
 
         return keccak256(
             abi.encode(
                 typeHash,
-                keccak256(abi.encodePacked(permit.tokens)),
+                keccak256(abi.encodePacked(tokenPermissions)),
                 msg.sender,
-                keccak256(abi.encodePacked(permit.signedAmounts)),
                 permit.nonce,
                 permit.deadline,
                 witness
@@ -120,5 +139,13 @@ library PermitHash {
 
     function _hashPermitDetails(IAllowanceTransfer.PermitDetails memory details) private pure returns (bytes32) {
         return keccak256(abi.encode(_PERMIT_DETAILS_TYPEHASH, details));
+    }
+
+    function _hashTokenPermissions(ISignatureTransfer.TokenPermissions memory permitted)
+        private
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permitted));
     }
 }

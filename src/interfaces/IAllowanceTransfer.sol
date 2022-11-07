@@ -69,7 +69,7 @@ interface IAllowanceTransfer {
     }
 
     /// @notice Details for a token transfer.
-    struct TransferDetail {
+    struct AllowanceTransferDetails {
         // the token to be transferred
         address token;
         // the amount of the token
@@ -109,7 +109,7 @@ interface IAllowanceTransfer {
     /// @notice Transfer approved tokens in a batch
     /// @param from The address to transfer tokens from
     /// @param transferDetails Array of recipients for the transfers
-    function batchTransferFrom(address from, TransferDetail[] calldata transferDetails) external;
+    function batchTransferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external;
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
     /// by batch revoking approvals

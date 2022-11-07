@@ -6,33 +6,33 @@ import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
 import {AddressBuilder} from "./AddressBuilder.sol";
 
 library StructBuilder {
-    function fillTransferDetail(uint256 length, address token, uint160 amount, address to)
+    function fillAllowanceTransferDetail(uint256 length, address token, uint160 amount, address to)
         external
         pure
-        returns (IAllowanceTransfer.TransferDetail[] memory tokenDetails)
+        returns (IAllowanceTransfer.AllowanceTransferDetails[] memory transferDetails)
     {
-        tokenDetails = new IAllowanceTransfer.TransferDetail[](length);
+        transferDetails = new IAllowanceTransfer.AllowanceTransferDetails[](length);
         for (uint256 i = 0; i < length; ++i) {
-            tokenDetails[i] = IAllowanceTransfer.TransferDetail({token: token, amount: amount, to: to});
+            transferDetails[i] = IAllowanceTransfer.AllowanceTransferDetails({token: token, amount: amount, to: to});
         }
     }
 
-    function fillToAmountPair(uint256 length, uint256 amount, address to)
+    function fillSigTransferDetails(uint256 length, uint256 amount, address to)
         external
         pure
-        returns (ISignatureTransfer.ToAmountPair[] memory toAmountPairs)
+        returns (ISignatureTransfer.SignatureTransferDetails[] memory transferDetails)
     {
-        return fillToAmountPairDifferentAddresses(amount, AddressBuilder.fill(length, to));
+        return fillSigTransferDetails(amount, AddressBuilder.fill(length, to));
     }
 
-    function fillToAmountPairDifferentAddresses(uint256 amount, address[] memory tos)
+    function fillSigTransferDetails(uint256 amount, address[] memory tos)
         public
         pure
-        returns (ISignatureTransfer.ToAmountPair[] memory toAmountPairs)
+        returns (ISignatureTransfer.SignatureTransferDetails[] memory transferDetails)
     {
-        toAmountPairs = new ISignatureTransfer.ToAmountPair[](tos.length);
+        transferDetails = new ISignatureTransfer.SignatureTransferDetails[](tos.length);
         for (uint256 i = 0; i < tos.length; ++i) {
-            toAmountPairs[i] = ISignatureTransfer.ToAmountPair({to: tos[i], requestedAmount: amount});
+            transferDetails[i] = ISignatureTransfer.SignatureTransferDetails({to: tos[i], requestedAmount: amount});
         }
     }
 }

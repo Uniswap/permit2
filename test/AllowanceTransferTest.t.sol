@@ -269,8 +269,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount);
 
         // permit token0 for 1 ** 18
-        IAllowanceTransfer.TransferDetail[] memory transferDetails =
-            StructBuilder.fillTransferDetail(3, address(token0), 1 ** 18, address0);
+        IAllowanceTransfer.AllowanceTransferDetails[] memory transferDetails =
+            StructBuilder.fillAllowanceTransferDetail(3, address(token0), 1 ** 18, address0);
         snapStart("batchTransferFrom");
         permit2.batchTransferFrom(from, transferDetails);
         snapEnd();
@@ -497,8 +497,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount);
 
         // permit token0 for 1 ** 18
-        IAllowanceTransfer.TransferDetail[] memory transferDetails =
-            StructBuilder.fillTransferDetail(3, address(token0), 1 ** 18, address0);
+        IAllowanceTransfer.AllowanceTransferDetails[] memory transferDetails =
+            StructBuilder.fillAllowanceTransferDetail(3, address(token0), 1 ** 18, address0);
 
         snapStart("batchTransferFrom");
         permit2.batchTransferFrom(from, transferDetails);
