@@ -62,36 +62,36 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes calldata signature
     ) internal {
         if (block.timestamp > permit.deadline) revert SignatureExpired();
-        if (requestedAmount > permit.signedAmount) revert InvalidAmount();
-
+        if (requestedAmount > permit.permitted.amount) revert InvalidAmount();
         _useUnorderedNonce(owner, permit.nonce);
+
         signature.verify(_hashTypedData(dataHash), owner);
 
-        ERC20(permit.token).safeTransferFrom(owner, to, requestedAmount);
+        ERC20(permit.permitted.token).safeTransferFrom(owner, to, requestedAmount);
     }
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
-        ToAmountPair[] calldata toAmountPairs,
+        SignatureTransferDetails[] calldata transferDetails,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(permit, permit.hash(), owner, toAmountPairs, signature);
+        _permitBatchTransferFrom(permit, permit.hash(), owner, transferDetails, signature);
     }
 
     /// @inheritdoc ISignatureTransfer
     function permitBatchWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
-        ToAmountPair[] calldata toAmountPairs,
+        SignatureTransferDetails[] calldata transferDetails,
         bytes32 witness,
         string calldata witnessTypeName,
         string calldata witnessType,
         bytes calldata signature
     ) external {
         _permitBatchTransferFrom(
-            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, toAmountPairs, signature
+            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, transferDetails, signature
         );
     }
 
@@ -105,22 +105,25 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         PermitBatchTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
-        ToAmountPair[] calldata toAmountPairs,
+        SignatureTransferDetails[] calldata transferDetails,
         bytes calldata signature
     ) internal {
-        uint256 permitTokensLength = permit.tokens.length;
+        uint256 numPermitted = permit.permitted.length;
 
         if (block.timestamp > permit.deadline) revert SignatureExpired();
-        _validateInputLengths(permitTokensLength, toAmountPairs.length, permit.signedAmounts.length);
+        if (numPermitted != transferDetails.length) revert LengthMismatch();
 
         _useUnorderedNonce(owner, permit.nonce);
         signature.verify(_hashTypedData(dataHash), owner);
 
         unchecked {
-            for (uint256 i = 0; i < permitTokensLength; ++i) {
-                uint256 requestedAmount = toAmountPairs[i].requestedAmount;
-                if (requestedAmount > permit.signedAmounts[i]) revert InvalidAmount();
-                ERC20(permit.tokens[i]).safeTransferFrom(owner, toAmountPairs[i].to, requestedAmount);
+            for (uint256 i = 0; i < numPermitted; ++i) {
+                TokenPermissions memory permitted = permit.permitted[i];
+                SignatureTransferDetails memory transfer = transferDetails[i];
+
+                if (transfer.requestedAmount > permitted.amount) revert InvalidAmount();
+
+                ERC20(permitted.token).safeTransferFrom(owner, transfer.to, transfer.requestedAmount);
             }
         }
     }
@@ -153,17 +156,5 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce();
 
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
-    }
-
-    /// @notice Ensures that permit token arrays are valid with regard to the tokens being spent
-    /// @param signedTokensLen The length of the tokens array signed by the user
-    /// @param toAmountPairsLen The length of the given recipients array
-    /// @param signedAmountsLen The length of the amounts length signed by the user
-    function _validateInputLengths(uint256 signedTokensLen, uint256 toAmountPairsLen, uint256 signedAmountsLen)
-        private
-        pure
-    {
-        if (signedAmountsLen != signedTokensLen) revert SignedDetailsLengthMismatch();
-        if (toAmountPairsLen != signedAmountsLen) revert AmountsLengthMismatch();
     }
 }

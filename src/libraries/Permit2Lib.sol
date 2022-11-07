@@ -114,14 +114,16 @@ library Permit2Lib {
 
             PERMIT2.permit(
                 owner,
-                IAllowanceTransfer.Permit({
-                    token: address(token),
+                IAllowanceTransfer.PermitSingle({
+                    details: IAllowanceTransfer.PermitDetails({
+                        token: address(token),
+                        amount: amount.toUint160(),
+                        // Use an unlimited expiration because it most
+                        // closely mimics how a standard approval works.
+                        expiration: type(uint64).max,
+                        nonce: nonce
+                    }),
                     spender: spender,
-                    amount: amount.toUint160(),
-                    // Use an unlimited expiration because it most
-                    // closely mimics how a standard approval works.
-                    expiration: type(uint64).max,
-                    nonce: nonce,
                     sigDeadline: deadline
                 }),
                 bytes.concat(r, s, bytes1(v))

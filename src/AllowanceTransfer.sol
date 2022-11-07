@@ -13,7 +13,7 @@ import {Allowance} from "./libraries/Allowance.sol";
 contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
-    using PermitHash for Permit;
+    using PermitHash for PermitSingle;
     using PermitHash for PermitBatch;
     using Allowance for PackedAllowance;
 
@@ -30,43 +30,28 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function permit(address owner, Permit memory permitData, bytes calldata signature) external {
-        PackedAllowance storage allowed = allowance[owner][permitData.token][permitData.spender];
-        _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
+    function permit(address owner, PermitSingle memory permitSingle, bytes calldata signature) external {
+        if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired();
 
         // Verify the signer address from the signature.
-        signature.verify(_hashTypedData(permitData.hash()), owner);
+        signature.verify(_hashTypedData(permitSingle.hash()), owner);
 
-        // Increments the nonce, and sets the new values for amount and expiration.
-        allowed.updateAll(permitData.amount, permitData.expiration, permitData.nonce);
-        emit Approval(owner, permitData.token, permitData.spender, permitData.amount);
+        _updateApproval(permitSingle.details, owner, permitSingle.spender);
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function permitBatch(address owner, PermitBatch memory permitData, bytes calldata signature) external {
-        // Use the first token's nonce.
-        PackedAllowance storage allowed = allowance[owner][permitData.tokens[0]][permitData.spender];
-        _validatePermit(allowed.nonce, permitData.nonce, permitData.sigDeadline);
+    function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external {
+        if (block.timestamp > permitBatch.sigDeadline) revert SignatureExpired();
 
         // Verify the signer address from the signature.
-        signature.verify(_hashTypedData(permitData.hash()), owner);
+        signature.verify(_hashTypedData(permitBatch.hash()), owner);
 
-        // Increments the nonce, and sets the new values for amount and expiration for the first token.
-        allowed.updateAll(permitData.amounts[0], permitData.expirations[0], permitData.nonce);
-
+        address spender = permitBatch.spender;
         unchecked {
-            for (uint256 i = 1; i < permitData.tokens.length; ++i) {
-                allowed = allowance[owner][permitData.tokens[i]][permitData.spender];
-                allowed.updateAmountAndExpiration(permitData.amounts[i], permitData.expirations[i]);
-                emit Approval(owner, permitData.tokens[i], permitData.spender, permitData.amounts[i]);
+            for (uint256 i = 0; i < permitBatch.details.length; ++i) {
+                _updateApproval(permitBatch.details[i], owner, spender);
             }
         }
-    }
-
-    /// @notice Ensures that the deadline on the signature has not passed, and that the nonce hasn't been used
-    function _validatePermit(uint32 nonce, uint32 signedNonce, uint256 sigDeadline) private view {
-        if (block.timestamp > sigDeadline) revert SignatureExpired();
-        if (nonce != signedNonce) revert InvalidNonce();
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -75,10 +60,10 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function batchTransferFrom(address from, TransferDetail[] calldata transferDetails) external {
+    function batchTransferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external {
         unchecked {
             for (uint256 i = 0; i < transferDetails.length; ++i) {
-                TransferDetail memory transferDetail = transferDetails[i];
+                AllowanceTransferDetails memory transferDetail = transferDetails[i];
                 _transfer(transferDetail.token, from, transferDetail.to, transferDetail.amount);
             }
         }
@@ -130,5 +115,17 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
         allowance[msg.sender][token][spender].nonce = newNonce;
         emit InvalidateNonces(msg.sender, newNonce, oldNonce, token, spender);
+    }
+
+    /// @notice Sets the new values for amount, expiration, and nonce.
+    /// @dev Will check that the signed nonce is equal to the current nonce and then incrememnt the nonce value by 1.
+    /// @dev Emits an approval event.
+    function _updateApproval(PermitDetails memory details, address owner, address spender) private {
+        PackedAllowance storage allowed = allowance[owner][details.token][spender];
+
+        if (allowed.nonce != details.nonce) revert InvalidNonce();
+
+        allowed.updateAll(details.amount, details.expiration, details.nonce);
+        emit Approval(owner, details.token, spender, details.amount);
     }
 }
