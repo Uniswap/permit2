@@ -141,7 +141,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @return bitPos The bit position
     /// @dev The first 248 bits of the nonce value is the index of the desired bitmap
     /// @dev The last 8 bits of the nonce value is the position of the bit in the bitmap
-    function bitmapPositions(uint256 nonce) private pure returns (uint248 wordPos, uint8 bitPos) {
+    function bitmapPositions(uint256 nonce) private pure returns (uint256 wordPos, uint256 bitPos) {
         wordPos = uint248(nonce >> 8);
         bitPos = uint8(nonce & 255);
     }
@@ -150,7 +150,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param from The address to use the nonce at
     /// @param nonce The nonce to spend
     function _useUnorderedNonce(address from, uint256 nonce) internal {
-        (uint248 wordPos, uint8 bitPos) = bitmapPositions(nonce);
+        (uint256 wordPos, uint256 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
 
         if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce();
