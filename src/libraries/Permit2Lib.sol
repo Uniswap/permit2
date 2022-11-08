@@ -87,7 +87,7 @@ library Permit2Lib {
                     // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
                     // Counterintuitively, this call must be positioned second to the and() call in the
                     // surrounding and() call or else returndatasize() will be zero during the computation.
-                    call(gas(), token, 0, add(inputData, 32), mload(inputData), 0, 32)
+                    staticcall(gas(), token, add(inputData, 32), mload(inputData), 0, 32)
                 )
 
             domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
