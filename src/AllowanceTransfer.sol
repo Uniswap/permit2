@@ -31,7 +31,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function permit(address owner, PermitSingle memory permitSingle, bytes calldata signature) external {
-        if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired();
+        if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired(permitSingle.sigDeadline);
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitSingle.hash()), owner);
@@ -41,7 +41,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external {
-        if (block.timestamp > permitBatch.sigDeadline) revert SignatureExpired();
+        if (block.timestamp > permitBatch.sigDeadline) revert SignatureExpired(permitBatch.sigDeadline);
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitBatch.hash()), owner);
@@ -108,7 +108,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function invalidateNonces(address token, address spender, uint32 newNonce) public {
         uint32 oldNonce = allowance[msg.sender][token][spender].nonce;
 
-        if (newNonce <= oldNonce) revert InvalidNonce();
+        if (newNonce <= oldNonce) revert InvalidNonce(newNonce);
 
         // Limit the amount of nonces that can be invalidated in one transaction.
         unchecked {
@@ -129,7 +129,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         uint160 amount = details.amount;
         PackedAllowance storage allowed = allowance[owner][token][spender];
 
-        if (allowed.nonce != nonce) revert InvalidNonce();
+        if (allowed.nonce != nonce) revert InvalidNonce(nonce);
 
         allowed.updateAll(amount, details.expiration, nonce);
         emit Approval(owner, token, spender, amount);

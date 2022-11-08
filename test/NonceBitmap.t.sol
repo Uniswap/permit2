@@ -18,11 +18,11 @@ contract NonceBitmapTest is Test {
         permit2.useUnorderedNonce(address(this), 0);
         permit2.useUnorderedNonce(address(this), 1);
 
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 1));
         permit2.useUnorderedNonce(address(this), 1);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 5));
         permit2.useUnorderedNonce(address(this), 5);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 0));
         permit2.useUnorderedNonce(address(this), 0);
         permit2.useUnorderedNonce(address(this), 4);
     }
@@ -31,9 +31,9 @@ contract NonceBitmapTest is Test {
         permit2.useUnorderedNonce(address(this), 255);
         permit2.useUnorderedNonce(address(this), 256);
 
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 255));
         permit2.useUnorderedNonce(address(this), 255);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 256));
         permit2.useUnorderedNonce(address(this), 256);
     }
 
@@ -41,22 +41,22 @@ contract NonceBitmapTest is Test {
         permit2.useUnorderedNonce(address(this), 2 ** 240);
         permit2.useUnorderedNonce(address(this), 2 ** 240 + 1);
 
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 2 ** 240));
         permit2.useUnorderedNonce(address(this), 2 ** 240);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 2 ** 240 + 1));
         permit2.useUnorderedNonce(address(this), 2 ** 240 + 1);
     }
 
     function testInvalidateFullWord() public {
         permit2.invalidateUnorderedNonces(0, 2 ** 256 - 1);
 
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 0));
         permit2.useUnorderedNonce(address(this), 0);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 1));
         permit2.useUnorderedNonce(address(this), 1);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 254));
         permit2.useUnorderedNonce(address(this), 254);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 255));
         permit2.useUnorderedNonce(address(this), 255);
         permit2.useUnorderedNonce(address(this), 256);
     }
@@ -67,23 +67,23 @@ contract NonceBitmapTest is Test {
         permit2.useUnorderedNonce(address(this), 0);
         permit2.useUnorderedNonce(address(this), 254);
         permit2.useUnorderedNonce(address(this), 255);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 256));
         permit2.useUnorderedNonce(address(this), 256);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 511));
         permit2.useUnorderedNonce(address(this), 511);
         permit2.useUnorderedNonce(address(this), 512);
     }
 
     function testUsingNonceTwiceFails(uint256 nonce) public {
         permit2.useUnorderedNonce(address(this), nonce);
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, nonce));
         permit2.useUnorderedNonce(address(this), nonce);
     }
 
     function testUseTwoRandomNonces(uint256 first, uint256 second) public {
         permit2.useUnorderedNonce(address(this), first);
         if (first == second) {
-            vm.expectRevert(InvalidNonce.selector);
+            vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, first));
             permit2.useUnorderedNonce(address(this), second);
         } else {
             permit2.useUnorderedNonce(address(this), second);

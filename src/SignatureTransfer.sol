@@ -61,7 +61,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         uint256 requestedAmount,
         bytes calldata signature
     ) internal {
-        if (block.timestamp > permit.deadline) revert SignatureExpired();
+        if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
         if (requestedAmount > permit.permitted.amount) revert InvalidAmount();
         _useUnorderedNonce(owner, permit.nonce);
 
@@ -110,7 +110,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     ) internal {
         uint256 numPermitted = permit.permitted.length;
 
-        if (block.timestamp > permit.deadline) revert SignatureExpired();
+        if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
         if (numPermitted != transferDetails.length) revert LengthMismatch();
 
         _useUnorderedNonce(owner, permit.nonce);
@@ -153,7 +153,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         (uint256 wordPos, uint256 bitPos) = bitmapPositions(nonce);
         uint256 bitmap = nonceBitmap[from][wordPos];
 
-        if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce();
+        if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce(nonce);
 
         nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
     }

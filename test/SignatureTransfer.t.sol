@@ -117,7 +117,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
 
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, nonce));
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
     }
 
@@ -450,7 +450,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bitmap = permit2.nonceBitmap(from, 0);
         assertEq(bitmap, 1);
 
-        vm.expectRevert(InvalidNonce.selector);
+        vm.expectRevert(abi.encodeWithSelector(InvalidNonce.selector, 0));
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
     }
 
