@@ -20,7 +20,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
     using AddressBuilder for address[];
     using AmountBuilder for uint256[];
 
-    event InvalidateUnorderedNonces(address indexed owner, uint256 word, uint256 mask);
+    event UnorderedNonceInvalidation(address indexed owner, uint256 word, uint256 mask);
     event Transfer(address indexed from, address indexed token, address indexed to, uint256 amount);
 
     struct MockWitness {
@@ -445,7 +445,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         vm.prank(from);
         vm.expectEmit(true, false, false, true);
-        emit InvalidateUnorderedNonces(from, 0, 1);
+        emit UnorderedNonceInvalidation(from, 0, 1);
         permit2.invalidateUnorderedNonces(0, 1);
         bitmap = permit2.nonceBitmap(from, 0);
         assertEq(bitmap, 1);

@@ -95,11 +95,16 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function lockdown(TokenSpenderPair[] calldata approvals) external {
+        address owner = msg.sender;
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
             uint256 length = approvals.length;
             for (uint256 i = 0; i < length; ++i) {
-                allowance[msg.sender][approvals[i].token][approvals[i].spender].amount = 0;
+                address token = approvals[i].token;
+                address spender = approvals[i].spender;
+
+                allowance[owner][token][spender].amount = 0;
+                emit Lockdown(owner, token, spender);
             }
         }
     }
@@ -117,7 +122,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         }
 
         allowance[msg.sender][token][spender].nonce = newNonce;
-        emit InvalidateNonces(msg.sender, newNonce, oldNonce, token, spender);
+        emit NonceInvalidation(msg.sender, token, spender, newNonce, oldNonce);
     }
 
     /// @notice Sets the new values for amount, expiration, and nonce.
