@@ -48,7 +48,8 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
         address spender = permitBatch.spender;
         unchecked {
-            for (uint256 i = 0; i < permitBatch.details.length; ++i) {
+            uint256 length = permitBatch.details.length;
+            for (uint256 i = 0; i < length; ++i) {
                 _updateApproval(permitBatch.details[i], owner, spender);
             }
         }
@@ -62,7 +63,8 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @inheritdoc IAllowanceTransfer
     function batchTransferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external {
         unchecked {
-            for (uint256 i = 0; i < transferDetails.length; ++i) {
+            uint256 length = transferDetails.length;
+            for (uint256 i = 0; i < length; ++i) {
                 AllowanceTransferDetails memory transferDetail = transferDetails[i];
                 _transfer(transferDetail.token, from, transferDetail.to, transferDetail.amount);
             }
@@ -95,7 +97,8 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function lockdown(TokenSpenderPair[] calldata approvals) external {
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
-            for (uint256 i = 0; i < approvals.length; ++i) {
+            uint256 length = approvals.length;
+            for (uint256 i = 0; i < length; ++i) {
                 allowance[msg.sender][approvals[i].token][approvals[i].spender].amount = 0;
             }
         }
@@ -121,11 +124,14 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @dev Will check that the signed nonce is equal to the current nonce and then incrememnt the nonce value by 1.
     /// @dev Emits an approval event.
     function _updateApproval(PermitDetails memory details, address owner, address spender) private {
-        PackedAllowance storage allowed = allowance[owner][details.token][spender];
+        uint32 nonce = details.nonce;
+        address token = details.token;
+        uint160 amount = details.amount;
+        PackedAllowance storage allowed = allowance[owner][token][spender];
 
-        if (allowed.nonce != details.nonce) revert InvalidNonce();
+        if (allowed.nonce != nonce) revert InvalidNonce();
 
-        allowed.updateAll(details.amount, details.expiration, details.nonce);
-        emit Approval(owner, details.token, spender, details.amount);
+        allowed.updateAll(amount, details.expiration, nonce);
+        emit Approval(owner, token, spender, amount);
     }
 }
