@@ -63,7 +63,7 @@ interface ISignatureTransfer {
     /// @param requestedAmount The amount of tokens to transfer
     /// @param signature The signature to verify
     function permitTransferFrom(
-        PermitTransferFrom calldata permit,
+        PermitTransferFrom memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -82,7 +82,7 @@ interface ISignatureTransfer {
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
-        PermitTransferFrom calldata permit,
+        PermitTransferFrom memory permit,
         address owner,
         address to,
         uint256 requestedAmount,
@@ -97,7 +97,7 @@ interface ISignatureTransfer {
     /// @param owner The owner of the tokens to transfer
     /// @param signature The signature to verify
     function permitBatchTransferFrom(
-        PermitBatchTransferFrom calldata permit,
+        PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
         bytes calldata signature
@@ -112,7 +112,7 @@ interface ISignatureTransfer {
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitBatchWitnessTransferFrom(
-        PermitBatchTransferFrom calldata permit,
+        PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
         bytes32 witness,
