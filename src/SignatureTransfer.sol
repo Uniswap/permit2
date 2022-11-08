@@ -132,7 +132,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
 
-        emit InvalidateUnorderedNonces(msg.sender, wordPos, mask);
+        emit UnorderedNonceInvalidation(msg.sender, wordPos, mask);
     }
 
     /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces

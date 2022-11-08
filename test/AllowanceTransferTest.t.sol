@@ -19,10 +19,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     using AddressBuilder for address[];
     using stdStorage for StdStorage;
 
-    event InvalidateNonces(
-        address indexed owner, uint32 indexed newNonce, uint32 oldNonce, address token, address spender
+    event NonceInvalidation(
+        address indexed owner, address indexed token, address indexed spender, uint32 newNonce, uint32 oldNonce
     );
     event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
+    event Lockdown(address indexed owner, address token, address spender);
 
     MockPermit2 permit2;
 
@@ -424,8 +425,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         // Invalidates the 0th nonce by setting the new nonce to 1.
         vm.prank(from);
-        vm.expectEmit(true, true, false, true);
-        emit InvalidateNonces(from, 1, defaultNonce, address(token0), address(this));
+        vm.expectEmit(true, true, true, true);
+        emit NonceInvalidation(from, address(token0), address(this), 1, defaultNonce);
         permit2.invalidateNonces(address(token0), address(this), 1);
         (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
@@ -449,8 +450,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         // Invalidates the 9 nonces by setting the new nonce to 33.
         vm.prank(from);
-        vm.expectEmit(true, true, false, true);
-        emit InvalidateNonces(from, 33, nonce, address(token0), address(this));
+        vm.expectEmit(true, true, true, true);
+
+        emit NonceInvalidation(from, address(token0), address(this), 33, nonce);
         permit2.invalidateNonces(address(token0), address(this), 33);
         (,, nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 33);
@@ -534,6 +536,43 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         snapStart("lockdown");
         permit2.lockdown(approvals);
         snapEnd();
+
+        (amount, expiration, nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, 0);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+        (amount1, expiration1, nonce1) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount1, 0);
+        assertEq(expiration1, defaultExpiration);
+        assertEq(nonce1, 1);
+    }
+
+    function testLockdownEvent() public {
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        IAllowanceTransfer.PermitBatch memory permit =
+            defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        permit2.permit(from, permit, sig);
+
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount1, defaultAmount);
+        assertEq(expiration1, defaultExpiration);
+        assertEq(nonce1, 1);
+
+        IAllowanceTransfer.TokenSpenderPair[] memory approvals = new IAllowanceTransfer.TokenSpenderPair[](2);
+        approvals[0] = IAllowanceTransfer.TokenSpenderPair(address(token0), address(this));
+        approvals[1] = IAllowanceTransfer.TokenSpenderPair(address(token1), address(this));
+
+        //TODO :fix expecting multiple events, can only check for 1
+        vm.prank(from);
+        vm.expectEmit(true, false, false, false);
+        emit Lockdown(from, address(token0), address(this));
+        permit2.lockdown(approvals);
 
         (amount, expiration, nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, 0);
