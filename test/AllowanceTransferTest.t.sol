@@ -22,7 +22,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     event NonceInvalidation(
         address indexed owner, address indexed token, address indexed spender, uint32 newNonce, uint32 oldNonce
     );
-    event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
+    event Approval(
+        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint64 expiration
+    );
     event Lockdown(address indexed owner, address token, address spender);
 
     MockPermit2 permit2;
@@ -77,7 +79,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     function testApprove() public {
         vm.prank(from);
         vm.expectEmit(true, true, true, true);
-        emit Approval(from, address(token0), address(this), defaultAmount);
+        emit Approval(from, address(token0), address(this), defaultAmount, defaultExpiration);
         permit2.approve(address(token0), address(this), defaultAmount, defaultExpiration);
 
         (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
@@ -177,9 +179,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         // TODO: fix
         // vm.expectEmit(true, true, false, true);
-        // emit Approval(from, tokens[0], address(this), amounts[0]);
+        // emit Approval(from, tokens[0], address(this), amounts[0], defaultExpiration);
         vm.expectEmit(true, true, true, true);
-        emit Approval(from, tokens[1], address(this), amounts[1]);
+        emit Approval(from, tokens[1], address(this), amounts[1], defaultExpiration);
         permit2.permit(from, permit, sig);
 
         (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));

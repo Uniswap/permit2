@@ -15,7 +15,9 @@ interface IAllowanceTransfer {
     );
 
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
-    event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
+    event Approval(
+        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint64 expiration
+    );
 
     /// @notice Emits an event when the owner sets the allowance back to 0 with the lockdown function.
     event Lockdown(address indexed owner, address token, address spender);
