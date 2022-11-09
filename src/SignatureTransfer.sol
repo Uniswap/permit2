@@ -9,6 +9,8 @@ import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
 import {EIP712} from "./EIP712.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
@@ -143,7 +145,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @dev The last 8 bits of the nonce value is the position of the bit in the bitmap
     function bitmapPositions(uint256 nonce) private pure returns (uint256 wordPos, uint256 bitPos) {
         wordPos = uint248(nonce >> 8);
-        bitPos = uint8(nonce & 255);
+        bitPos = uint8(nonce);
     }
 
     /// @notice Checks whether a nonce is taken and sets the bit at the bit position in the bitmap at the word position
@@ -151,10 +153,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param nonce The nonce to spend
     function _useUnorderedNonce(address from, uint256 nonce) internal {
         (uint256 wordPos, uint256 bitPos) = bitmapPositions(nonce);
-        uint256 bitmap = nonceBitmap[from][wordPos];
+        uint256 bit = 1 << bitPos;
+        uint256 flipped = nonceBitmap[from][wordPos] ^= bit;
 
-        if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce();
-
-        nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
+        console2.log(bit);
+        console2.log(flipped);
+        if (flipped & bit == 0) revert InvalidNonce();
     }
 }
