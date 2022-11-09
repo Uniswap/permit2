@@ -132,12 +132,11 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         uint32 nonce = details.nonce;
         address token = details.token;
         uint160 amount = details.amount;
-        uint64 expiration = details.expiration;
         PackedAllowance storage allowed = allowance[owner][token][spender];
 
         if (allowed.nonce != nonce) revert InvalidNonce();
 
-        allowed.updateAll(amount, expiration, nonce);
-        emit Approval(owner, token, spender, amount, expiration);
+        allowed.updateAll(amount, details.expiration, nonce);
+        emit Approval(owner, token, spender, amount, details.expiration);
     }
 }
