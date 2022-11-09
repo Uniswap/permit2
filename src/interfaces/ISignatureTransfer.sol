@@ -111,7 +111,7 @@ interface ISignatureTransfer {
     /// @param witnessTypeName The name of the witness type
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
-    function permitBatchWitnessTransferFrom(
+    function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,

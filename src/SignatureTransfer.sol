@@ -81,7 +81,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     }
 
     /// @inheritdoc ISignatureTransfer
-    function permitBatchWitnessTransferFrom(
+    function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
