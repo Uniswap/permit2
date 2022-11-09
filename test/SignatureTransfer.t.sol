@@ -186,7 +186,6 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         ISignatureTransfer.PermitBatchTransferFrom memory permit = defaultERC20PermitMultiple(tokens, nonce);
         bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        // address(0) gets sent to spender
         address[] memory to = AddressBuilder.fill(1, address(address2)).push(address(address0));
         ISignatureTransfer.SignatureTransferDetails[] memory toAmountPairs =
             StructBuilder.fillSigTransferDetails(defaultAmount, to);
@@ -201,6 +200,34 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo0 + defaultAmount);
+        assertEq(token1.balanceOf(address0), startBalanceTo1 + defaultAmount);
+    }
+
+    function testPermitBatchMultiPermitSingleTransfer() public {
+        uint256 nonce = 0;
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        ISignatureTransfer.PermitBatchTransferFrom memory permit = defaultERC20PermitMultiple(tokens, nonce);
+
+        bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        // must fill address to even though token0 wont get sent.
+        // transfer details must be lenght of permit
+        address[] memory to = AddressBuilder.fill(1, address(address0)).push(address(address0));
+        ISignatureTransfer.SignatureTransferDetails[] memory toAmountPairs =
+            StructBuilder.fillSigTransferDetails(defaultAmount, to);
+        // spender doesnt need token0 even though user permitted it
+        toAmountPairs[0].requestedAmount = 0;
+
+        uint256 startBalanceFrom0 = token0.balanceOf(from);
+        uint256 startBalanceFrom1 = token1.balanceOf(from);
+        uint256 startBalanceTo0 = token0.balanceOf(address2);
+        uint256 startBalanceTo1 = token1.balanceOf(address0);
+
+        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+
+        assertEq(token0.balanceOf(from), startBalanceFrom0);
+        assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
+        assertEq(token0.balanceOf(address2), startBalanceTo0);
         assertEq(token1.balanceOf(address0), startBalanceTo1 + defaultAmount);
     }
 
