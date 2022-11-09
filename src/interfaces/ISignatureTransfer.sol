@@ -96,7 +96,7 @@ interface ISignatureTransfer {
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param signature The signature to verify
-    function permitBatchTransferFrom(
+    function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
@@ -111,7 +111,7 @@ interface ISignatureTransfer {
     /// @param witnessTypeName The name of the witness type
     /// @param witnessType The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
-    function permitBatchWitnessTransferFrom(
+    function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
