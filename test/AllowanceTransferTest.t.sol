@@ -103,6 +103,33 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(nonce, 1);
     }
 
+    function testSetAllowanceCompactSig() public {
+        IAllowanceTransfer.PermitSingle memory permit =
+            defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getCompactPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        assertEq(sig.length, 64);
+
+        snapStart("permitCompactSig");
+        permit2.permit(from, permit, sig);
+        snapEnd();
+
+        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+    }
+
+    function testSetAllowanceIncorrectSigLength() public {
+        IAllowanceTransfer.PermitSingle memory permit =
+            defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sigExtra = bytes.concat(sig, bytes1(uint8(1)));
+        assertEq(sigExtra.length, 66);
+
+        vm.expectRevert(SignatureVerification.InvalidSignature.selector);
+        permit2.permit(from, permit, sigExtra);
+    }
+
     function testSetAllowanceDirtyWrite() public {
         IAllowanceTransfer.PermitSingle memory permit =
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, dirtyNonce);
