@@ -81,7 +81,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         setERC20TestTokenApprovals(vm, from, address(permit2));
     }
 
-    function testPermitTransferFromL() public {
+    function testPermitTransferFrom() public {
         uint256 nonce = 0;
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
@@ -93,6 +93,34 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
+    }
+
+    function testPermitTransferFromCompactSig() public {
+        uint256 nonce = 0;
+        ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig = getCompactPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        assertEq(sig.length, 64);
+
+        uint256 startBalanceFrom = token0.balanceOf(from);
+        uint256 startBalanceTo = token0.balanceOf(address2);
+
+        snapStart("permitTransferFromCompactSig");
+        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        snapEnd();
+
+        assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
+        assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
+    }
+
+    function testPermitTransferFromIncorrectSigLength() public {
+        uint256 nonce = 0;
+        ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sigExtra = bytes.concat(sig, bytes1(uint8(0)));
+        assertEq(sigExtra.length, 66);
+
+        vm.expectRevert(SignatureVerification.InvalidSignature.selector);
+        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sigExtra);
     }
 
     function testPermitTransferFromToSpender() public {

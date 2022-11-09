@@ -126,13 +126,13 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     }
 
     function testPermit2InvalidAmount() public {
-        (,, uint32 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
 
         IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
             details: IAllowanceTransfer.PermitDetails({
                 token: address(nonPermitToken),
                 amount: type(uint160).max,
-                expiration: type(uint64).max,
+                expiration: type(uint48).max,
                 nonce: nonce
             }),
             spender: address(0xCAFE),
@@ -165,13 +165,13 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     //////////////////////////////////////////////////////////////*/
 
     function testPermit2Full() public {
-        (,, uint32 nonce) = permit2.allowance(PK_OWNER, address(token), address(0xCAFE));
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(token), address(0xCAFE));
 
         IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
             details: IAllowanceTransfer.PermitDetails({
                 token: address(token),
                 amount: 1e18,
-                expiration: type(uint64).max,
+                expiration: type(uint48).max,
                 nonce: nonce
             }),
             spender: address(0xCAFE),
@@ -184,13 +184,13 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     }
 
     function testPermit2NonPermitToken() public {
-        (,, uint32 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
 
         IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
             details: IAllowanceTransfer.PermitDetails({
                 token: address(nonPermitToken),
                 amount: 1e18,
-                expiration: type(uint64).max,
+                expiration: type(uint48).max,
                 nonce: nonce
             }),
             spender: address(0xCAFE),
@@ -281,13 +281,13 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     }
 
     function testPermit2PlusTransferFrom2WithNonPermit() public {
-        (,, uint32 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
 
         IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
             details: IAllowanceTransfer.PermitDetails({
                 token: address(nonPermitToken),
                 amount: 1e18,
-                expiration: type(uint64).max,
+                expiration: type(uint48).max,
                 nonce: nonce
             }),
             spender: address(0xCAFE),

@@ -6,14 +6,14 @@ import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
 
 library PermitHash {
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
-        keccak256("PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)");
+        keccak256("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)");
 
     bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
-        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
+        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
     );
 
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
+        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
     );
 
     bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");

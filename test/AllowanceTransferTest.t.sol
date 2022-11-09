@@ -20,10 +20,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     using stdStorage for StdStorage;
 
     event NonceInvalidation(
-        address indexed owner, address indexed token, address indexed spender, uint32 newNonce, uint32 oldNonce
+        address indexed owner, address indexed token, address indexed spender, uint48 newNonce, uint48 oldNonce
     );
     event Approval(
-        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint64 expiration
+        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint48 expiration
     );
     event Lockdown(address indexed owner, address token, address spender);
 
@@ -39,9 +39,9 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     address address2 = address(2);
 
     uint160 defaultAmount = 10 ** 18;
-    uint32 defaultNonce = 0;
+    uint48 defaultNonce = 0;
     uint32 dirtyNonce = 1;
-    uint64 defaultExpiration = uint64(block.timestamp + 5);
+    uint48 defaultExpiration = uint48(block.timestamp + 5);
 
     // has some balance of token0
     address address3 = address(3);
@@ -82,7 +82,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         emit Approval(from, address(token0), address(this), defaultAmount, defaultExpiration);
         permit2.approve(address(token0), address(this), defaultAmount, defaultExpiration);
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 0);
@@ -97,10 +97,37 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         permit2.permit(from, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
+    }
+
+    function testSetAllowanceCompactSig() public {
+        IAllowanceTransfer.PermitSingle memory permit =
+            defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getCompactPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        assertEq(sig.length, 64);
+
+        snapStart("permitCompactSig");
+        permit2.permit(from, permit, sig);
+        snapEnd();
+
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+    }
+
+    function testSetAllowanceIncorrectSigLength() public {
+        IAllowanceTransfer.PermitSingle memory permit =
+            defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sigExtra = bytes.concat(sig, bytes1(uint8(1)));
+        assertEq(sigExtra.length, 66);
+
+        vm.expectRevert(SignatureVerification.InvalidSignature.selector);
+        permit2.permit(from, permit, sigExtra);
     }
 
     function testSetAllowanceDirtyWrite() public {
@@ -112,7 +139,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         permit2.permit(fromDirty, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(fromDirty, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 2);
@@ -125,7 +152,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         permit2.permit(from, permit, sig);
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
@@ -143,7 +170,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 2);
-        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2.allowance(from, address(token1), address(this));
         assertEq(amount1, defaultAmount);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
@@ -159,11 +186,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         permit2.permit(from, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
-        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2.allowance(from, address(token1), address(this));
         assertEq(amount1, defaultAmount);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
@@ -184,11 +211,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         emit Approval(from, tokens[1], address(this), amounts[1], defaultExpiration);
         permit2.permit(from, permit, sig);
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
-        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2.allowance(from, address(token1), address(this));
         assertEq(amount1, defaultAmount);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
@@ -204,11 +231,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         permit2.permit(fromDirty, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(fromDirty, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(fromDirty, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 2);
-        (uint160 amount1, uint64 expiration1, uint32 nonce1) =
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) =
             permit2.allowance(fromDirty, address(token1), address(this));
         assertEq(amount1, defaultAmount);
         assertEq(expiration1, defaultExpiration);
@@ -409,10 +436,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(from, permit, sig);
-        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (,, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
 
-        (uint160 amount, uint64 expiration,) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration,) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
 
@@ -430,7 +457,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         vm.expectEmit(true, true, true, true);
         emit NonceInvalidation(from, address(token0), address(this), 1, defaultNonce);
         permit2.invalidateNonces(address(token0), address(this), 1);
-        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (,, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
 
         vm.expectRevert(InvalidNonce.selector);
@@ -444,7 +471,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         // Valid permit, uses nonce 0.
         permit2.permit(from, permit, sig);
-        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (,, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
 
         permit = defaultERC20PermitAllowance(address(token1), defaultAmount, defaultExpiration, nonce);
@@ -483,7 +510,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         vm.stopPrank();
 
         permit2.permit(from, permit, sig);
-        (,, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (,, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(nonce, 1);
     }
 
@@ -520,11 +547,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         permit2.permit(from, permit, sig);
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
-        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2.allowance(from, address(token1), address(this));
         assertEq(amount1, defaultAmount);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
@@ -556,11 +583,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         permit2.permit(from, permit, sig);
 
-        (uint160 amount, uint64 expiration, uint32 nonce) = permit2.allowance(from, address(token0), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
-        (uint160 amount1, uint64 expiration1, uint32 nonce1) = permit2.allowance(from, address(token1), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2.allowance(from, address(token1), address(this));
         assertEq(amount1, defaultAmount);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
