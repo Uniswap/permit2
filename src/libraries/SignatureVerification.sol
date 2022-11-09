@@ -19,13 +19,14 @@ library SignatureVerification {
             if (signature.length == 65) {
                 (r, s) = abi.decode(signature, (bytes32, bytes32));
                 v = uint8(signature[64]);
-            } else {
+            } else if (signature.length == 64) {
                 // EIP-2098
-                if (signature.length != 64) revert InvalidSignature();
                 bytes32 vs;
                 (r, vs) = abi.decode(signature, (bytes32, bytes32));
                 s = vs & UPPER_BIT_MASK;
                 v = uint8(uint256(vs >> 255)) + 27;
+            } else {
+                revert InvalidSignature();
             }
             address signer = ecrecover(hash, v, r, s);
             if (signer == address(0)) revert InvalidSignature();
