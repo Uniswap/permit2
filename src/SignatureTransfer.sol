@@ -71,17 +71,17 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     }
 
     /// @inheritdoc ISignatureTransfer
-    function permitBatchTransferFrom(
+    function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(permit, permit.hash(), owner, transferDetails, signature);
+        _permitTransferFrom(permit, permit.hash(), owner, transferDetails, signature);
     }
 
     /// @inheritdoc ISignatureTransfer
-    function permitBatchWitnessTransferFrom(
+    function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
@@ -90,7 +90,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         string calldata witnessType,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(
+        _permitTransferFrom(
             permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, transferDetails, signature
         );
     }
@@ -101,7 +101,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
     /// @param signature The signature to verify
-    function _permitBatchTransferFrom(
+    function _permitTransferFrom(
         PermitBatchTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
@@ -123,7 +123,10 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
                 if (requestedAmount > permitted.amount) revert InvalidAmount();
 
-                ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+                if (requestedAmount != 0) {
+                    // allow spender to specify which of the permitted tokens should be transferred
+                    ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+                }
             }
         }
     }

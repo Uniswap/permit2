@@ -110,7 +110,7 @@ library Permit2Lib {
             // If the initial DOMAIN_SEPARATOR call on the token failed or a
             // subsequent call to permit failed, fall back to using Permit2.
 
-            (,, uint32 nonce) = PERMIT2.allowance(owner, address(token), spender);
+            (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
 
             PERMIT2.permit(
                 owner,
@@ -120,7 +120,7 @@ library Permit2Lib {
                         amount: amount.toUint160(),
                         // Use an unlimited expiration because it most
                         // closely mimics how a standard approval works.
-                        expiration: type(uint64).max,
+                        expiration: type(uint48).max,
                         nonce: nonce
                     }),
                     spender: spender,
