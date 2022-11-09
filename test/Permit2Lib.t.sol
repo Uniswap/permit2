@@ -14,6 +14,7 @@ import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
 import {MockPermit2Lib} from "./mocks/MockPermit2Lib.sol";
 import {SafeCast160} from "../src/libraries/SafeCast160.sol";
+import {MockInvalidDomainSep} from "./mocks/MockInvalidDomainSep.sol";
 
 contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     bytes32 constant PERMIT_TYPEHASH =
@@ -33,6 +34,7 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     MockERC20 immutable token = new MockERC20("Mock Token", "MOCK", 18);
 
     MockNonPermitERC20 immutable nonPermitToken = new MockNonPermitERC20("Mock NonPermit Token", "MOCK", 18);
+    MockInvalidDomainSep immutable invalidDSToken = new MockInvalidDomainSep();
 
     constructor() {
         PK = 0xBEEF;
@@ -200,6 +202,27 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
         Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    }
+
+    function testPermit2InvalidDSToken() public {
+        (,, uint32 nonce) = permit2.allowance(PK_OWNER, address(invalidDSToken), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(invalidDSToken),
+                amount: 1e18,
+                expiration: type(uint64).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        Permit2Lib.permit2(
+            MockERC20(address(invalidDSToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
