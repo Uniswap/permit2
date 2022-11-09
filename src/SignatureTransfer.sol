@@ -9,8 +9,6 @@ import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
 import {EIP712} from "./EIP712.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
@@ -156,8 +154,6 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         uint256 bit = 1 << bitPos;
         uint256 flipped = nonceBitmap[from][wordPos] ^= bit;
 
-        console2.log(bit);
-        console2.log(flipped);
         if (flipped & bit == 0) revert InvalidNonce();
     }
 }
