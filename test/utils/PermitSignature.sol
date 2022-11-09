@@ -10,14 +10,14 @@ import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
 
 contract PermitSignature is Test {
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
-        keccak256("PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)");
+        keccak256("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)");
 
     bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
-        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
+        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
     );
 
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint64 expiration,uint32 nonce)"
+        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
     );
 
     bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
@@ -235,7 +235,7 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function defaultERC20PermitAllowance(address token0, uint160 amount, uint64 expiration, uint32 nonce)
+    function defaultERC20PermitAllowance(address token0, uint160 amount, uint48 expiration, uint48 nonce)
         internal
         view
         returns (IAllowanceTransfer.PermitSingle memory)
@@ -249,7 +249,7 @@ contract PermitSignature is Test {
         });
     }
 
-    function defaultERC20PermitBatchAllowance(address[] memory tokens, uint160 amount, uint64 expiration, uint32 nonce)
+    function defaultERC20PermitBatchAllowance(address[] memory tokens, uint160 amount, uint48 expiration, uint48 nonce)
         internal
         view
         returns (IAllowanceTransfer.PermitBatch memory)

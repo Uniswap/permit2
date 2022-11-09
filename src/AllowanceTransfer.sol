@@ -23,7 +23,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     mapping(address => mapping(address => mapping(address => PackedAllowance))) public allowance;
 
     /// @inheritdoc IAllowanceTransfer
-    function approve(address token, address spender, uint160 amount, uint64 expiration) external {
+    function approve(address token, address spender, uint160 amount, uint48 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.updateAmountAndExpiration(amount, expiration);
         emit Approval(msg.sender, token, spender, amount, expiration);
@@ -110,14 +110,14 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function invalidateNonces(address token, address spender, uint32 newNonce) public {
-        uint32 oldNonce = allowance[msg.sender][token][spender].nonce;
+    function invalidateNonces(address token, address spender, uint48 newNonce) public {
+        uint48 oldNonce = allowance[msg.sender][token][spender].nonce;
 
         if (newNonce <= oldNonce) revert InvalidNonce();
 
         // Limit the amount of nonces that can be invalidated in one transaction.
         unchecked {
-            uint32 delta = newNonce - oldNonce;
+            uint48 delta = newNonce - oldNonce;
             if (delta > type(uint16).max) revert ExcessiveInvalidation();
         }
 
@@ -129,10 +129,10 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @dev Will check that the signed nonce is equal to the current nonce and then incrememnt the nonce value by 1.
     /// @dev Emits an approval event.
     function _updateApproval(PermitDetails memory details, address owner, address spender) private {
-        uint32 nonce = details.nonce;
+        uint48 nonce = details.nonce;
         address token = details.token;
         uint160 amount = details.amount;
-        uint64 expiration = details.expiration;
+        uint48 expiration = details.expiration;
         PackedAllowance storage allowed = allowance[owner][token][spender];
 
         if (allowed.nonce != nonce) revert InvalidNonce();
