@@ -503,7 +503,6 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         // permit token0 for 1 ** 18
         IAllowanceTransfer.AllowanceTransferDetails[] memory transferDetails =
             StructBuilder.fillAllowanceTransferDetail(3, address(token0), 1 ** 18, address0);
-        // not changing snap names so I can see diff
         snapStart("batchTransferFrom");
         permit2.transferFrom(from, transferDetails);
         snapEnd();
