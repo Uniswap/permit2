@@ -84,7 +84,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
                 revert InsufficientAllowance();
             } else {
                 unchecked {
-                    allowed.amount -= amount;
+                    allowed.amount = uint160(maxAmount) - amount;
                 }
             }
         }
