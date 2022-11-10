@@ -50,6 +50,11 @@ FOUNDRY_PROFILE=integration forge test
 forge snapshot
 ```
 
+### Deploy
+```sh
+forge script --broadcast --rpc-url <RPC-URL> --private-key <PRIVATE_KEY> script/DeployPermit2.s.sol:DeployPermit2
+```
+
 ## Acknowledgments
 
 Inspired by [merklejerk](https://github.com/merklejerk)'s [permit-everywhere](https://github.com/merklejerk/permit-everywhere) contracts which introduce permit based approvals for all tokens regardless of EIP2612 support.
