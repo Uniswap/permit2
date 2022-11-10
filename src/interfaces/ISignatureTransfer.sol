@@ -60,6 +60,7 @@ interface ISignatureTransfer {
     function nonceBitmap(address, uint256) external view returns (uint256);
 
     /// @notice Transfers a token using a signed permit message
+    /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
@@ -76,6 +77,7 @@ interface ISignatureTransfer {
     /// @notice Transfers a token using a signed permit message
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @dev The witness type string must follow EIP712 ordering of nested structs and must include the TokenPermissions type definition
+    /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
@@ -96,6 +98,7 @@ interface ISignatureTransfer {
     /// @notice Transfers multiple tokens using a signed permit message
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
+    /// @param transferDetails Specifies the recipient and requested amount for the token transfer
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
@@ -109,6 +112,7 @@ interface ISignatureTransfer {
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
+    /// @param transferDetails Specifies the recipient and requested amount for the token transfer
     /// @param witness Extra data to include when checking the user signature
     /// @param witnessTypeString The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
