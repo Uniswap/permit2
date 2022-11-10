@@ -47,7 +47,7 @@ library Permit2Lib {
         }
 
         // We'll fall back to using Permit2 if calling transferFrom on the token directly reverted.
-        if (!success) PERMIT2.transferFrom(address(token), from, to, amount.toUint160());
+        if (!success) PERMIT2.transferFrom(from, to, amount.toUint160(), address(token));
     }
 
     /*//////////////////////////////////////////////////////////////

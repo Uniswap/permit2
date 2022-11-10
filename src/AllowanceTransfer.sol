@@ -56,7 +56,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function transferFrom(address token, address from, address to, uint160 amount) external {
+    function transferFrom(address from, address to, uint160 amount, address token) external {
         _transfer(token, from, to, amount);
     }
 
