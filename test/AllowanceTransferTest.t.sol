@@ -485,8 +485,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         emit NonceInvalidation(from, address(token0), address(this), 33, nonce1);
         permit2.invalidateNonces(address(token0), address(this), 33);
-        (,, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
-        assertEq(nonce, 33);
+        (,, uint48 nonce2) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce2, 33);
 
         vm.expectRevert(InvalidNonce.selector);
         permit2.permit(from, permit, sig);
