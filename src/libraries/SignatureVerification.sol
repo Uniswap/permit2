@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import {IERC1271} from "../interfaces/IERC1271.sol";
 
 library SignatureVerification {
+    error InvalidSignatureLength();
     error InvalidSignature();
     error InvalidSigner();
     error InvalidContractSignature();
@@ -26,7 +27,7 @@ library SignatureVerification {
                 s = vs & UPPER_BIT_MASK;
                 v = uint8(uint256(vs >> 255)) + 27;
             } else {
-                revert InvalidSignature();
+                revert InvalidSignatureLength();
             }
             address signer = ecrecover(hash, v, r, s);
             if (signer == address(0)) revert InvalidSignature();

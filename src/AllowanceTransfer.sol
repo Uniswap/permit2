@@ -31,7 +31,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function permit(address owner, PermitSingle memory permitSingle, bytes calldata signature) external {
-        if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired();
+        if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired(permitSingle.sigDeadline);
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitSingle.hash()), owner);
@@ -41,7 +41,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external {
-        if (block.timestamp > permitBatch.sigDeadline) revert SignatureExpired();
+        if (block.timestamp > permitBatch.sigDeadline) revert SignatureExpired(permitBatch.sigDeadline);
 
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitBatch.hash()), owner);
@@ -76,12 +76,12 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
-        if (block.timestamp > allowed.expiration) revert AllowanceExpired();
+        if (block.timestamp > allowed.expiration) revert AllowanceExpired(allowed.expiration);
 
         uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
             if (amount > maxAmount) {
-                revert InsufficientAllowance();
+                revert InsufficientAllowance(maxAmount);
             } else {
                 unchecked {
                     allowed.amount = uint160(maxAmount) - amount;

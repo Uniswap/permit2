@@ -5,8 +5,9 @@ pragma solidity ^0.8.17;
 /// @notice Handles ERC20 token transfers through signature based actions
 /// @dev Requires user's token approval on the Permit2 contract
 interface ISignatureTransfer {
+    /// @param maxAmount The maximum amount a spender can request to transfer
+    error InvalidAmount(uint256 maxAmount);
     error NotSpender();
-    error InvalidAmount();
     error LengthMismatch();
 
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.

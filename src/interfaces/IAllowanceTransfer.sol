@@ -5,8 +5,10 @@ pragma solidity ^0.8.17;
 /// @notice Handles ERC20 token transfers through signature based actions
 /// @dev Requires user's token approval on the Permit2 contract
 interface IAllowanceTransfer {
-    error AllowanceExpired();
-    error InsufficientAllowance();
+    /// @param deadline The timestamp at which the allowed amount is no longer valid
+    error AllowanceExpired(uint256 deadline);
+    /// @param amount The maximum amount allowed
+    error InsufficientAllowance(uint256 amount);
     error ExcessiveInvalidation();
 
     /// @notice Emits an event when the owner successfully invalidates an ordered nonce.

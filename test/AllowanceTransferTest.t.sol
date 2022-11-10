@@ -126,7 +126,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         bytes memory sigExtra = bytes.concat(sig, bytes1(uint8(1)));
         assertEq(sigExtra.length, 66);
 
-        vm.expectRevert(SignatureVerification.InvalidSignature.selector);
+        vm.expectRevert(SignatureVerification.InvalidSignatureLength.selector);
         permit2.permit(from, permit, sigExtra);
     }
 
@@ -351,9 +351,11 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
             defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
+        uint256 sigDeadline = block.timestamp + 100;
+
         vm.warp(block.timestamp + 101);
         snapStart("permitSignatureExpired");
-        vm.expectRevert(SignatureExpired.selector);
+        vm.expectRevert(abi.encodeWithSelector(SignatureExpired.selector, sigDeadline));
         permit2.permit(from, permit, sig);
         snapEnd();
     }
@@ -472,20 +474,20 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
 
         // Valid permit, uses nonce 0.
         permit2.permit(from, permit, sig);
-        (,, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
-        assertEq(nonce, 1);
+        (,, uint48 nonce1) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce1, 1);
 
-        permit = defaultERC20PermitAllowance(address(token1), defaultAmount, defaultExpiration, nonce);
+        permit = defaultERC20PermitAllowance(address(token1), defaultAmount, defaultExpiration, nonce1);
         sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         // Invalidates the 9 nonces by setting the new nonce to 33.
         vm.prank(from);
         vm.expectEmit(true, true, true, true);
 
-        emit NonceInvalidation(from, address(token0), address(this), 33, nonce);
+        emit NonceInvalidation(from, address(token0), address(this), 33, nonce1);
         permit2.invalidateNonces(address(token0), address(this), 33);
-        (,, nonce) = permit2.allowance(from, address(token0), address(this));
-        assertEq(nonce, 33);
+        (,, uint48 nonce2) = permit2.allowance(from, address(token0), address(this));
+        assertEq(nonce2, 33);
 
         vm.expectRevert(InvalidNonce.selector);
         permit2.permit(from, permit, sig);

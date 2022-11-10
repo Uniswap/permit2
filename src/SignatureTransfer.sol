@@ -60,8 +60,8 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         uint256 requestedAmount,
         bytes calldata signature
     ) internal {
-        if (block.timestamp > permit.deadline) revert SignatureExpired();
-        if (requestedAmount > permit.permitted.amount) revert InvalidAmount();
+        if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
+        if (requestedAmount > permit.permitted.amount) revert InvalidAmount(permit.permitted.amount);
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(_hashTypedData(dataHash), owner);
@@ -108,7 +108,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     ) internal {
         uint256 numPermitted = permit.permitted.length;
 
-        if (block.timestamp > permit.deadline) revert SignatureExpired();
+        if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
         if (numPermitted != transferDetails.length) revert LengthMismatch();
 
         _useUnorderedNonce(owner, permit.nonce);
@@ -119,7 +119,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
                 TokenPermissions memory permitted = permit.permitted[i];
                 uint256 requestedAmount = transferDetails[i].requestedAmount;
 
-                if (requestedAmount > permitted.amount) revert InvalidAmount();
+                if (requestedAmount > permitted.amount) revert InvalidAmount(permitted.amount);
 
                 if (requestedAmount != 0) {
                     // allow spender to specify which of the permitted tokens should be transferred

@@ -123,7 +123,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bytes memory sigExtra = bytes.concat(sig, bytes1(uint8(0)));
         assertEq(sigExtra.length, 66);
 
-        vm.expectRevert(SignatureVerification.InvalidSignature.selector);
+        vm.expectRevert(SignatureVerification.InvalidSignatureLength.selector);
         permit2.permitTransferFrom(permit, from, address2, defaultAmount, sigExtra);
     }
 
