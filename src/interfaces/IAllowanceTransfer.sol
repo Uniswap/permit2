@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 /// @title AllowanceTransfer
-/// @notice Handles ERC20 token transfers through signature based actions
+/// @notice Handles ERC20 token permissions through signature based allowance setting and ERC20 token transfers by checking allowed amounts
 /// @dev Requires user's token approval on the Permit2 contract
 interface IAllowanceTransfer {
     /// @param deadline The timestamp at which the allowed amount is no longer valid
