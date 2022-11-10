@@ -58,6 +58,7 @@ interface IAllowanceTransfer {
 
     /// @notice The saved permissions
     /// @dev This info is saved per owner, per token, per spender and all signed over in the permit message
+    /// @dev Setting amount to type(uint160).max sets an unlimited approval
     struct PackedAllowance {
         // amount allowed
         uint160 amount;
@@ -93,6 +94,7 @@ interface IAllowanceTransfer {
     /// @param amount The approved amount of the token
     /// @param expiration The timestamp at which the approval is no longer valid
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve
+    /// @dev Setting amount to type(uint160).max sets an unlimited approval
     function approve(address token, address spender, uint160 amount, uint48 expiration) external;
 
     /// @notice Permit a spender to a given amount of the owners token via the owner's EIP-712 signature
