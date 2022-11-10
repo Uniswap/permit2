@@ -82,8 +82,8 @@ library Permit2Lib {
         assembly {
             success :=
                 and(
-                    // Should resolve false if it returned <32 bytes or its first word is 0.
-                    and(iszero(iszero(mload(0))), gt(returndatasize(), 31)),
+                    // Should resolve false if its not 32 bytes or its first word is 0.
+                    and(iszero(iszero(mload(0))), eq(returndatasize(), 32)),
                     // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
                     // Counterintuitively, this call must be positioned second to the and() call in the
                     // surrounding and() call or else returndatasize() will be zero during the computation.
