@@ -30,9 +30,9 @@ interface ISignatureTransfer {
         uint256 deadline;
     }
 
-    /// @notice Specifies the recipient address and amount for transfers.
-    /// @dev Used for batch transfers.
-    /// Recipients and amounts correspond to the index of the signed token permissions array.
+    /// @notice Specifies the recipient address and amount for batched transfers.
+    /// @dev Recipients and amounts correspond to the index of the signed token permissions array.
+    /// @dev Reverts if the requested amount is greater than the permitted signed amount.
     struct SignatureTransferDetails {
         // recipient address
         address to;
@@ -60,7 +60,6 @@ interface ISignatureTransfer {
     function nonceBitmap(address, uint256) external view returns (uint256);
 
     /// @notice Transfers a token using a signed permit message
-    /// @dev If to is the zero address, the tokens are sent to the signed spendegr
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
@@ -76,7 +75,6 @@ interface ISignatureTransfer {
 
     /// @notice Transfers a token using a signed permit message
     /// @notice Includes extra data provided by the caller to verify signature over
-    /// @dev If to is the zero address, the tokens are sent to the spender
     /// @dev The witness type string must follow EIP712 ordering of nested structs and must include the TokenPermissions type definition
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
