@@ -109,12 +109,14 @@ interface IAllowanceTransfer {
 
     /// @notice Transfer approved tokens from one address to another.
     /// @param from The address to transfer from.
-    /// @dev Requires either the from address to have approved at least the desired amount
-    /// of tokens or msg.sender to be approved to manage all of the from addresses's tokens.
+    /// @dev Requires the from address to have approved at least the desired amount
+    /// of tokens to msg.sender.
     function transferFrom(address from, address to, uint160 amount, address token) external;
 
     /// @notice Transfer approved tokens in a batch
     /// @param transferDetails Array of recipients for the transfers
+    /// @dev Requires the from address to have approved at least the desired amount
+    /// of tokens to msg.sender.
     function transferFrom(AllowanceTransferDetails[] calldata transferDetails) external;
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
