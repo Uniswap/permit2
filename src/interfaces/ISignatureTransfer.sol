@@ -54,10 +54,13 @@ interface ISignatureTransfer {
 
     /// @notice A bitmap used for replay protection
     /// @dev Uses unordered nonces so that permit messages do not need to be spent in a certain order
+    /// @dev This is a mapping indexed first by the token owner, then by an index specified in the nonce
+    /// @dev It returns a uint256 bitmap
+    /// @dev The index, or wordPosition is capped at type(uint248).max
     function nonceBitmap(address, uint256) external returns (uint256);
 
     /// @notice Transfers a token using a signed permit message
-    /// @dev If to is the zero address, the tokens are sent to the signed spender
+    /// @dev If to is the zero address, the tokens are sent to the signed spendegr
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
