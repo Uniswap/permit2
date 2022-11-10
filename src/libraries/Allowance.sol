@@ -10,15 +10,15 @@ library Allowance {
     function updateAll(
         IAllowanceTransfer.PackedAllowance storage allowed,
         uint160 amount,
-        uint64 expiration,
-        uint32 nonce
+        uint48 expiration,
+        uint48 nonce
     ) internal {
-        uint32 storedNonce;
+        uint48 storedNonce;
         unchecked {
             storedNonce = nonce + 1;
         }
 
-        uint64 storedExpiration = expiration == 0 ? uint64(block.timestamp) : expiration;
+        uint48 storedExpiration = expiration == 0 ? uint48(block.timestamp) : expiration;
 
         uint256 word = pack(amount, storedExpiration, storedNonce);
         assembly {
@@ -31,15 +31,15 @@ library Allowance {
     function updateAmountAndExpiration(
         IAllowanceTransfer.PackedAllowance storage allowed,
         uint160 amount,
-        uint64 expiration
+        uint48 expiration
     ) internal {
         // If the inputted expiration is 0, the allowance only lasts the duration of the block.
-        allowed.expiration = expiration == 0 ? uint64(block.timestamp) : expiration;
+        allowed.expiration = expiration == 0 ? uint48(block.timestamp) : expiration;
         allowed.amount = amount;
     }
 
     /// @notice Computes the packed slot of the amount, expiration, and nonce that make up PackedAllowance
-    function pack(uint160 amount, uint64 expiration, uint32 nonce) internal pure returns (uint256 word) {
-        word = (uint256(nonce) << 224) | uint256(expiration) << 160 | amount;
+    function pack(uint160 amount, uint48 expiration, uint48 nonce) internal pure returns (uint256 word) {
+        word = (uint256(nonce) << 208) | uint256(expiration) << 160 | amount;
     }
 }

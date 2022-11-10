@@ -36,12 +36,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address to,
         uint256 requestedAmount,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
+        string calldata witnessTypeString,
         bytes calldata signature
     ) external {
         _permitTransferFrom(
-            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, to, requestedAmount, signature
+            permit, permit.hashWithWitness(witness, witnessTypeString), owner, to, requestedAmount, signature
         );
     }
 
@@ -62,7 +61,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes calldata signature
     ) internal {
         if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
-        if (requestedAmount > permit.permitted.amount) revert InvalidAmount();
+        if (requestedAmount > permit.permitted.amount) revert InvalidAmount(permit.permitted.amount);
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(_hashTypedData(dataHash), owner);
@@ -71,27 +70,26 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     }
 
     /// @inheritdoc ISignatureTransfer
-    function permitBatchTransferFrom(
+    function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(permit, permit.hash(), owner, transferDetails, signature);
+        _permitTransferFrom(permit, permit.hash(), owner, transferDetails, signature);
     }
 
     /// @inheritdoc ISignatureTransfer
-    function permitBatchWitnessTransferFrom(
+    function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
+        string calldata witnessTypeString,
         bytes calldata signature
     ) external {
-        _permitBatchTransferFrom(
-            permit, permit.hashWithWitness(witness, witnessTypeName, witnessType), owner, transferDetails, signature
+        _permitTransferFrom(
+            permit, permit.hashWithWitness(witness, witnessTypeString), owner, transferDetails, signature
         );
     }
 
@@ -101,7 +99,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
     /// @param signature The signature to verify
-    function _permitBatchTransferFrom(
+    function _permitTransferFrom(
         PermitBatchTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
@@ -121,9 +119,12 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
                 TokenPermissions memory permitted = permit.permitted[i];
                 uint256 requestedAmount = transferDetails[i].requestedAmount;
 
-                if (requestedAmount > permitted.amount) revert InvalidAmount();
+                if (requestedAmount > permitted.amount) revert InvalidAmount(permitted.amount);
 
-                ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+                if (requestedAmount != 0) {
+                    // allow spender to specify which of the permitted tokens should be transferred
+                    ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+                }
             }
         }
     }
@@ -143,7 +144,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @dev The last 8 bits of the nonce value is the position of the bit in the bitmap
     function bitmapPositions(uint256 nonce) private pure returns (uint256 wordPos, uint256 bitPos) {
         wordPos = uint248(nonce >> 8);
-        bitPos = uint8(nonce & 255);
+        bitPos = uint8(nonce);
     }
 
     /// @notice Checks whether a nonce is taken and sets the bit at the bit position in the bitmap at the word position
@@ -151,10 +152,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param nonce The nonce to spend
     function _useUnorderedNonce(address from, uint256 nonce) internal {
         (uint256 wordPos, uint256 bitPos) = bitmapPositions(nonce);
-        uint256 bitmap = nonceBitmap[from][wordPos];
+        uint256 bit = 1 << bitPos;
+        uint256 flipped = nonceBitmap[from][wordPos] ^= bit;
 
-        if ((bitmap >> bitPos) & 1 == 1) revert InvalidNonce(nonce);
-
-        nonceBitmap[from][wordPos] = bitmap | (1 << bitPos);
+        if (flipped & bit == 0) revert InvalidNonce();
     }
 }

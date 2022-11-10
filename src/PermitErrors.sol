@@ -8,5 +8,4 @@ pragma solidity 0.8.17;
 error SignatureExpired(uint256 signatureDeadline);
 
 /// @notice Thrown when validating that the inputted nonce has not been used
-/// @param nonce The invalid nonce.
-error InvalidNonce(uint256 nonce);
+error InvalidNonce();

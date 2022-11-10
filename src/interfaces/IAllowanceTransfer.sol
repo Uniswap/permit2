@@ -5,17 +5,21 @@ pragma solidity 0.8.17;
 /// @notice Handles ERC20 token transfers through signature based actions
 /// @dev Requires user's token approval on the Permit2 contract
 interface IAllowanceTransfer {
-    error AllowanceExpired();
-    error InsufficientAllowance();
+    /// @param deadline The timestamp at which the allowed amount is no longer valid
+    error AllowanceExpired(uint256 deadline);
+    /// @param amount The maximum amount allowed
+    error InsufficientAllowance(uint256 amount);
     error ExcessiveInvalidation();
 
     /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
     event NonceInvalidation(
-        address indexed owner, address indexed token, address indexed spender, uint32 newNonce, uint32 oldNonce
+        address indexed owner, address indexed token, address indexed spender, uint48 newNonce, uint48 oldNonce
     );
 
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
-    event Approval(address indexed owner, address indexed token, address indexed spender, uint160 amount);
+    event Approval(
+        address indexed owner, address indexed token, address indexed spender, uint160 amount, uint48 expiration
+    );
 
     /// @notice Emits an event when the owner sets the allowance back to 0 with the lockdown function.
     event Lockdown(address indexed owner, address token, address spender);
@@ -27,9 +31,9 @@ interface IAllowanceTransfer {
         // the maximum amount allowed to spend
         uint160 amount;
         // timestamp at which a spender's token allowances become invalid
-        uint64 expiration;
-        // a unique value for each signature
-        uint32 nonce;
+        uint48 expiration;
+        // an incrementing value indexed per owner,token,and spender for each signature
+        uint48 nonce;
     }
 
     /// @notice The permit message signed for a single token allownce
@@ -58,9 +62,9 @@ interface IAllowanceTransfer {
         // amount allowed
         uint160 amount;
         // permission expiry
-        uint64 expiration;
-        // a unique value for each signature
-        uint32 nonce;
+        uint48 expiration;
+        // an incrementing value indexed per owner,token,and spender for each signature
+        uint48 nonce;
     }
 
     /// @notice A token spender pair.
@@ -87,7 +91,7 @@ interface IAllowanceTransfer {
     /// @param amount The approved amount of the token
     /// @param expiration The timestamp at which the approval is no longer valid
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve
-    function approve(address token, address spender, uint160 amount, uint64 expiration) external;
+    function approve(address token, address spender, uint160 amount, uint48 expiration) external;
 
     /// @notice Permit a spender to a given amount of the owners token via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
@@ -112,7 +116,7 @@ interface IAllowanceTransfer {
     /// @notice Transfer approved tokens in a batch
     /// @param from The address to transfer tokens from
     /// @param transferDetails Array of recipients for the transfers
-    function batchTransferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external;
+    function transferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external;
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
     /// by batch revoking approvals
@@ -124,5 +128,5 @@ interface IAllowanceTransfer {
     /// @param spender The spender to invalidate nonces for
     /// @param newNonce The new nonce to set. Invalidates all nonces less than it.
     /// @dev Can't invalidate more than 2**16 nonces per transaction.
-    function invalidateNonces(address token, address spender, uint32 newNonce) external;
+    function invalidateNonces(address token, address spender, uint48 newNonce) external;
 }

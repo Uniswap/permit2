@@ -5,8 +5,9 @@ pragma solidity 0.8.17;
 /// @notice Handles ERC20 token transfers through signature based actions
 /// @dev Requires user's token approval on the Permit2 contract
 interface ISignatureTransfer {
+    /// @param maxAmount The maximum amount a spender can request to transfer
+    error InvalidAmount(uint256 maxAmount);
     error NotSpender();
-    error InvalidAmount();
     error LengthMismatch();
 
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
@@ -73,13 +74,13 @@ interface ISignatureTransfer {
     /// @notice Transfers a token using a signed permit message
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @dev If to is the zero address, the tokens are sent to the spender
+    /// @dev The witness type string must follow EIP712 ordering of nested structs and must include the TokenPermissions type definition
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
     /// @param requestedAmount The amount of tokens to transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeName The name of the witness type
-    /// @param witnessType The EIP-712 type definition for the witness type
+    /// @param witnessTypeString The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
@@ -87,8 +88,7 @@ interface ISignatureTransfer {
         address to,
         uint256 requestedAmount,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
+        string calldata witnessTypeString,
         bytes calldata signature
     ) external;
 
@@ -96,7 +96,7 @@ interface ISignatureTransfer {
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param signature The signature to verify
-    function permitBatchTransferFrom(
+    function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
@@ -104,20 +104,19 @@ interface ISignatureTransfer {
     ) external;
 
     /// @notice Transfers multiple tokens using a signed permit message
+    /// @dev The witness type string must follow EIP712 ordering of nested structs and must include the TokenPermissions type definition
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeName The name of the witness type
-    /// @param witnessType The EIP-712 type definition for the witness type
+    /// @param witnessTypeString The EIP-712 type definition for the witness type
     /// @param signature The signature to verify
-    function permitBatchWitnessTransferFrom(
+    function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         address owner,
         SignatureTransferDetails[] calldata transferDetails,
         bytes32 witness,
-        string calldata witnessTypeName,
-        string calldata witnessType,
+        string calldata witnessTypeString,
         bytes calldata signature
     ) external;
 

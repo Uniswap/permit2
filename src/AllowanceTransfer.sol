@@ -23,10 +23,10 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     mapping(address => mapping(address => mapping(address => PackedAllowance))) public allowance;
 
     /// @inheritdoc IAllowanceTransfer
-    function approve(address token, address spender, uint160 amount, uint64 expiration) external {
+    function approve(address token, address spender, uint160 amount, uint48 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.updateAmountAndExpiration(amount, expiration);
-        emit Approval(msg.sender, token, spender, amount);
+        emit Approval(msg.sender, token, spender, amount, expiration);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -61,7 +61,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function batchTransferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external {
+    function transferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external {
         unchecked {
             uint256 length = transferDetails.length;
             for (uint256 i = 0; i < length; ++i) {
@@ -76,15 +76,15 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function _transfer(address token, address from, address to, uint160 amount) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
-        if (block.timestamp > allowed.expiration) revert AllowanceExpired();
+        if (block.timestamp > allowed.expiration) revert AllowanceExpired(allowed.expiration);
 
         uint256 maxAmount = allowed.amount;
         if (maxAmount != type(uint160).max) {
             if (amount > maxAmount) {
-                revert InsufficientAllowance();
+                revert InsufficientAllowance(maxAmount);
             } else {
                 unchecked {
-                    allowed.amount -= amount;
+                    allowed.amount = uint160(maxAmount) - amount;
                 }
             }
         }
@@ -110,14 +110,14 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function invalidateNonces(address token, address spender, uint32 newNonce) public {
-        uint32 oldNonce = allowance[msg.sender][token][spender].nonce;
+    function invalidateNonces(address token, address spender, uint48 newNonce) public {
+        uint48 oldNonce = allowance[msg.sender][token][spender].nonce;
 
-        if (newNonce <= oldNonce) revert InvalidNonce(newNonce);
+        if (newNonce <= oldNonce) revert InvalidNonce();
 
         // Limit the amount of nonces that can be invalidated in one transaction.
         unchecked {
-            uint32 delta = newNonce - oldNonce;
+            uint48 delta = newNonce - oldNonce;
             if (delta > type(uint16).max) revert ExcessiveInvalidation();
         }
 
@@ -129,14 +129,15 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @dev Will check that the signed nonce is equal to the current nonce and then incrememnt the nonce value by 1.
     /// @dev Emits an approval event.
     function _updateApproval(PermitDetails memory details, address owner, address spender) private {
-        uint32 nonce = details.nonce;
+        uint48 nonce = details.nonce;
         address token = details.token;
         uint160 amount = details.amount;
+        uint48 expiration = details.expiration;
         PackedAllowance storage allowed = allowance[owner][token][spender];
 
-        if (allowed.nonce != nonce) revert InvalidNonce(nonce);
+        if (allowed.nonce != nonce) revert InvalidNonce();
 
-        allowed.updateAll(amount, details.expiration, nonce);
-        emit Approval(owner, token, spender, amount);
+        allowed.updateAll(amount, expiration, nonce);
+        emit Approval(owner, token, spender, amount, expiration);
     }
 }
