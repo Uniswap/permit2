@@ -13,12 +13,6 @@ contract NonceBitmapTest is Test {
         permit2 = new MockPermit2();
     }
 
-    function testNonceLLL() public {
-        permit2.useUnorderedNonce(address(this), 5);
-        vm.expectRevert(InvalidNonce.selector);
-        permit2.useUnorderedNonce(address(this), 5);
-    }
-
     function testLowNonces() public {
         permit2.useUnorderedNonce(address(this), 5);
         permit2.useUnorderedNonce(address(this), 0);
