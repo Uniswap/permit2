@@ -57,7 +57,7 @@ interface ISignatureTransfer {
     /// @dev The mapping is indexed first by the token owner, then by an index specified in the nonce
     /// @dev It returns a uint256 bitmap
     /// @dev The index, or wordPosition is capped at type(uint248).max
-    function nonceBitmap(address, uint256) external returns (uint256);
+    function nonceBitmap(address, uint256) external view returns (uint256);
 
     /// @notice Transfers a token using a signed permit message
     /// @dev If to is the zero address, the tokens are sent to the signed spendegr
