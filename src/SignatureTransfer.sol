@@ -123,7 +123,10 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
 
                 if (requestedAmount > permitted.amount) revert InvalidAmount();
 
-                ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+                if (requestedAmount != 0) {
+                    // allow spender to specify which of the permitted tokens should be transferred
+                    ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+                }
             }
         }
     }
