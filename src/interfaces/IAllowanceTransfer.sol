@@ -75,14 +75,14 @@ interface IAllowanceTransfer {
 
     /// @notice Details for a token transfer.
     struct AllowanceTransferDetails {
-        // the token to be transferred
-        address token;
         // the owner of the token
         address from;
         // the recipient of the token
         address to;
         // the amount of the token
         uint160 amount;
+        // the token to be transferred
+        address token;
     }
 
     /// @notice Approves the spender to use up to amount of the specified token up until the expiration
