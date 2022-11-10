@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 /// @notice EIP712 helpers for permit2
 /// @dev Maintains cross-chain replay protection in the event of a fork
