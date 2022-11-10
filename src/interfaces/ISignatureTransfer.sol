@@ -52,9 +52,9 @@ interface ISignatureTransfer {
         uint256 deadline;
     }
 
-    /// @notice A bitmap used for replay protection
+    /// @notice A map from token owner address and a caller specified word index to a bitmap. Used to set bits in the bitmap to prevent against signature replay protection
     /// @dev Uses unordered nonces so that permit messages do not need to be spent in a certain order
-    /// @dev This is a mapping indexed first by the token owner, then by an index specified in the nonce
+    /// @dev The mapping is indexed first by the token owner, then by an index specified in the nonce
     /// @dev It returns a uint256 bitmap
     /// @dev The index, or wordPosition is capped at type(uint248).max
     function nonceBitmap(address, uint256) external returns (uint256);
