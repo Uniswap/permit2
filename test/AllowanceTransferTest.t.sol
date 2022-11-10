@@ -539,6 +539,41 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(amount, defaultAmount - 3 * 1 ** 18);
     }
 
+    function testBatchTransferFromMultiToken() public {
+        address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
+        IAllowanceTransfer.PermitBatch memory permitBatch =
+            defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitBatchSignature(permitBatch, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalanceFrom0 = token0.balanceOf(from);
+        uint256 startBalanceFrom1 = token1.balanceOf(from);
+        uint256 startBalanceTo0 = token0.balanceOf(address0);
+        uint256 startBalanceTo1 = token0.balanceOf(address0);
+
+        permit2.permit(from, permitBatch, sig);
+
+        (uint160 amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount);
+        (amount,,) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount, defaultAmount);
+
+        // permit token0 for 1 ** 18
+        IAllowanceTransfer.AllowanceTransferDetails[] memory transferDetails =
+            StructBuilder.fillAllowanceTransferDetail(2, address(token0), 1 ** 18, address0);
+        transferDetails[1].token = address(token1);
+        snapStart("batchTransferFromMultiToken");
+        permit2.transferFrom(from, transferDetails);
+        snapEnd();
+        assertEq(token0.balanceOf(from), startBalanceFrom0 - 1 ** 18);
+        assertEq(token1.balanceOf(from), startBalanceFrom1 - 1 ** 18);
+        assertEq(token0.balanceOf(address0), startBalanceTo0 + 1 ** 18);
+        assertEq(token0.balanceOf(address0), startBalanceTo1 + 1 ** 18);
+        (amount,,) = permit2.allowance(from, address(token0), address(this));
+        assertEq(amount, defaultAmount - 1 ** 18);
+        (amount,,) = permit2.allowance(from, address(token1), address(this));
+        assertEq(amount, defaultAmount - 1 ** 18);
+    }
+
     function testLockdown() public {
         address[] memory tokens = AddressBuilder.fill(1, address(token0)).push(address(token1));
         IAllowanceTransfer.PermitBatch memory permit =
