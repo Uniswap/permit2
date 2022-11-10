@@ -56,17 +56,17 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function transferFrom(address token, address from, address to, uint160 amount) external {
+    function transferFrom(address from, address to, uint160 amount, address token) external {
         _transfer(token, from, to, amount);
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function transferFrom(address from, AllowanceTransferDetails[] calldata transferDetails) external {
+    function transferFrom(AllowanceTransferDetails[] calldata transferDetails) external {
         unchecked {
             uint256 length = transferDetails.length;
             for (uint256 i = 0; i < length; ++i) {
                 AllowanceTransferDetails memory transferDetail = transferDetails[i];
-                _transfer(transferDetail.token, from, transferDetail.to, transferDetail.amount);
+                _transfer(transferDetail.token, transferDetail.from, transferDetail.to, transferDetail.amount);
             }
         }
     }
