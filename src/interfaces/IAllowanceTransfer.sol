@@ -118,15 +118,18 @@ interface IAllowanceTransfer {
     /// @param signature The owner's signature over the permit data
     function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external;
 
-    /// @notice Transfer approved tokens from one address to another.
-    /// @param from The address to transfer from.
+    /// @notice Transfer approved tokens from one address to another
+    /// @param from The address to transfer from
+    /// @param to The address of the recipient
+    /// @param amount The amount of the token to transfer
+    /// @param token The token address to transfer
     /// @dev Requires the from address to have approved at least the desired amount
     /// of tokens to msg.sender.
     function transferFrom(address from, address to, uint160 amount, address token) external;
 
     /// @notice Transfer approved tokens in a batch
-    /// @param transferDetails Array of recipients for the transfers
-    /// @dev Requires the from address to have approved at least the desired amount
+    /// @param transferDetails Array of owners, recipients, amounts, and tokens for the transfers
+    /// @dev Requires the from addresses to have approved at least the desired amount
     /// of tokens to msg.sender.
     function transferFrom(AllowanceTransferDetails[] calldata transferDetails) external;
 
