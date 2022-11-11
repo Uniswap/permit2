@@ -83,7 +83,7 @@ interface ISignatureTransfer {
     /// @param to The recipient of the tokens
     /// @param requestedAmount The amount of tokens to transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash. It includes the caller specified witness type and must include the nested TokenPermissions type
+    /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
@@ -114,7 +114,7 @@ interface ISignatureTransfer {
     /// @param owner The owner of the tokens to transfer
     /// @param transferDetails Specifies the recipient and requested amount for the token transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeString The EIP-712 type definition for the witness type
+    /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
