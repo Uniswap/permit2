@@ -24,15 +24,15 @@ interface ISignatureTransfer {
     /// @notice The signed permit message for a single token transfer
     struct PermitTransferFrom {
         TokenPermissions permitted;
-        // a unique value for each signature
+        // a unique value for every token owner's signature to prevent signature replays
         uint256 nonce;
         // deadline on the permit signature
         uint256 deadline;
     }
 
-    /// @notice Specifies the recipient address and amount for transfers.
-    /// @dev Used for batch transfers.
-    /// Recipients and amounts correspond to the index of the signed token permissions array.
+    /// @notice Specifies the recipient address and amount for batched transfers.
+    /// @dev Recipients and amounts correspond to the index of the signed token permissions array.
+    /// @dev Reverts if the requested amount is greater than the permitted signed amount.
     struct SignatureTransferDetails {
         // recipient address
         address to;
@@ -46,18 +46,21 @@ interface ISignatureTransfer {
     struct PermitBatchTransferFrom {
         // the tokens and corresponding amounts permitted for a transfer
         TokenPermissions[] permitted;
-        // a unique value for each signature
+        // a unique value for every token owner's signature to prevent signature replays
         uint256 nonce;
         // deadline on the permit signature
         uint256 deadline;
     }
 
-    /// @notice A bitmap used for replay protection
+    /// @notice A map from token owner address and a caller specified word index to a bitmap. Used to set bits in the bitmap to prevent against signature replay protection
     /// @dev Uses unordered nonces so that permit messages do not need to be spent in a certain order
-    function nonceBitmap(address, uint256) external returns (uint256);
+    /// @dev The mapping is indexed first by the token owner, then by an index specified in the nonce
+    /// @dev It returns a uint256 bitmap
+    /// @dev The index, or wordPosition is capped at type(uint248).max
+    function nonceBitmap(address, uint256) external view returns (uint256);
 
     /// @notice Transfers a token using a signed permit message
-    /// @dev If to is the zero address, the tokens are sent to the signed spender
+    /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
@@ -73,14 +76,14 @@ interface ISignatureTransfer {
 
     /// @notice Transfers a token using a signed permit message
     /// @notice Includes extra data provided by the caller to verify signature over
-    /// @dev If to is the zero address, the tokens are sent to the spender
     /// @dev The witness type string must follow EIP712 ordering of nested structs and must include the TokenPermissions type definition
+    /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param to The recipient of the tokens
     /// @param requestedAmount The amount of tokens to transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeString The EIP-712 type definition for the witness type
+    /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
@@ -95,6 +98,7 @@ interface ISignatureTransfer {
     /// @notice Transfers multiple tokens using a signed permit message
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
+    /// @param transferDetails Specifies the recipient and requested amount for the token transfer
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
@@ -108,8 +112,9 @@ interface ISignatureTransfer {
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
+    /// @param transferDetails Specifies the recipient and requested amount for the token transfer
     /// @param witness Extra data to include when checking the user signature
-    /// @param witnessTypeString The EIP-712 type definition for the witness type
+    /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
