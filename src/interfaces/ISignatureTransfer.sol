@@ -24,7 +24,7 @@ interface ISignatureTransfer {
     /// @notice The signed permit message for a single token transfer
     struct PermitTransferFrom {
         TokenPermissions permitted;
-        // a unique value for each signature
+        // a unique value for every token owner's signature to prevent signature replays
         uint256 nonce;
         // deadline on the permit signature
         uint256 deadline;
@@ -46,7 +46,7 @@ interface ISignatureTransfer {
     struct PermitBatchTransferFrom {
         // the tokens and corresponding amounts permitted for a transfer
         TokenPermissions[] permitted;
-        // a unique value for each signature
+        // a unique value for every token owner's signature to prevent signature replays
         uint256 nonce;
         // deadline on the permit signature
         uint256 deadline;
