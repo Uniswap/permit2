@@ -7,8 +7,10 @@ pragma solidity ^0.8.17;
 interface IAllowanceTransfer {
     /// @param deadline The timestamp at which the allowed amount is no longer valid
     error AllowanceExpired(uint256 deadline);
+
     /// @param amount The maximum amount allowed
     error InsufficientAllowance(uint256 amount);
+
     error ExcessiveInvalidation();
 
     /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
@@ -87,6 +89,11 @@ interface IAllowanceTransfer {
         // the token to be transferred
         address token;
     }
+
+    /// @notice A mapping from owner address to token address to spender address to PackedAllowance struct, which contains details and conditions of the approval.
+    /// @notice The mapping is indexed in the above order see: allowance[ownerAddress][tokenAddress][spenderAddress]
+    /// @dev The packed slot holds the allowed amount, expiration at which the allowed amount is no longer valid, and current nonce thats updated on any signature based approvals.
+    function allowance(address, address, address) external view returns (uint160, uint48, uint48);
 
     /// @notice Approves the spender to use up to amount of the specified token up until the expiration
     /// @param token The token to approve
