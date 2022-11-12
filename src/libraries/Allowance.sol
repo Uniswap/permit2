@@ -4,6 +4,9 @@ pragma solidity ^0.8.17;
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 
 library Allowance {
+    // note if the expiration passed is 0, then it the approval set to the block.timestamp
+    uint256 private constant BLOCK_TIMESTAMP_EXPIRATION = 0;
+
     /// @notice Sets the allowed amount, expiry, and nonce of the spender's permissions on owner's token.
     /// @dev Nonce is incremented.
     /// @dev If the inputted expiration is 0, the stored expiration is set to block.timestamp
@@ -18,7 +21,7 @@ library Allowance {
             storedNonce = nonce + 1;
         }
 
-        uint48 storedExpiration = expiration == 0 ? uint48(block.timestamp) : expiration;
+        uint48 storedExpiration = expiration == BLOCK_TIMESTAMP_EXPIRATION ? uint48(block.timestamp) : expiration;
 
         uint256 word = pack(amount, storedExpiration, storedNonce);
         assembly {
