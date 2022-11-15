@@ -23,7 +23,7 @@ You will need a copy of [Foundry](https://github.com/foundry-rs/foundry) install
 ### Setup
 
 ```sh
-git clone https://github.com/Uniswap/permit2.git
+git clone --recurse-submodules https://github.com/Uniswap/permit2.git
 cd permit2
 ```
 
