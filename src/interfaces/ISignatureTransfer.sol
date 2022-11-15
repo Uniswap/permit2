@@ -63,14 +63,12 @@ interface ISignatureTransfer {
     /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipient of the tokens
-    /// @param requestedAmount The amount of tokens to transfer
+    /// @param transferDetails The spender's requested transfer details for the permitted token
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitTransferFrom memory permit,
         address owner,
-        address to,
-        uint256 requestedAmount,
+        SignatureTransferDetails calldata transferDetails,
         bytes calldata signature
     ) external;
 
@@ -80,16 +78,14 @@ interface ISignatureTransfer {
     /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipient of the tokens
-    /// @param requestedAmount The amount of tokens to transfer
+    /// @param transferDetails The spender's requested transfer details for the permitted token
     /// @param witness Extra data to include when checking the user signature
     /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
         address owner,
-        address to,
-        uint256 requestedAmount,
+        SignatureTransferDetails calldata transferDetails,
         bytes32 witness,
         string calldata witnessTypeString,
         bytes calldata signature

@@ -22,25 +22,23 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     function permitTransferFrom(
         PermitTransferFrom memory permit,
         address owner,
-        address to,
-        uint256 requestedAmount,
+        SignatureTransferDetails calldata transferDetails,
         bytes calldata signature
     ) external {
-        _permitTransferFrom(permit, permit.hash(), owner, to, requestedAmount, signature);
+        _permitTransferFrom(permit, permit.hash(), owner, transferDetails, signature);
     }
 
     /// @inheritdoc ISignatureTransfer
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
         address owner,
-        address to,
-        uint256 requestedAmount,
+        SignatureTransferDetails calldata transferDetails,
         bytes32 witness,
         string calldata witnessTypeString,
         bytes calldata signature
     ) external {
         _permitTransferFrom(
-            permit, permit.hashWithWitness(witness, witnessTypeString), owner, to, requestedAmount, signature
+            permit, permit.hashWithWitness(witness, witnessTypeString), owner, transferDetails, signature
         );
     }
 
@@ -49,24 +47,22 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @param permit The permit data signed over by the owner
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipient of the tokens
-    /// @param requestedAmount The amount of tokens to transfer
+    /// @param transferDetails The spender's requested transfer details for the permitted token
     /// @param signature The signature to verify
     function _permitTransferFrom(
         PermitTransferFrom memory permit,
         bytes32 dataHash,
         address owner,
-        address to,
-        uint256 requestedAmount,
+        SignatureTransferDetails calldata transferDetails,
         bytes calldata signature
     ) internal {
         if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
-        if (requestedAmount > permit.permitted.amount) revert InvalidAmount(permit.permitted.amount);
+        if (transferDetails.requestedAmount > permit.permitted.amount) revert InvalidAmount(permit.permitted.amount);
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(_hashTypedData(dataHash), owner);
 
-        ERC20(permit.permitted.token).safeTransferFrom(owner, to, requestedAmount);
+        ERC20(permit.permitted.token).safeTransferFrom(owner, transferDetails.to, transferDetails.requestedAmount);
     }
 
     /// @inheritdoc ISignatureTransfer
