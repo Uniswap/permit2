@@ -1,3 +1,6 @@
+AllowanceTransferInvariants:invariant_balanceEqualsSpent() (runs: 256, calls: 3840, reverts: 0)
+AllowanceTransferInvariants:invariant_permit2NeverHoldsBalance() (runs: 256, calls: 3840, reverts: 0)
+AllowanceTransferInvariants:invariant_spendNeverExceedsPermit() (runs: 256, calls: 3840, reverts: 0)
 AllowanceTransferTest:testApprove() (gas: 47747)
 AllowanceTransferTest:testBatchTransferFrom() (gas: 160035)
 AllowanceTransferTest:testBatchTransferFromDifferentOwners() (gas: 236086)
