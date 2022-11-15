@@ -1,7 +1,6 @@
 pragma solidity 0.8.17;
 
 import "forge-std/Test.sol";
-import "forge-std/console2.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
