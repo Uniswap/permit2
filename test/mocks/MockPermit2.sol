@@ -16,4 +16,13 @@ contract MockPermit2 is Permit2 {
     function useUnorderedNonce(address from, uint256 nonce) public {
         _useUnorderedNonce(from, nonce);
     }
+
+    function testBitmapPositions(uint256 nonce) public pure returns (uint256 wordPos, uint256 bitPos) {
+        wordPos = uint248(nonce >> 8);
+        bitPos = uint8(nonce);
+    }
+
+    function testInvalidateUnorderedNonces(uint256 wordPos, uint256 mask) public {
+        invalidateUnorderedNonces(wordPos, mask);
+    }
 }
