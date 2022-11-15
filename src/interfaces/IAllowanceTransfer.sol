@@ -5,12 +5,15 @@ pragma solidity ^0.8.17;
 /// @notice Handles ERC20 token permissions through signature based allowance setting and ERC20 token transfers by checking allowed amounts
 /// @dev Requires user's token approval on the Permit2 contract
 interface IAllowanceTransfer {
+    /// @notice Thrown when an allowance on a token has expired.
     /// @param deadline The timestamp at which the allowed amount is no longer valid
     error AllowanceExpired(uint256 deadline);
 
+    /// @notice Thrown when an allowance on a token has been depleted.
     /// @param amount The maximum amount allowed
     error InsufficientAllowance(uint256 amount);
 
+    /// @notice Thrown when too many nonces are invalidated.
     error ExcessiveInvalidation();
 
     /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
