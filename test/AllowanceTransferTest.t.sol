@@ -213,6 +213,8 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         vm.expectEmit(true, true, true, true);
+        emit Permit(from, tokens[0], address(this), amounts[0], defaultExpiration, defaultNonce);
+        vm.expectEmit(true, true, true, true);
         emit Permit(from, tokens[1], address(this), amounts[1], defaultExpiration, defaultNonce);
         permit2.permit(from, permit, sig);
 
