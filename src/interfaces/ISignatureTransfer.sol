@@ -67,8 +67,8 @@ interface ISignatureTransfer {
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitTransferFrom memory permit,
-        address owner,
         SignatureTransferDetails calldata transferDetails,
+        address owner,
         bytes calldata signature
     ) external;
 
@@ -84,8 +84,8 @@ interface ISignatureTransfer {
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
-        address owner,
         SignatureTransferDetails calldata transferDetails,
+        address owner,
         bytes32 witness,
         string calldata witnessTypeString,
         bytes calldata signature
@@ -98,8 +98,8 @@ interface ISignatureTransfer {
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
-        address owner,
         SignatureTransferDetails[] calldata transferDetails,
+        address owner,
         bytes calldata signature
     ) external;
 
@@ -114,8 +114,8 @@ interface ISignatureTransfer {
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
-        address owner,
         SignatureTransferDetails[] calldata transferDetails,
+        address owner,
         bytes32 witness,
         string calldata witnessTypeString,
         bytes calldata signature
