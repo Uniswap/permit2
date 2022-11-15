@@ -146,4 +146,34 @@ contract TypehashGeneration is Test, PermitSignature {
         // this should not revert, validating that from is indeed the signer
         mockSig.verify(sig, hashedPermit, from);
     }
+
+    function testPermitBatchTransferFrom() public view {
+        // metamask wallet signed data
+        // 0x8987ef38bdbf7f7dd8f133c92a331b5359036ca9732b2cf15750f1a56050159e10a62544d74648d917ce4c1b670024a771aadb8bace7db63ef6f5d3975451b231b
+        bytes32 r = 0x8987ef38bdbf7f7dd8f133c92a331b5359036ca9732b2cf15750f1a56050159e;
+        bytes32 s = 0x10a62544d74648d917ce4c1b670024a771aadb8bace7db63ef6f5d3975451b23;
+        uint8 v = 0x1b;
+
+        bytes memory sig = bytes.concat(r, s, bytes1(v));
+
+        address[] memory tokens = AddressBuilder.fill(1, token1).push(token2);
+
+        ISignatureTransfer.TokenPermissions[] memory permitted =
+            new ISignatureTransfer.TokenPermissions[](tokens.length);
+
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            permitted[i] = ISignatureTransfer.TokenPermissions({token: tokens[i], amount: amount});
+        }
+        ISignatureTransfer.PermitBatchTransferFrom memory permitBatchTransferFrom =
+            ISignatureTransfer.PermitBatchTransferFrom({permitted: permitted, nonce: nonce, deadline: sigDeadline});
+
+        // skip local sig since address(this) is used on reconstruction
+
+        bytes32 hashedPermit =
+            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, mockHash.hash(permitBatchTransferFrom)));
+
+        // verify the signed data againt the locally generated hash
+        // this should not revert, validating that from is indeed the signer
+        mockSig.verify(sig, hashedPermit, from);
+    }
 }
