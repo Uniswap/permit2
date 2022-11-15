@@ -6,15 +6,16 @@ import "forge-std/console2.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {PermitHash} from "../src/libraries/PermitHash.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
+import {ISignatureTransfer} from "../src/interfaces/ISignatureTransfer.sol";
 import {MockSignatureVerification} from "./mocks/MockSignatureVerification.sol";
-import {MockPermit2} from "./mocks/MockPermit2.sol";
+import {MockHash} from "./mocks/MockHash.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 
 contract TypehashGeneration is Test, PermitSignature {
     using PermitHash for *;
     using AddressBuilder for address[];
 
-    MockPermit2 permit2;
+    MockHash mockHash;
 
     uint256 PRIV_KEY_TEST = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
     address from = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
@@ -35,6 +36,7 @@ contract TypehashGeneration is Test, PermitSignature {
     MockSignatureVerification mockSig;
 
     function setUp() public {
+        mockHash = new MockHash();
         // hardcoding these to match mm inputs
         verifyingContract = 0xCe71065D4017F316EC606Fe4422e11eB2c47c246;
         chainId = 1;
@@ -118,5 +120,30 @@ contract TypehashGeneration is Test, PermitSignature {
         mockSig.verify(sig, hashedPermit, from);
         // also verify typehash with local sig
         mockSig.verify(localSig, hashedPermit, from);
+    }
+
+    function testPermitTransferFrom() public view {
+        // metamask wallet signed data
+        // 0x3d298c897075538134ee0003bba9b149fac6e4b3496e34272f6731c32be2a710682657710eb4208db1eb6a6dac08b375f171733604e4e1deed30d49e22d0c42f1c
+        bytes32 r = 0xc12d33a96aef9ea42f1ad72587f52b5113b68d7b8fe35675fc0bb1ade3773455;
+        bytes32 s = 0x56f3bbecb0c791bc9e23e58ce3a889f39c4b37b315faa264b8e4b5f2d5f7b365;
+        uint8 v = 0x1b;
+
+        bytes memory sig = bytes.concat(r, s, bytes1(v));
+
+        ISignatureTransfer.PermitTransferFrom memory permitTransferFrom = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({token: token1, amount: amount}),
+            nonce: nonce,
+            deadline: sigDeadline
+        });
+
+        // skip local sig since address(this) is used on reconstruction
+
+        bytes32 hashedPermit =
+            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, mockHash.hash(permitTransferFrom)));
+
+        // verify the signed data againt the locally generated hash
+        // this should not revert, validating that from is indeed the signer
+        mockSig.verify(sig, hashedPermit, from);
     }
 }
