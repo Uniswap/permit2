@@ -37,7 +37,8 @@ contract Runner {
     function createPermit(uint128 amount, bool firstPermitter, bool firstSpender) public {
         Permitter permitter = firstPermitter ? permitter1 : permitter2;
         Spender spender = firstSpender ? spender1 : spender2;
-        (IAllowanceTransfer.PermitSingle memory permit, bytes memory sig) = permitter.createPermit(amount, address(spender));
+        (IAllowanceTransfer.PermitSingle memory permit, bytes memory sig) =
+            permitter.createPermit(amount, address(spender));
         permits.push(permit);
         sigs.push(sig);
         owners.push(address(permitter.signer()));

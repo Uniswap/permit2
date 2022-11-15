@@ -47,9 +47,7 @@ contract Permitter is PermitSignature {
         amountPermitted += amount;
     }
 
-    function approve(uint128 amount, address spender)
-        public
-    {
+    function approve(uint128 amount, address spender) public {
         permit2.approve(address(token), spender, uint160(amount), uint48(block.timestamp + 1000));
         amountPermitted += amount;
     }
