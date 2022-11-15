@@ -2,9 +2,7 @@
 // from: https://github.com/maple-labs/contract-test-utils/blob/add-bounded-invariants/contracts/test.sol
 pragma solidity 0.8.17;
 
-
 contract InvariantTest {
-
     address[] private _excludedContracts;
     address[] private _targetContracts;
     address[] private _targetSenders;
@@ -35,5 +33,4 @@ contract InvariantTest {
         require(_excludedContracts.length != uint256(0), "NO_TARGET_CONTRACTS");
         return _excludedContracts;
     }
-
 }

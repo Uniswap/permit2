@@ -8,6 +8,9 @@ no_match_path = "*/integration/*"
 fuzz_runs = 10000
 ffi = true
 fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}]
+[invariant]
+fail_on_revert = true
+
 [profile.integration]
 no_match_path = ""
 match_path = "*/integration/*"

@@ -1,11 +1,11 @@
 pragma solidity 0.8.17;
 
-import "ds-test/test.sol";
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
-import {Permit, Signature, InvalidSignature} from "../src/Permit2Utils.sol";
+import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
+import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {InvariantTest} from "./utils/InvariantTest.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
@@ -13,77 +13,102 @@ import {MockERC20} from "./mocks/MockERC20.sol";
 contract Permitter is PermitSignature {
     Permit2 private permit2;
     MockERC20 private token;
-    uint32 private nonce;
-    Vm private vm;
-    address private runner;
+    uint48 private nonce;
+    Runner private runner;
     uint256 private privateKey = 0x1234567890;
+    address public signer;
     uint256 public amountPermitted;
 
-    constructor(Vm _vm, Permit2 _permit2, MockERC20 _token) {
-        vm = _vm;
+    constructor(Permit2 _permit2, MockERC20 _token) {
         permit2 = _permit2;
         token = _token;
-        token.mint(vm.addr(privateKey), type(uint160).max);
-        vm.prank(vm.addr(privateKey));
+        signer = vm.addr(privateKey);
+        token.mint(signer, type(uint160).max);
+        vm.prank(signer);
         token.approve(address(permit2), type(uint256).max);
-        runner = msg.sender;
+        runner = Runner(msg.sender);
     }
 
-    function createPermit(uint128 amount) public returns (Permit memory permit, Signature memory sig) {
-        permit = defaultERC20PermitAllowance(address(token), amount, uint64(block.timestamp + 1000));
-        sig = getPermitSignature(vm, permit, nonce, privateKey, permit2.DOMAIN_SEPARATOR());
+    function createPermit(uint128 amount)
+        public
+        returns (IAllowanceTransfer.PermitSingle memory permit, bytes memory sig)
+    {
+        permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(token),
+                amount: amount,
+                expiration: uint48(block.timestamp + 1000),
+                nonce: nonce
+            }),
+            spender: address(runner.spender()),
+            sigDeadline: block.timestamp + 1000
+        });
+        sig = getPermitSignature(permit, privateKey, permit2.DOMAIN_SEPARATOR());
 
         nonce++;
-        amountPermitted += amount / 2;
+        amountPermitted += amount;
     }
 }
 
-contract Spender {
+contract Spender is Test {
     Permit2 private permit2;
     MockERC20 private token;
     address private from;
-    address private runner;
-    Vm private vm;
+    Runner private runner;
     uint256 public amountSpent;
 
-    constructor(Vm _vm, Permit2 _permit2, MockERC20 _token, address _from) {
-        vm = _vm;
+    constructor(Permit2 _permit2, MockERC20 _token, address _from) {
         permit2 = _permit2;
         token = _token;
         from = _from;
-        runner = msg.sender;
+        runner = Runner(msg.sender);
     }
 
-    function spendPermit(Permit memory permit, Signature memory sig, uint160 amount) public {
-        permit2.transferFrom(address(token), from, address(0), amount);
+    function spendPermit(uint160 amount) public {
+        (uint160 allowance, uint48 expiry,) = permit2.allowance(from, address(token), address(this));
+        if (expiry < block.timestamp) return;
+        amount = uint160(bound(amount, 0, allowance));
+        permit2.transferFrom(from, address(this), amount, address(token));
         amountSpent += amount;
     }
 }
 
 contract Runner {
+    Permit2 public permit2;
     Permitter public permitter;
     Spender public spender;
     MockERC20 public token;
-    Vm private vm;
+    uint256 private index;
 
-    Permit[] permits;
-    Signature[] sigs;
+    IAllowanceTransfer.PermitSingle[] permits;
+    bytes[] sigs;
 
-    constructor(Vm _vm, Permit2 _permit2) {
-        vm = _vm;
+    constructor(Permit2 _permit2) {
+        permit2 = _permit2;
+        index = 0;
         token = new MockERC20("TEST", "test", 18);
-        permitter = new Permitter(_vm, _permit2, token);
-        spender = new Spender(_vm, _permit2, token, address(permitter));
+        permitter = new Permitter(_permit2, token);
+        spender = new Spender(_permit2, token, address(permitter.signer()));
     }
 
     function createPermit(uint128 amount) public {
-        (Permit memory permit, Signature memory sig) = permitter.createPermit(amount);
+        (IAllowanceTransfer.PermitSingle memory permit, bytes memory sig) = permitter.createPermit(amount);
         permits.push(permit);
         sigs.push(sig);
     }
 
-    function usePermit(uint8 index) public {
-        spender.spendPermit(permits[0], sigs[0], uint160(permits[0].amount));
+    // always uses permits in order for nonces
+    function usePermit() public {
+        if (permits.length <= index) {
+            return;
+        }
+        permit2.permit(permitter.signer(), permits[index], sigs[index]);
+        index++;
+    }
+
+    // always uses permits in order for nonces
+    function spendPermit(uint160 amount) public {
+        spender.spendPermit(amount);
     }
 
     function amountPermitted() public view returns (uint256) {
@@ -99,40 +124,23 @@ contract Runner {
     }
 }
 
-struct FuzzSelector {
-    address addr;
-    bytes4[] selectors;
-}
-
-contract AllowanceTransferInvariants is DSTest, InvariantTest {
+contract AllowanceTransferInvariants is Test, InvariantTest {
     Permit2 permit2;
     Runner runner;
     MockERC20 token;
 
     function setUp() public {
         permit2 = new Permit2();
-        runner = new Runner(Vm(HEVM_ADDRESS), permit2);
+        runner = new Runner(permit2);
 
-        excludeContract(address(runner.token()));
-        excludeContract(address(runner.permitter()));
-        excludeContract(address(runner.spender()));
         addTargetContract(address(runner));
+        addTargetSender(address(vm.addr(0xb0b0)));
     }
 
     function invariant_spendNeverExceedsPermit() public {
         uint256 permitted = runner.amountPermitted();
         uint256 spent = runner.amountSpent();
-        require(permitted <= spent, "spend exceeds");
-        require(runner.balanceOf(address(0)) == 0, "transfer");
-    }
-
-    function targetSelectors() public returns (FuzzSelector[] memory) {
-        FuzzSelector[] memory targets = new FuzzSelector[](2);
-        bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = Runner.createPermit.selector;
-        targets[0] = FuzzSelector(address(runner), selectors);
-        selectors[1] = Runner.usePermit.selector;
-        targets[1] = FuzzSelector(address(runner), selectors);
-        return targets;
+        require(permitted >= spent, "spend exceeds");
+        require(runner.balanceOf(address(runner.spender())) == spent, "balance not equal spent");
     }
 }
