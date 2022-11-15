@@ -16,7 +16,6 @@ contract Spender is Test {
     }
 
     function spendPermit(uint160 amount, address from) public {
-        (uint160 allowance, uint48 expiry,) = permit2.allowance(from, address(token), address(this));
         permit2.transferFrom(from, address(this), amount, address(token));
         amountSpent += amount;
     }
