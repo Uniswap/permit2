@@ -48,8 +48,4 @@ contract MockPermit2 is Permit2 {
         wordPos = uint248(nonce >> 8);
         bitPos = uint8(nonce);
     }
-
-    function testInvalidateUnorderedNonces(uint256 wordPos, uint256 mask) public {
-        invalidateUnorderedNonces(wordPos, mask);
-    }
 }
