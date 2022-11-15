@@ -16,6 +16,22 @@ contract AllowanceUnitTest is Test, TokenProvider {
         initializeERC20Tokens();
     }
 
+    function testUpdateAmountExpirationRandomly(uint160 amount, uint48 expiration) public {
+        address token = address(token1);
+
+        (,, uint48 nonce) = permit2.allowance(from, token, spender);
+
+        permit2.mockUpdateAmountAndExpiration(from, token, spender, amount, expiration);
+
+        uint48 timestampAfterUpdate = expiration == 0 ? uint48(block.timestamp) : expiration;
+
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2.allowance(from, token, spender);
+        assertEq(amount, amount1);
+        assertEq(timestampAfterUpdate, expiration1);
+        /// nonce shouldnt change
+        assertEq(nonce, nonce1);
+    }
+
     function testUpdateAllRandomly(uint160 amount, uint48 expiration, uint48 nonce) public {
         // there is overflow since we increment the nonce by 1
         // we assume we will never be able to reach 2**48
@@ -23,7 +39,7 @@ contract AllowanceUnitTest is Test, TokenProvider {
 
         address token = address(token1);
 
-        permit2.testUpdateAll(from, token, spender, amount, expiration, nonce);
+        permit2.mockUpdateAll(from, token, spender, amount, expiration, nonce);
 
         uint48 nonceAfterUpdate = nonce + 1;
         uint48 timestampAfterUpdate = expiration == 0 ? uint48(block.timestamp) : expiration;

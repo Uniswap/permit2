@@ -28,7 +28,18 @@ contract MockPermit2 is Permit2 {
         }
     }
 
-    function testUpdateAll(
+    function mockUpdateAmountAndExpiration(
+        address from,
+        address token,
+        address spender,
+        uint160 amount,
+        uint48 expiration
+    ) public {
+        IAllowanceTransfer.PackedAllowance storage allowed = allowance[from][token][spender];
+        Allowance.updateAmountAndExpiration(allowed, amount, expiration);
+    }
+
+    function mockUpdateAll(
         address from,
         address token,
         address spender,
