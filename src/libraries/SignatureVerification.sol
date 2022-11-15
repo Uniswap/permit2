@@ -4,9 +4,16 @@ pragma solidity ^0.8.17;
 import {IERC1271} from "../interfaces/IERC1271.sol";
 
 library SignatureVerification {
+    /// @notice Thrown when the passed in signature is not a valid length
     error InvalidSignatureLength();
+
+    /// @notice Thrown when the recovered signer is equal to the zero address
     error InvalidSignature();
+
+    /// @notice Thrown when the recovered signer does not equal the claimedSigner
     error InvalidSigner();
+
+    /// @notice Thrown when the recovered contract signature is incorrect
     error InvalidContractSignature();
 
     bytes32 constant UPPER_BIT_MASK = (0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
