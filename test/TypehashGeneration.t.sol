@@ -187,6 +187,42 @@ contract TypehashGeneration is Test, PermitSignature {
         mockSig.verify(sig, hashedPermit, from);
     }
 
+    function testPermitTransferFromWithWitness() public view {
+        string memory WITNESS_TYPE_STRING_STUB =
+            "MockWitness witness)MockWitness(address person,uint256 amount)TokenPermissions(address token,uint256 amount)";
+        bytes memory sig = _getSingleWitnessMetamaskSignature();
+        bytes32 hashedPermit = _getLocalSingleWitnessHash(amount, WITNESS_TYPE_STRING_STUB);
+
+        // verify the signed data againt the locally generated hash
+        // this should not revert, validating that from is indeed the signer
+        mockSig.verify(sig, hashedPermit, from);
+    }
+
+    function testPermitTransferFromWithWitnessIncorrectTypehashStub() public {
+        string memory INCORRECT_WITNESS_TYPE_STRING_STUB =
+            "MockWitness witness)TokenPermissions(address token,uint256 amount)MockWitness(address person,uint256 amount)";
+        bytes memory sig = _getSingleWitnessMetamaskSignature();
+        bytes32 hashedPermit = _getLocalSingleWitnessHash(amount, INCORRECT_WITNESS_TYPE_STRING_STUB);
+
+        // verify the signed data againt the locally generated hash
+        // should revert since the typehash is incorrect
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        mockSig.verify(sig, hashedPermit, from);
+    }
+
+    function testPermitTransferFromWithWitnessIncorrectPermitData() public {
+        string memory WITNESS_TYPE_STRING_STUB =
+            "MockWitness witness)MockWitness(address person,uint256 amount)TokenPermissions(address token,uint256 amount)";
+        bytes memory sig = _getSingleWitnessMetamaskSignature();
+        uint256 incorrectAmount = 10000000000;
+        bytes32 hashedPermit = _getLocalSingleWitnessHash(incorrectAmount, WITNESS_TYPE_STRING_STUB);
+
+        // verify the signed data againt the locally generated hash
+        // should revert since the incorrect amount is passed
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        mockSig.verify(sig, hashedPermit, from);
+    }
+
     function testPermitBatchTransferFromWithWitness() public view {
         string memory WITNESS_TYPE_STRING_STUB =
             "MockWitness witness)MockWitness(address person,uint256 amount)TokenPermissions(address token,uint256 amount)";
@@ -221,6 +257,38 @@ contract TypehashGeneration is Test, PermitSignature {
         // this should not revert, validating that from is indeed the signer
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         mockSig.verify(sig, hashedPermit, from);
+    }
+
+    function _getSingleWitnessMetamaskSignature() private pure returns (bytes memory sig) {
+        // TODO change
+        // metamask wallet signed data
+        // 0x0dff2ebed15802a2a21eaac44a12fb182ac41771aaaf6ff33a6a5c78ac66aec306e693dba180302dc0b6aecd97261adfa91f27fd0964e71f58c8b40444ce2f7a1b
+        bytes32 r = 0x6cf7721a2a489c29d86fe0bb9b1f5f440a6a7e3fea5f5533ec080068025a7d4f;
+        bytes32 s = 0x30d7d8452106654827fd3b44f24260bacb8cf191ec185fc19fc24f5941d573d7;
+        uint8 v = 0x1c;
+
+        sig = bytes.concat(r, s, bytes1(v));
+    }
+
+    function _getLocalSingleWitnessHash(uint256 amountToHash, string memory typehashStub)
+        private
+        view
+        returns (bytes32 hashedPermit)
+    {
+        ISignatureTransfer.PermitTransferFrom memory permitTransferFrom = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({token: token1, amount: amountToHash}),
+            nonce: nonce,
+            deadline: sigDeadline
+        });
+
+        MockWitness memory witness = MockWitness({person: person, amount: amount});
+        bytes32 hashedWitness = hashTypedWitness(WITNESS_TYPE_HASH, witness);
+
+        hashedPermit = keccak256(
+            abi.encodePacked(
+                "\x19\x01", DOMAIN_SEPARATOR, mockHash.hashWithWitness(permitTransferFrom, hashedWitness, typehashStub)
+            )
+        );
     }
 
     function _getBatchedWitnessMetamaskSignature() private pure returns (bytes memory sig) {
