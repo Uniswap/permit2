@@ -129,15 +129,11 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     /// @dev Will check that the signed nonce is equal to the current nonce and then incrememnt the nonce value by 1.
     /// @dev Emits a Permit event.
     function _updateApproval(PermitDetails memory details, address owner, address spender) private {
-        uint48 nonce = details.nonce;
-        address token = details.token;
-        uint160 amount = details.amount;
-        uint48 expiration = details.expiration;
-        PackedAllowance storage allowed = allowance[owner][token][spender];
+        PackedAllowance storage allowed = allowance[owner][details.token][spender];
 
-        if (allowed.nonce != nonce) revert InvalidNonce();
+        if (allowed.nonce != details.nonce) revert InvalidNonce();
 
-        allowed.updateAll(amount, expiration, nonce);
-        emit Permit(owner, token, spender, amount, expiration, nonce);
+        allowed.updateAll(details.amount, details.expiration, details.nonce);
+        emit Permit(owner, details.token, spender, details.amount, details.expiration, details.nonce);
     }
 }
