@@ -6,14 +6,6 @@ import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
 import {Allowance} from "../../src/libraries/Allowance.sol";
 
 contract MockPermit2 is Permit2 {
-    function setAllowance(address from, address token, address spender, uint48 nonce)
-        public
-        returns (IAllowanceTransfer.PackedAllowance memory allowed)
-    {
-        allowed = allowance[from][token][spender];
-        allowance[from][token][spender].nonce = nonce;
-    }
-
     function doStore(address from, address token, address spender, uint256 word) public {
         IAllowanceTransfer.PackedAllowance storage allowed = allowance[from][token][spender];
         assembly {

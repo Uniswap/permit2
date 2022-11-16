@@ -35,7 +35,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     );
     event Lockdown(address indexed owner, address token, address spender);
 
-    MockPermit2 permit2;
+    Permit2 permit2;
 
     address from;
     uint256 fromPrivateKey;
@@ -76,9 +76,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         setERC20TestTokenApprovals(vm, fromDirty, address(permit2));
 
         // dirty the nonce for fromDirty address on token0 and token1
-        permit2.setAllowance(fromDirty, address(token0), address(this), 1);
-        permit2.setAllowance(fromDirty, address(token1), address(this), 1);
-
+        vm.startPrank(fromDirty);
+        permit2.invalidateNonces(address(token0), address(this), 1);
+        permit2.invalidateNonces(address(token1), address(this), 1);
+        vm.stopPrank();
         // ensure address3 has some balance of token0 and token1 for dirty sstore on transfer
         token0.mint(address3, defaultAmount);
         token1.mint(address3, defaultAmount);
