@@ -172,7 +172,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
     /// @dev for some reason safeApprove gets stack too deep for USDT
     /// so helper function for setup
-    function setupToken() private {
+    function setupToken() internal virtual {
         dealTokens(from, AMOUNT);
         vm.prank(from);
         token().safeApprove(address(permit2), AMOUNT);
