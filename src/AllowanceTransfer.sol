@@ -57,7 +57,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function transferFrom(address from, address to, uint160 amount, address token) external {
-        _transfer(token, from, to, amount);
+        _transfer(from, to, amount, token);
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -66,14 +66,14 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
             uint256 length = transferDetails.length;
             for (uint256 i = 0; i < length; ++i) {
                 AllowanceTransferDetails memory transferDetail = transferDetails[i];
-                _transfer(transferDetail.token, transferDetail.from, transferDetail.to, transferDetail.amount);
+                _transfer(transferDetail.from, transferDetail.to, transferDetail.amount, transferDetail.token);
             }
         }
     }
 
     /// @notice Internal function for transferring tokens using stored allowances
     /// @dev Will fail if the allowed timeframe has passed
-    function _transfer(address token, address from, address to, uint160 amount) private {
+    function _transfer(address from, address to, uint160 amount, address token) private {
         PackedAllowance storage allowed = allowance[from][token][msg.sender];
 
         if (block.timestamp > allowed.expiration) revert AllowanceExpired(allowed.expiration);
