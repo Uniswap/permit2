@@ -12,7 +12,6 @@ import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {AllowanceTransfer} from "../src/AllowanceTransfer.sol";
 import {SignatureExpired, InvalidNonce} from "../src/PermitErrors.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
-import {MockPermit2} from "./mocks/MockPermit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 
 contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnapshot {
@@ -35,7 +34,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     );
     event Lockdown(address indexed owner, address token, address spender);
 
-    MockPermit2 permit2;
+    Permit2 permit2;
 
     address from;
     uint256 fromPrivateKey;
@@ -57,7 +56,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     bytes32 DOMAIN_SEPARATOR;
 
     function setUp() public {
-        permit2 = new MockPermit2();
+        permit2 = new Permit2();
         DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
 
         fromPrivateKey = 0x12341234;
@@ -76,9 +75,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         setERC20TestTokenApprovals(vm, fromDirty, address(permit2));
 
         // dirty the nonce for fromDirty address on token0 and token1
-        permit2.setAllowance(fromDirty, address(token0), address(this), 1);
-        permit2.setAllowance(fromDirty, address(token1), address(this), 1);
-
+        vm.startPrank(fromDirty);
+        permit2.invalidateNonces(address(token0), address(this), 1);
+        permit2.invalidateNonces(address(token1), address(this), 1);
+        vm.stopPrank();
         // ensure address3 has some balance of token0 and token1 for dirty sstore on transfer
         token0.mint(address3, defaultAmount);
         token1.mint(address3, defaultAmount);
