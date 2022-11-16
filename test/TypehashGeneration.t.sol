@@ -2,7 +2,6 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "forge-std/console2.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {PermitHash} from "../src/libraries/PermitHash.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
@@ -85,15 +84,12 @@ contract TypehashGeneration is Test, PermitSignature {
         IAllowanceTransfer.PermitSingle memory permit =
             IAllowanceTransfer.PermitSingle({details: details, spender: spender, sigDeadline: sigDeadline});
 
-        bytes memory localSig = getPermitSignature(permit, PRIV_KEY_TEST, DOMAIN_SEPARATOR);
         // generate hash of local data
         bytes32 hashedPermit = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, permit.hash()));
 
         // verify the signed data againt the locally generated hash
         // this should not revert, validating that from is indeed the signer
         mockSig.verify(sig, hashedPermit, from);
-        // also verify typehash with local sig
-        mockSig.verify(localSig, hashedPermit, from);
     }
 
     function testPermitBatch() public {
@@ -121,15 +117,12 @@ contract TypehashGeneration is Test, PermitSignature {
         IAllowanceTransfer.PermitBatch memory permit =
             IAllowanceTransfer.PermitBatch({details: details, spender: spender, sigDeadline: sigDeadline});
 
-        bytes memory localSig = getPermitBatchSignature(permit, PRIV_KEY_TEST, DOMAIN_SEPARATOR);
         // generate hash of local data
         bytes32 hashedPermit = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, permit.hash()));
 
         // verify the signed data againt the locally generated hash
         // this should not revert, validating that from is indeed the signer
         mockSig.verify(sig, hashedPermit, from);
-        // also verify typehash with local sig
-        mockSig.verify(localSig, hashedPermit, from);
     }
 
     function testPermitTransferFrom() public view {
@@ -146,8 +139,6 @@ contract TypehashGeneration is Test, PermitSignature {
             nonce: nonce,
             deadline: sigDeadline
         });
-
-        // skip local sig since address(this) is used on reconstruction
 
         bytes32 hashedPermit =
             keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, mockHash.hash(permitTransferFrom)));
@@ -176,8 +167,6 @@ contract TypehashGeneration is Test, PermitSignature {
         }
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatchTransferFrom =
             ISignatureTransfer.PermitBatchTransferFrom({permitted: permitted, nonce: nonce, deadline: sigDeadline});
-
-        // skip local sig since address(this) is used on reconstruction
 
         bytes32 hashedPermit =
             keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, mockHash.hash(permitBatchTransferFrom)));
@@ -241,7 +230,7 @@ contract TypehashGeneration is Test, PermitSignature {
         bytes32 hashedPermit = _getLocalBatchedWitnessHash(amount, INCORRECT_WITNESS_TYPE_STRING_STUB);
 
         // verify the signed data againt the locally generated hash
-        // this should not revert, validating that from is indeed the signer
+        // this should revert since the typehash is incorrect
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         mockSig.verify(sig, hashedPermit, from);
     }
@@ -254,15 +243,14 @@ contract TypehashGeneration is Test, PermitSignature {
         bytes32 hashedPermit = _getLocalBatchedWitnessHash(incorrectAmount, INCORRECT_WITNESS_TYPE_STRING_STUB);
 
         // verify the signed data againt the locally generated hash
-        // this should not revert, validating that from is indeed the signer
+        // this should revert since the incorrect amount is passed
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         mockSig.verify(sig, hashedPermit, from);
     }
 
     function _getSingleWitnessMetamaskSignature() private pure returns (bytes memory sig) {
-        // TODO change
         // metamask wallet signed data
-        // 0x0dff2ebed15802a2a21eaac44a12fb182ac41771aaaf6ff33a6a5c78ac66aec306e693dba180302dc0b6aecd97261adfa91f27fd0964e71f58c8b40444ce2f7a1b
+        // 0x6cf7721a2a489c29d86fe0bb9b1f5f440a6a7e3fea5f5533ec080068025a7d4f30d7d8452106654827fd3b44f24260bacb8cf191ec185fc19fc24f5941d573d71c
         bytes32 r = 0x6cf7721a2a489c29d86fe0bb9b1f5f440a6a7e3fea5f5533ec080068025a7d4f;
         bytes32 s = 0x30d7d8452106654827fd3b44f24260bacb8cf191ec185fc19fc24f5941d573d7;
         uint8 v = 0x1c;
