@@ -123,14 +123,15 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
         // permit token() for 1 ** 18
         address[] memory owners = AddressBuilder.fill(3, from);
+        uint256 eachTransfer = 10 ** 5;
         IAllowanceTransfer.AllowanceTransferDetails[] memory transferDetails =
-            StructBuilder.fillAllowanceTransferDetail(3, address(token()), 1 ** 18, RECIPIENT, owners);
+            StructBuilder.fillAllowanceTransferDetail(3, address(token()), uint160(eachTransfer), RECIPIENT, owners);
         permit2.transferFrom(transferDetails);
 
-        assertEq(token().balanceOf(from), startBalanceFrom - 3 * 1 ** 18);
-        assertEq(token().balanceOf(RECIPIENT), startBalanceTo + 3 * 1 ** 18);
+        assertEq(token().balanceOf(from), startBalanceFrom - 3 * eachTransfer);
+        assertEq(token().balanceOf(RECIPIENT), startBalanceTo + 3 * eachTransfer);
         (amount,,) = permit2.allowance(from, address(token()), address(this));
-        assertEq(amount, AMOUNT - 3 * 1 ** 18);
+        assertEq(amount, AMOUNT - 3 * eachTransfer);
     }
 
     function testPermitTransferFrom() public {
