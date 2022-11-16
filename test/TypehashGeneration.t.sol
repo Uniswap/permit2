@@ -10,6 +10,7 @@ import {ISignatureTransfer} from "../src/interfaces/ISignatureTransfer.sol";
 import {MockSignatureVerification} from "./mocks/MockSignatureVerification.sol";
 import {MockHash} from "./mocks/MockHash.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
+import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 
 contract TypehashGeneration is Test, PermitSignature {
     using PermitHash for *;
@@ -33,7 +34,16 @@ contract TypehashGeneration is Test, PermitSignature {
 
     bytes32 DOMAIN_SEPARATOR;
 
+    bytes32 WITNESS_TYPE_HASH = keccak256("MockWitness(address person,uint256 amount)");
+
     MockSignatureVerification mockSig;
+
+    address person = 0xd5F5175D014F28c85F7D67A111C2c9335D7CD771;
+
+    struct MockWitness {
+        address person;
+        uint256 amount;
+    }
 
     function setUp() public {
         mockHash = new MockHash();
@@ -175,5 +185,85 @@ contract TypehashGeneration is Test, PermitSignature {
         // verify the signed data againt the locally generated hash
         // this should not revert, validating that from is indeed the signer
         mockSig.verify(sig, hashedPermit, from);
+    }
+
+    function testPermitBatchTransferFromWithWitness() public view {
+        string memory WITNESS_TYPE_STRING_STUB =
+            "MockWitness witness)MockWitness(address person,uint256 amount)TokenPermissions(address token,uint256 amount)";
+        bytes memory sig = _getBatchedWitnessMetamaskSignature();
+        bytes32 hashedPermit = _getLocalBatchedWitnessHash(amount, WITNESS_TYPE_STRING_STUB);
+
+        // verify the signed data againt the locally generated hash
+        // this should not revert, validating that from is indeed the signer
+        mockSig.verify(sig, hashedPermit, from);
+    }
+
+    function testPermitBatchTransferFromWithWitnessIncorrectTypehashStub() public {
+        string memory INCORRECT_WITNESS_TYPE_STRING_STUB =
+            "MockWitness witness)TokenPermissions(address token,uint256 amount)MockWitness(address person,uint256 amount)";
+        bytes memory sig = _getBatchedWitnessMetamaskSignature();
+        bytes32 hashedPermit = _getLocalBatchedWitnessHash(amount, INCORRECT_WITNESS_TYPE_STRING_STUB);
+
+        // verify the signed data againt the locally generated hash
+        // this should not revert, validating that from is indeed the signer
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        mockSig.verify(sig, hashedPermit, from);
+    }
+
+    function testPermitBatchTransferFromWithWitnessIncorrectPermitData() public {
+        string memory INCORRECT_WITNESS_TYPE_STRING_STUB =
+            "MockWitness witness)TokenPermissions(address token,uint256 amount)MockWitness(address person,uint256 amount)";
+        bytes memory sig = _getBatchedWitnessMetamaskSignature();
+        uint256 incorrectAmount = 100000000000;
+        bytes32 hashedPermit = _getLocalBatchedWitnessHash(incorrectAmount, INCORRECT_WITNESS_TYPE_STRING_STUB);
+
+        // verify the signed data againt the locally generated hash
+        // this should not revert, validating that from is indeed the signer
+        vm.expectRevert(SignatureVerification.InvalidSigner.selector);
+        mockSig.verify(sig, hashedPermit, from);
+    }
+
+    function _getBatchedWitnessMetamaskSignature() private pure returns (bytes memory sig) {
+        // metamask wallet signed data
+        // 0x0dff2ebed15802a2a21eaac44a12fb182ac41771aaaf6ff33a6a5c78ac66aec306e693dba180302dc0b6aecd97261adfa91f27fd0964e71f58c8b40444ce2f7a1b
+        bytes32 r = 0x0dff2ebed15802a2a21eaac44a12fb182ac41771aaaf6ff33a6a5c78ac66aec3;
+        bytes32 s = 0x06e693dba180302dc0b6aecd97261adfa91f27fd0964e71f58c8b40444ce2f7a;
+        uint8 v = 0x1b;
+
+        sig = bytes.concat(r, s, bytes1(v));
+    }
+
+    function _getLocalBatchedWitnessHash(uint256 amountToHash, string memory typehashStub)
+        private
+        view
+        returns (bytes32 hashedPermit)
+    {
+        MockWitness memory witness = MockWitness({person: person, amount: amount});
+        bytes32 hashedWitness = hashTypedWitness(WITNESS_TYPE_HASH, witness);
+
+        address[] memory tokens = AddressBuilder.fill(1, token1).push(token2);
+        ISignatureTransfer.TokenPermissions[] memory permitted =
+            new ISignatureTransfer.TokenPermissions[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            permitted[i] = ISignatureTransfer.TokenPermissions({token: tokens[i], amount: amountToHash});
+        }
+        ISignatureTransfer.PermitBatchTransferFrom memory permitBatchTransferFrom =
+            ISignatureTransfer.PermitBatchTransferFrom({permitted: permitted, nonce: nonce, deadline: sigDeadline});
+
+        hashedPermit = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                mockHash.hashWithWitness(permitBatchTransferFrom, hashedWitness, typehashStub)
+            )
+        );
+    }
+
+    function hashTypedWitness(bytes32 typehash, MockWitness memory typedWitness)
+        private
+        pure
+        returns (bytes32 witness)
+    {
+        return keccak256(abi.encode(typehash, typedWitness));
     }
 }
