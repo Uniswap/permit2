@@ -12,7 +12,6 @@ import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {AllowanceTransfer} from "../src/AllowanceTransfer.sol";
 import {SignatureExpired, InvalidNonce} from "../src/PermitErrors.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
-import {MockPermit2} from "./mocks/MockPermit2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 
 contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnapshot {
@@ -57,7 +56,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     bytes32 DOMAIN_SEPARATOR;
 
     function setUp() public {
-        permit2 = new MockPermit2();
+        permit2 = new Permit2();
         DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
 
         fromPrivateKey = 0x12341234;
