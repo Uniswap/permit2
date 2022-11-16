@@ -173,10 +173,15 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
     /// @dev for some reason safeApprove gets stack too deep for USDT
     /// so helper function for setup
     function setupToken() private {
-        deal(address(token()), from, AMOUNT);
+        dealTokens(from, AMOUNT);
         vm.prank(from);
         token().safeApprove(address(permit2), AMOUNT);
     }
 
     function token() internal virtual returns (ERC20);
+
+    // sometimes the balances slot is not easy to find for forge
+    function dealTokens(address to, uint256 amount) internal virtual {
+        deal(address(token()), to, amount);
+    }
 }
