@@ -55,7 +55,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address owner,
         bytes32 dataHash,
         bytes calldata signature
-    ) internal {
+    ) private {
         uint256 requestedAmount = transferDetails.requestedAmount;
 
         if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
@@ -104,7 +104,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         address owner,
         bytes32 dataHash,
         bytes calldata signature
-    ) internal {
+    ) private {
         uint256 numPermitted = permit.permitted.length;
 
         if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
