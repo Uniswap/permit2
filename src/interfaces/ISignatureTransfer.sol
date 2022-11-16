@@ -66,14 +66,12 @@ interface ISignatureTransfer {
     /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipient of the tokens
-    /// @param requestedAmount The amount of tokens to transfer
+    /// @param transferDetails The spender's requested transfer details for the permitted token
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitTransferFrom memory permit,
+        SignatureTransferDetails calldata transferDetails,
         address owner,
-        address to,
-        uint256 requestedAmount,
         bytes calldata signature
     ) external;
 
@@ -83,16 +81,14 @@ interface ISignatureTransfer {
     /// @dev Reverts if the requested amount is greater than the permitted signed amount
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param to The recipient of the tokens
-    /// @param requestedAmount The amount of tokens to transfer
+    /// @param transferDetails The spender's requested transfer details for the permitted token
     /// @param witness Extra data to include when checking the user signature
     /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
+        SignatureTransferDetails calldata transferDetails,
         address owner,
-        address to,
-        uint256 requestedAmount,
         bytes32 witness,
         string calldata witnessTypeString,
         bytes calldata signature
@@ -105,8 +101,8 @@ interface ISignatureTransfer {
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
-        address owner,
         SignatureTransferDetails[] calldata transferDetails,
+        address owner,
         bytes calldata signature
     ) external;
 
@@ -121,8 +117,8 @@ interface ISignatureTransfer {
     /// @param signature The signature to verify
     function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
-        address owner,
         SignatureTransferDetails[] calldata transferDetails,
+        address owner,
         bytes32 witness,
         string calldata witnessTypeString,
         bytes calldata signature

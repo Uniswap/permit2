@@ -85,6 +85,14 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         );
     }
 
+    function getTransferDetails(address to, uint256 amount)
+        private
+        pure
+        returns (ISignatureTransfer.SignatureTransferDetails memory)
+    {
+        return ISignatureTransfer.SignatureTransferDetails({to: to, requestedAmount: amount});
+    }
+
     function testPermitTransferFrom() public {
         uint256 nonce = 0;
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
@@ -93,7 +101,9 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
 
-        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
@@ -108,8 +118,10 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
         snapStart("permitTransferFromCompactSig");
-        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
@@ -123,8 +135,10 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bytes memory sigExtra = bytes.concat(sig, bytes1(uint8(0)));
         assertEq(sigExtra.length, 66);
 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
         vm.expectRevert(SignatureVerification.InvalidSignatureLength.selector);
-        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sigExtra);
+        permit2.permitTransferFrom(permit, transferDetails, from, sigExtra);
     }
 
     function testPermitTransferFromToSpender() public {
@@ -136,7 +150,9 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address0);
 
-        permit2.permitTransferFrom(permit, from, address0, defaultAmount, sig);
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address0, defaultAmount);
+
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address0), startBalanceTo + defaultAmount);
@@ -147,10 +163,11 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
         bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
 
         vm.expectRevert(InvalidNonce.selector);
-        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
     }
 
     function testPermitTransferFromRandomNonceAndAmount(uint256 nonce, uint128 amount) public {
@@ -161,8 +178,9 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, amount);
 
-        permit2.permitTransferFrom(permit, from, address2, amount, sig);
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - amount);
         assertEq(token0.balanceOf(address2), startBalanceTo + amount);
@@ -178,7 +196,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo = token0.balanceOf(address2);
 
         uint256 amountToSpend = amount / 2;
-        permit2.permitTransferFrom(permit, from, address2, amountToSpend, sig);
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, amountToSpend);
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom - amountToSpend);
         assertEq(token0.balanceOf(address2), startBalanceTo + amountToSpend);
@@ -199,7 +218,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo0 = token0.balanceOf(address2);
         uint256 startBalanceTo1 = token1.balanceOf(address0);
 
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
@@ -227,7 +246,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo0 = token0.balanceOf(address2);
         uint256 startBalanceTo1 = token1.balanceOf(address0);
 
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom0);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - defaultAmount);
@@ -250,7 +269,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo1 = token1.balanceOf(address2);
 
         snapStart("single recipient 2 tokens");
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
@@ -274,7 +293,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         address[] memory to = AddressBuilder.fill(1, address(this)).push(address2);
         ISignatureTransfer.SignatureTransferDetails[] memory toAmountPairs =
             StructBuilder.fillSigTransferDetails(defaultAmount, to);
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
         assertEq(token0.balanceOf(address(this)), startBalanceTo0 + defaultAmount);
@@ -297,7 +316,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             StructBuilder.fillSigTransferDetails(10, defaultAmount, address(this));
 
         snapStart("single recipient many tokens");
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - 10 * defaultAmount);
@@ -315,7 +334,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             StructBuilder.fillSigTransferDetails(1, defaultAmount, address(this));
 
         vm.expectRevert(ISignatureTransfer.LengthMismatch.selector);
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
     }
 
     function testGasSinglePermitTransferFrom() public {
@@ -325,8 +344,11 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
+
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
         snapStart("permitTransferFromSingleToken");
-        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
@@ -346,7 +368,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo0 = token0.balanceOf(address2);
 
         snapStart("permitBatchTransferFromSingleToken");
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
@@ -370,7 +392,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceToThis1 = token1.balanceOf(address(this));
 
         snapStart("permitBatchTransferFromMultipleTokens");
-        permit2.permitTransferFrom(permit, from, toAmountPairs, sig);
+        permit2.permitTransferFrom(permit, toAmountPairs, from, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
@@ -401,7 +423,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceTo1 = token1.balanceOf(address0);
 
         snapStart("permitTransferFromBatchTypedWitness");
-        permit2.permitWitnessTransferFrom(permit, from, toAmountPairs, witness, WITNESS_TYPE_STRING, sig);
+        permit2.permitWitnessTransferFrom(permit, toAmountPairs, from, witness, WITNESS_TYPE_STRING, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom0 - defaultAmount);
@@ -425,7 +447,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             StructBuilder.fillSigTransferDetails(defaultAmount, to);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitWitnessTransferFrom(permit, from, toAmountPairs, witness, "fake type", sig);
+        permit2.permitWitnessTransferFrom(permit, toAmountPairs, from, witness, "fake type", sig);
     }
 
     function testPermitBatchTransferFromTypedWitnessInvalidTypeHash() public {
@@ -442,7 +464,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             StructBuilder.fillSigTransferDetails(defaultAmount, to);
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitWitnessTransferFrom(permit, from, toAmountPairs, witness, WITNESS_TYPE_STRING, sig);
+        permit2.permitWitnessTransferFrom(permit, toAmountPairs, from, witness, WITNESS_TYPE_STRING, sig);
     }
 
     function testPermitBatchTransferFromTypedWitnessInvalidWitness() public {
@@ -461,7 +483,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         permit2.permitWitnessTransferFrom(
-            permit, from, toAmountPairs, keccak256(abi.encodePacked("bad witness")), WITNESS_TYPE_STRING, sig
+            permit, toAmountPairs, from, keccak256(abi.encodePacked("bad witness")), WITNESS_TYPE_STRING, sig
         );
     }
 
@@ -479,8 +501,10 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bitmap = permit2.nonceBitmap(from, 0);
         assertEq(bitmap, 1);
 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
         vm.expectRevert(InvalidNonce.selector);
-        permit2.permitTransferFrom(permit, from, address2, defaultAmount, sig);
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
     }
 
     function testPermitTransferFromTypedWitness() public {
@@ -495,8 +519,10 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         uint256 startBalanceFrom = token0.balanceOf(from);
         uint256 startBalanceTo = token0.balanceOf(address2);
 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
         snapStart("permitTransferFromTypedWitness");
-        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, witness, WITNESS_TYPE_STRING, sig);
+        permit2.permitWitnessTransferFrom(permit, transferDetails, from, witness, WITNESS_TYPE_STRING, sig);
         snapEnd();
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
@@ -512,8 +538,10 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
             permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
         );
 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, witness, "fake typedef", sig);
+        permit2.permitWitnessTransferFrom(permit, transferDetails, from, witness, "fake typedef", sig);
     }
 
     function testPermitTransferFromTypedWitnessInvalidTypehash() public {
@@ -524,7 +552,9 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bytes memory sig =
             getPermitWitnessTransferSignature(permit, fromPrivateKey, "fake typehash", witness, DOMAIN_SEPARATOR);
 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2.permitWitnessTransferFrom(permit, from, address2, defaultAmount, witness, WITNESS_TYPE_STRING, sig);
+        permit2.permitWitnessTransferFrom(permit, transferDetails, from, witness, WITNESS_TYPE_STRING, sig);
     }
 }

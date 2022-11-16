@@ -25,6 +25,14 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
     event Approval(
         address indexed owner, address indexed token, address indexed spender, uint160 amount, uint48 expiration
     );
+    event Permit(
+        address indexed owner,
+        address indexed token,
+        address indexed spender,
+        uint160 amount,
+        uint48 expiration,
+        uint48 nonce
+    );
     event Lockdown(address indexed owner, address token, address spender);
 
     MockPermit2 permit2;
@@ -204,11 +212,10 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
             defaultERC20PermitBatchAllowance(tokens, defaultAmount, defaultExpiration, defaultNonce);
         bytes memory sig = getPermitBatchSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        // TODO: fix
-        // vm.expectEmit(true, true, false, true);
-        // emit Approval(from, tokens[0], address(this), amounts[0], defaultExpiration);
         vm.expectEmit(true, true, true, true);
-        emit Approval(from, tokens[1], address(this), amounts[1], defaultExpiration);
+        emit Permit(from, tokens[0], address(this), amounts[0], defaultExpiration, defaultNonce);
+        vm.expectEmit(true, true, true, true);
+        emit Permit(from, tokens[1], address(this), amounts[1], defaultExpiration, defaultNonce);
         permit2.permit(from, permit, sig);
 
         (uint160 amount, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(token0), address(this));
