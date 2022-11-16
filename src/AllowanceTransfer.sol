@@ -110,7 +110,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @inheritdoc IAllowanceTransfer
-    function invalidateNonces(address token, address spender, uint48 newNonce) public {
+    function invalidateNonces(address token, address spender, uint48 newNonce) external {
         uint48 oldNonce = allowance[msg.sender][token][spender].nonce;
 
         if (newNonce <= oldNonce) revert InvalidNonce();
