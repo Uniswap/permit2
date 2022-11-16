@@ -125,7 +125,7 @@ contract TypehashGeneration is Test, PermitSignature {
         mockSig.verify(sig, hashedPermit, from);
     }
 
-    function testPermitTransferFrom() public view {
+    function testPermitTransferFrom() public {
         // metamask wallet signed data
         // 0x3d298c897075538134ee0003bba9b149fac6e4b3496e34272f6731c32be2a710682657710eb4208db1eb6a6dac08b375f171733604e4e1deed30d49e22d0c42f1c
         bytes32 r = 0xc12d33a96aef9ea42f1ad72587f52b5113b68d7b8fe35675fc0bb1ade3773455;
@@ -140,15 +140,16 @@ contract TypehashGeneration is Test, PermitSignature {
             deadline: sigDeadline
         });
 
-        bytes32 hashedPermit =
-            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, mockHash.hash(permitTransferFrom)));
+        vm.prank(spender);
+        bytes32 permitTransferFromHash = mockHash.hash(permitTransferFrom);
+        bytes32 hashedPermit = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, permitTransferFromHash));
 
         // verify the signed data againt the locally generated hash
         // this should not revert, validating that from is indeed the signer
         mockSig.verify(sig, hashedPermit, from);
     }
 
-    function testPermitBatchTransferFrom() public view {
+    function testPermitBatchTransferFrom() public {
         // metamask wallet signed data
         // 0x8987ef38bdbf7f7dd8f133c92a331b5359036ca9732b2cf15750f1a56050159e10a62544d74648d917ce4c1b670024a771aadb8bace7db63ef6f5d3975451b231b
         bytes32 r = 0x8987ef38bdbf7f7dd8f133c92a331b5359036ca9732b2cf15750f1a56050159e;
@@ -168,15 +169,16 @@ contract TypehashGeneration is Test, PermitSignature {
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatchTransferFrom =
             ISignatureTransfer.PermitBatchTransferFrom({permitted: permitted, nonce: nonce, deadline: sigDeadline});
 
-        bytes32 hashedPermit =
-            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, mockHash.hash(permitBatchTransferFrom)));
+        vm.prank(spender);
+        bytes32 permitBatchTransferFromHash = mockHash.hash(permitBatchTransferFrom);
+        bytes32 hashedPermit = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, permitBatchTransferFromHash));
 
         // verify the signed data againt the locally generated hash
         // this should not revert, validating that from is indeed the signer
         mockSig.verify(sig, hashedPermit, from);
     }
 
-    function testPermitTransferFromWithWitness() public view {
+    function testPermitTransferFromWithWitness() public {
         string memory WITNESS_TYPE_STRING_STUB =
             "MockWitness witness)MockWitness(address person,uint256 amount)TokenPermissions(address token,uint256 amount)";
         bytes memory sig = _getSingleWitnessMetamaskSignature();
@@ -212,7 +214,7 @@ contract TypehashGeneration is Test, PermitSignature {
         mockSig.verify(sig, hashedPermit, from);
     }
 
-    function testPermitBatchTransferFromWithWitness() public view {
+    function testPermitBatchTransferFromWithWitness() public {
         string memory WITNESS_TYPE_STRING_STUB =
             "MockWitness witness)MockWitness(address person,uint256 amount)TokenPermissions(address token,uint256 amount)";
         bytes memory sig = _getBatchedWitnessMetamaskSignature();
@@ -260,7 +262,6 @@ contract TypehashGeneration is Test, PermitSignature {
 
     function _getLocalSingleWitnessHash(uint256 amountToHash, string memory typehashStub)
         private
-        view
         returns (bytes32 hashedPermit)
     {
         ISignatureTransfer.PermitTransferFrom memory permitTransferFrom = ISignatureTransfer.PermitTransferFrom({
@@ -272,11 +273,10 @@ contract TypehashGeneration is Test, PermitSignature {
         MockWitness memory witness = MockWitness({person: person, amount: amount});
         bytes32 hashedWitness = hashTypedWitness(WITNESS_TYPE_HASH, witness);
 
-        hashedPermit = keccak256(
-            abi.encodePacked(
-                "\x19\x01", DOMAIN_SEPARATOR, mockHash.hashWithWitness(permitTransferFrom, hashedWitness, typehashStub)
-            )
-        );
+        vm.prank(spender);
+        bytes32 permitTrasferFromWitnessHash = mockHash.hashWithWitness(permitTransferFrom, hashedWitness, typehashStub);
+
+        hashedPermit = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, permitTrasferFromWitnessHash));
     }
 
     function _getBatchedWitnessMetamaskSignature() private pure returns (bytes memory sig) {
@@ -291,7 +291,6 @@ contract TypehashGeneration is Test, PermitSignature {
 
     function _getLocalBatchedWitnessHash(uint256 amountToHash, string memory typehashStub)
         private
-        view
         returns (bytes32 hashedPermit)
     {
         MockWitness memory witness = MockWitness({person: person, amount: amount});
@@ -306,13 +305,10 @@ contract TypehashGeneration is Test, PermitSignature {
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatchTransferFrom =
             ISignatureTransfer.PermitBatchTransferFrom({permitted: permitted, nonce: nonce, deadline: sigDeadline});
 
-        hashedPermit = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                DOMAIN_SEPARATOR,
-                mockHash.hashWithWitness(permitBatchTransferFrom, hashedWitness, typehashStub)
-            )
-        );
+        vm.prank(spender);
+        bytes32 permitBatchTransferFromWitnessHash =
+            mockHash.hashWithWitness(permitBatchTransferFrom, hashedWitness, typehashStub);
+        hashedPermit = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, permitBatchTransferFromWitnessHash));
     }
 
     function hashTypedWitness(bytes32 typehash, MockWitness memory typedWitness)

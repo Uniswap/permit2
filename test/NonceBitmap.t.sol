@@ -89,4 +89,24 @@ contract NonceBitmapTest is Test {
             permit2.useUnorderedNonce(address(this), second);
         }
     }
+
+    function testInvalidateNoncesRandomly(uint248 wordPos, uint256 mask) public {
+        permit2.invalidateUnorderedNonces(wordPos, mask);
+        assertEq(mask, permit2.nonceBitmap(address(this), wordPos));
+    }
+
+    function testInvalidateTwoNoncesRandomly(uint248 wordPos, uint256 startBitmap, uint256 mask) public {
+        permit2.invalidateUnorderedNonces(wordPos, startBitmap);
+        assertEq(startBitmap, permit2.nonceBitmap(address(this), wordPos));
+
+        // invalidating with the mask changes the original bitmap
+        uint256 finalBitmap = startBitmap | mask;
+        permit2.invalidateUnorderedNonces(wordPos, mask);
+        uint256 savedBitmap = permit2.nonceBitmap(address(this), wordPos);
+        assertEq(finalBitmap, savedBitmap);
+
+        // invalidating with the same mask should do nothing
+        permit2.invalidateUnorderedNonces(wordPos, mask);
+        assertEq(savedBitmap, permit2.nonceBitmap(address(this), wordPos));
+    }
 }
