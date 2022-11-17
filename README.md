@@ -24,7 +24,7 @@ The `AllowanceTransfer` contract handles setting allowances on tokens, giving pe
 
 ## Integrating with Permit2
 
-Before integrating contracts can request users’ tokens through `Permit2`, users must approve the `Permit2` contract through the specific token contract. To see a detailed technical reference, visit the Uniswap [documentation site](https://docs.uniswap.org/protocol/reference/permit2/overview).
+Before integrating contracts can request users’ tokens through `Permit2`, users must approve the `Permit2` contract through the specific token contract. To see a detailed technical reference, visit the Uniswap [documentation site](https://docs.uniswap.org/protocol/permit2/overview).
 
 ## Bug Bounty
 
