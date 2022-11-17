@@ -30,7 +30,7 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     uint256 immutable PK;
     address immutable PK_OWNER;
 
-    Permit2 immutable permit2 = new Permit2();
+    Permit2 immutable permit2 = Permit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     // Use to test errors in Permit2Lib calls.
     MockPermit2Lib immutable permit2Lib = new MockPermit2Lib();
@@ -47,6 +47,8 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     constructor() {
         PK = 0xBEEF;
         PK_OWNER = vm.addr(PK);
+        Permit2 tempPermit2 = new Permit2();
+        vm.etch(address(permit2), address(tempPermit2).code);
 
         TOKEN_DOMAIN_SEPARATOR = token.DOMAIN_SEPARATOR();
         PERMIT2_DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
