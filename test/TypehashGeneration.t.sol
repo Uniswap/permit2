@@ -68,7 +68,7 @@ contract TypehashGeneration is Test, PermitSignature {
         return keccak256(abi.encode(typeHash, nameHash, chainId, verifyingContract));
     }
 
-    function testPermitSingle() public {
+    function testPermitSingle() public view {
         // metamask wallet signed data
         // 0xdb5507adaba8ed8e1d83dc7cb64980735c4769076c657d80563ce9a991fbb1981d07973917923c7942307e63285ff2e9e8d435fc4da8cdc7546a669bf474fb6d1b
         bytes32 r = 0xdb5507adaba8ed8e1d83dc7cb64980735c4769076c657d80563ce9a991fbb198;
@@ -92,7 +92,7 @@ contract TypehashGeneration is Test, PermitSignature {
         mockSig.verify(sig, hashedPermit, from);
     }
 
-    function testPermitBatch() public {
+    function testPermitBatch() public view {
         // metamask wallet signed data
         // 0x3d298c897075538134ee0003bba9b149fac6e4b3496e34272f6731c32be2a710682657710eb4208db1eb6a6dac08b375f171733604e4e1deed30d49e22d0c42f1c
         bytes32 r = 0x3d298c897075538134ee0003bba9b149fac6e4b3496e34272f6731c32be2a710;
