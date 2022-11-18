@@ -43,7 +43,6 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     }
 
     /// @notice Transfers a token using a signed permit message.
-    /// @dev If to is the zero address, the tokens are sent to the spender.
     /// @param permit The permit data signed over by the owner
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
@@ -93,7 +92,6 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     }
 
     /// @notice Transfers tokens using a signed permit messages
-    /// @dev If to is the zero address, the tokens are sent to the spender
     /// @param permit The permit data signed over by the owner
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
