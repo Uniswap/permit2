@@ -16,16 +16,12 @@ library Allowance {
         uint48 expiration,
         uint48 nonce
     ) internal {
-        uint48 storedNonce;
-        unchecked {
-            storedNonce = nonce + 1;
-        }
-
         uint48 storedExpiration = expiration == BLOCK_TIMESTAMP_EXPIRATION ? uint48(block.timestamp) : expiration;
-
-        uint256 word = pack(amount, storedExpiration, storedNonce);
-        assembly {
-            sstore(allowed.slot, word)
+        unchecked {
+            uint256 word = pack(amount, storedExpiration, ++nonce);
+            assembly {
+                sstore(allowed.slot, word)
+            }
         }
     }
 
@@ -37,7 +33,7 @@ library Allowance {
         uint48 expiration
     ) internal {
         // If the inputted expiration is 0, the allowance only lasts the duration of the block.
-        allowed.expiration = expiration == 0 ? uint48(block.timestamp) : expiration;
+        allowed.expiration = expiration == BLOCK_TIMESTAMP_EXPIRATION ? uint48(block.timestamp) : expiration;
         allowed.amount = amount;
     }
 

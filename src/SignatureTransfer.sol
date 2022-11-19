@@ -103,22 +103,22 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes32 dataHash,
         bytes calldata signature
     ) private {
-        uint256 numPermitted = permit.permitted.length;
-
         if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
+        uint256 numPermitted = permit.permitted.length;
         if (numPermitted != transferDetails.length) revert LengthMismatch();
 
         _useUnorderedNonce(owner, permit.nonce);
         signature.verify(_hashTypedData(dataHash), owner);
-
+        TokenPermissions memory permitted;
+        uint256 requestedAmount;
         unchecked {
             for (uint256 i = 0; i < numPermitted; ++i) {
-                TokenPermissions memory permitted = permit.permitted[i];
-                uint256 requestedAmount = transferDetails[i].requestedAmount;
+                permitted = permit.permitted[i];
+                requestedAmount = transferDetails[i].requestedAmount;
 
                 if (requestedAmount > permitted.amount) revert InvalidAmount(permitted.amount);
 
-                if (requestedAmount != 0) {
+                if (requestedAmount > 0) {
                     // allow spender to specify which of the permitted tokens should be transferred
                     ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
                 }

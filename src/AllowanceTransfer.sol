@@ -99,11 +99,13 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
             uint256 length = approvals.length;
+            address token;
+            address spender;
             for (uint256 i = 0; i < length; ++i) {
-                address token = approvals[i].token;
-                address spender = approvals[i].spender;
+                token = approvals[i].token;
+                spender = approvals[i].spender;
 
-                allowance[owner][token][spender].amount = 0;
+                delete allowance[owner][token][spender].amount;
                 emit Lockdown(owner, token, spender);
             }
         }
