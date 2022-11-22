@@ -37,8 +37,15 @@ library Allowance {
         uint48 expiration
     ) internal {
         // If the inputted expiration is 0, the allowance only lasts the duration of the block.
-        allowed.expiration = expiration == BLOCK_TIMESTAMP_EXPIRATION ? uint48(block.timestamp) : expiration;
-        allowed.amount = amount;
+        assembly {
+            let expiry
+            switch expiration
+            case 0 { expiry := timestamp() }
+            default { expiry := expiration }
+            let slot := allowed.slot
+            let word := sload(slot)
+            sstore(slot, or(shl(208, shr(208, word)), or(shl(160, expiry), amount)))
+        }
     }
 
     /// @notice Computes the packed slot of the amount, expiration, and nonce that make up PackedAllowance
