@@ -16,15 +16,13 @@ library Allowance {
         uint48 expiration,
         uint48 nonce
     ) internal {
-        uint48 storedNonce;
-        unchecked {
-            storedNonce = nonce + 1;
-        }
-
-        uint48 storedExpiration = expiration == BLOCK_TIMESTAMP_EXPIRATION ? uint48(block.timestamp) : expiration;
-
-        uint256 word = pack(amount, storedExpiration, storedNonce);
         assembly {
+            nonce := add(nonce, 1)
+            let expiry
+            switch expiration
+            case 0 { expiry := timestamp() }
+            default { expiry := expiration }
+            let word := or(shl(208, nonce), or(shl(160, expiry), amount))
             sstore(allowed.slot, word)
         }
     }
