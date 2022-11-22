@@ -64,9 +64,8 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function transferFrom(AllowanceTransferDetails[] calldata transferDetails) external {
         unchecked {
             uint256 length = transferDetails.length;
-            AllowanceTransferDetails memory transferDetail;
             for (uint256 i = 0; i < length; ++i) {
-                transferDetail = transferDetails[i];
+                AllowanceTransferDetails memory transferDetail = transferDetails[i];
                 _transfer(transferDetail.from, transferDetail.to, transferDetail.amount, transferDetail.token);
             }
         }
@@ -100,13 +99,11 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         // Revoke allowances for each pair of spenders and tokens.
         unchecked {
             uint256 length = approvals.length;
-            address token;
-            address spender;
             for (uint256 i = 0; i < length; ++i) {
-                token = approvals[i].token;
-                spender = approvals[i].spender;
+                address token = approvals[i].token;
+                address spender = approvals[i].spender;
 
-                delete allowance[owner][token][spender].amount;
+                allowance[owner][token][spender].amount = 0;
                 emit Lockdown(owner, token, spender);
             }
         }

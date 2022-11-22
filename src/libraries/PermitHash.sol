@@ -43,10 +43,8 @@ library PermitHash {
     function hash(IAllowanceTransfer.PermitBatch memory permitBatch) internal pure returns (bytes32) {
         uint256 numPermits = permitBatch.details.length;
         bytes32[] memory permitHashes = new bytes32[](numPermits);
-        unchecked {
-            for (uint256 i = 0; i < numPermits; ++i) {
-                permitHashes[i] = _hashPermitDetails(permitBatch.details[i]);
-            }
+        for (uint256 i = 0; i < numPermits; ++i) {
+            permitHashes[i] = _hashPermitDetails(permitBatch.details[i]);
         }
         return keccak256(
             abi.encode(
@@ -69,10 +67,8 @@ library PermitHash {
         uint256 numPermitted = permit.permitted.length;
         bytes32[] memory tokenPermissionHashes = new bytes32[](numPermitted);
 
-        unchecked {
-            for (uint256 i = 0; i < numPermitted; ++i) {
-                tokenPermissionHashes[i] = _hashTokenPermissions(permit.permitted[i]);
-            }
+        for (uint256 i = 0; i < numPermitted; ++i) {
+            tokenPermissionHashes[i] = _hashTokenPermissions(permit.permitted[i]);
         }
 
         return keccak256(
@@ -108,10 +104,8 @@ library PermitHash {
         uint256 numPermitted = permit.permitted.length;
         bytes32[] memory tokenPermissionHashes = new bytes32[](numPermitted);
 
-        unchecked {
-            for (uint256 i = 0; i < numPermitted; ++i) {
-                tokenPermissionHashes[i] = _hashTokenPermissions(permit.permitted[i]);
-            }
+        for (uint256 i = 0; i < numPermitted; ++i) {
+            tokenPermissionHashes[i] = _hashTokenPermissions(permit.permitted[i]);
         }
 
         return keccak256(
