@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/src/tokens/ERC20.sol";
 import {Permit2Lib} from "../../src/libraries/Permit2Lib.sol";
 
 contract MockPermit2Lib {

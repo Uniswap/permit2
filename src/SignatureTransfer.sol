@@ -3,8 +3,8 @@ pragma solidity 0.8.17;
 
 import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
 import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ERC20} from "solmate/src/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
 import {EIP712} from "./EIP712.sol";
