@@ -11,9 +11,8 @@ library SafeCast160 {
         uint256 maxValue = type(uint160).max;
         assembly {
             if gt(value, maxValue) {
-                let ptr := mload(0x40)
-                mstore(ptr, 0xc4bd89a9)
-                revert(add(ptr, 0x1C), 0x04)
+                mstore(0, 0xc4bd89a9)
+                revert(0x1C, 0x04)
             }
             result := value
         }
