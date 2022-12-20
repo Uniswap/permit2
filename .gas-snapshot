@@ -4,7 +4,7 @@ AllowanceTransferInvariants:invariant_spendNeverExceedsPermit() (runs: 256, call
 AllowanceTransferTest:testApprove() (gas: 47561)
 AllowanceTransferTest:testBatchTransferFrom() (gas: 159268)
 AllowanceTransferTest:testBatchTransferFromDifferentOwners() (gas: 235508)
-AllowanceTransferTest:testBatchTransferFromMultiToken() (gas: 231810)
+AllowanceTransferTest:testBatchTransferFromMultiToken() (gas: 231828)
 AllowanceTransferTest:testBatchTransferFromWithGasSnapshot() (gas: 159818)
 AllowanceTransferTest:testExcessiveInvalidation() (gas: 64136)
 AllowanceTransferTest:testInvalidateMultipleNonces() (gas: 83139)
