@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {DSTestPlus} from "solmate/src/test/utils/DSTestPlus.sol";
-import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20, ERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {Permit2Lib} from "../src/libraries/Permit2Lib.sol";
 import {MockNonPermitERC20} from "./mocks/MockNonPermitERC20.sol";
@@ -17,6 +17,7 @@ import {SafeCast160} from "../src/libraries/SafeCast160.sol";
 import {MockPermitWithSmallDS, MockPermitWithLargerDS} from "./mocks/MockPermitWithDS.sol";
 import {MockNonPermitNonERC20WithDS} from "./mocks/MockNonPermitNonERC20WithDS.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
+import {WETH9} from "./mocks/WETH9.sol";
 
 contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     bytes32 constant PERMIT_TYPEHASH =
@@ -31,6 +32,8 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     address immutable PK_OWNER;
 
     Permit2 immutable permit2 = Permit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+
+    WETH9 immutable weth9 = new WETH9();
 
     // Use to test errors in Permit2Lib calls.
     MockPermit2Lib immutable permit2Lib = new MockPermit2Lib();
@@ -222,6 +225,29 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
         Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    }
+
+    function testPermit2WETH9() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(weth9), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(weth9),
+                amount: 1e18,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        uint256 gas1 = gasleft();
+
+        Permit2Lib.permit2(ERC20(address(weth9)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+
+        assertLt(gas1 - gasleft(), 100_000); // If unbounded the staticcall will consume a wild amount of gas.
     }
 
     function testPermit2SmallerDS() public {
