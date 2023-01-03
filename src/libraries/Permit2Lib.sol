@@ -20,6 +20,9 @@ library Permit2Lib {
     /// @dev The unique EIP-712 domain domain separator for the DAI token contract.
     bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
+    /// @dev The address for the WETH9 contract on Ethereum mainnet, encoded as a bytes32.
+    bytes32 internal constant WETH9_ADDRESS = 0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2;
+
     /// @dev The address of the Permit2 contract the library will use.
     Permit2 internal constant PERMIT2 = Permit2(address(0x000000000022D473030F116dDEE9F6B43aC78BA3));
 
@@ -79,18 +82,25 @@ library Permit2Lib {
 
         bool success; // Call the token contract as normal, capturing whether it succeeded.
         bytes32 domainSeparator; // If the call succeeded, we'll capture the return value here.
-        assembly {
-            success :=
-                and(
-                    // Should resolve false if its not 32 bytes or its first word is 0.
-                    and(iszero(iszero(mload(0))), eq(returndatasize(), 32)),
-                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-                    // Counterintuitively, this call must be positioned second to the and() call in the
-                    // surrounding and() call or else returndatasize() will be zero during the computation.
-                    staticcall(gas(), token, add(inputData, 32), mload(inputData), 0, 32)
-                )
 
-            domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
+        assembly {
+            // If the token is WETH9, we know it doesn't have a DOMAIN_SEPARATOR, and we'll skip this step.
+            // We make sure to mask the token address as its higher order bits aren't guaranteed to be clean.
+            if iszero(eq(and(token, 0xffffffffffffffffffffffffffffffffffffffff), WETH9_ADDRESS)) {
+                success :=
+                    and(
+                        // Should resolve false if its not 32 bytes or its first word is 0.
+                        and(iszero(iszero(mload(0))), eq(returndatasize(), 32)),
+                        // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
+                        // Counterintuitively, this call must be positioned second to the and() call in the
+                        // surrounding and() call or else returndatasize() will be zero during the computation.
+                        // We send a maximum of 5000 gas to prevent tokens with fallbacks from using a ton of gas.
+                        // which should be plenty to allow tokens to fetch their DOMAIN_SEPARATOR from storage, etc.
+                        staticcall(5000, token, add(inputData, 32), mload(inputData), 0, 32)
+                    )
+
+                domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
+            }
         }
 
         // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.

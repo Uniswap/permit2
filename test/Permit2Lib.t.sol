@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {DSTestPlus} from "solmate/src/test/utils/DSTestPlus.sol";
-import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20, ERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {Permit2Lib} from "../src/libraries/Permit2Lib.sol";
 import {MockNonPermitERC20} from "./mocks/MockNonPermitERC20.sol";
@@ -17,6 +17,7 @@ import {SafeCast160} from "../src/libraries/SafeCast160.sol";
 import {MockPermitWithSmallDS, MockPermitWithLargerDS} from "./mocks/MockPermitWithDS.sol";
 import {MockNonPermitNonERC20WithDS} from "./mocks/MockNonPermitNonERC20WithDS.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
+import {MockFallbackERC20} from "./mocks/MockFallbackERC20.sol";
 
 contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     bytes32 constant PERMIT_TYPEHASH =
@@ -32,12 +33,15 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
     Permit2 immutable permit2 = Permit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
+    ERC20 immutable weth9Mainnet = ERC20(payable(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)));
+
     // Use to test errors in Permit2Lib calls.
     MockPermit2Lib immutable permit2Lib = new MockPermit2Lib();
 
     MockERC20 immutable token = new MockERC20("Mock Token", "MOCK", 18);
 
     MockNonPermitERC20 immutable nonPermitToken = new MockNonPermitERC20("Mock NonPermit Token", "MOCK", 18);
+    MockFallbackERC20 immutable fallbackToken = new MockFallbackERC20("Mock Fallback Token", "MOCK", 18);
     MockPermitWithSmallDS immutable lessDSToken =
         new MockPermitWithSmallDS("Mock Permit Token Small Domain Sep", "MOCK", 18);
     MockPermitWithLargerDS immutable largerDSToken =
@@ -49,6 +53,7 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         PK_OWNER = vm.addr(PK);
         Permit2 tempPermit2 = new Permit2();
         vm.etch(address(permit2), address(tempPermit2).code);
+        vm.etch(address(weth9Mainnet), address(nonPermitToken).code);
 
         TOKEN_DOMAIN_SEPARATOR = token.DOMAIN_SEPARATOR();
         PERMIT2_DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
@@ -78,11 +83,29 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         nonPermitToken.mint(PK_OWNER, type(uint128).max);
         vm.prank(PK_OWNER);
         nonPermitToken.approve(address(permit2), type(uint128).max);
+
+        MockNonPermitERC20(address(weth9Mainnet)).mint(address(this), type(uint128).max);
+        weth9Mainnet.approve(address(this), type(uint128).max);
+        weth9Mainnet.approve(address(permit2), type(uint128).max);
+
+        MockNonPermitERC20(address(weth9Mainnet)).mint(PK_OWNER, type(uint128).max);
+        vm.prank(PK_OWNER);
+        weth9Mainnet.approve(address(permit2), type(uint128).max);
+
+        fallbackToken.mint(address(this), type(uint128).max);
+        fallbackToken.approve(address(this), type(uint128).max);
+        fallbackToken.approve(address(permit2), type(uint128).max);
+
+        fallbackToken.mint(PK_OWNER, type(uint128).max);
+        vm.prank(PK_OWNER);
+        fallbackToken.approve(address(permit2), type(uint128).max);
     }
 
     function setUp() public {
         testPermit2Full();
+        testPermit2NonPermitFallback();
         testPermit2NonPermitToken();
+        testPermit2WETH9Mainnet();
         testStandardPermit();
     }
 
@@ -222,6 +245,48 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
         Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    }
+
+    function testPermit2WETH9Mainnet() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(weth9Mainnet), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(weth9Mainnet),
+                amount: 1e18,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        Permit2Lib.permit2(weth9Mainnet, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    }
+
+    function testPermit2NonPermitFallback() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(fallbackToken), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(fallbackToken),
+                amount: 1e18,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        uint256 gas1 = gasleft();
+
+        Permit2Lib.permit2(ERC20(address(fallbackToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+
+        assertLt(gas1 - gasleft(), 50000); // If unbounded the staticcall will consume a wild amount of gas.
     }
 
     function testPermit2SmallerDS() public {
@@ -410,6 +475,58 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
         Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
         Permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
+
+        snapEnd();
+    }
+
+    function testPermit2PlusTransferFrom2WithNonPermitFallback() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(fallbackToken), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(fallbackToken),
+                amount: 1e18,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        vm.startPrank(address(0xCAFE));
+
+        snapStart("permit2 + transferFrom2 with a non EIP-2612 native token with fallback");
+
+        Permit2Lib.permit2(ERC20(address(fallbackToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.transferFrom2(ERC20(address(fallbackToken)), PK_OWNER, address(0xB00B), 1e18);
+
+        snapEnd();
+    }
+
+    function testPermit2PlusTransferFrom2WithWETH9Mainnet() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(weth9Mainnet), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(weth9Mainnet),
+                amount: 1e18,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        vm.startPrank(address(0xCAFE));
+
+        snapStart("permit2 + transferFrom2 with WETH9's mainnet address");
+
+        Permit2Lib.permit2(weth9Mainnet, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.transferFrom2(weth9Mainnet, PK_OWNER, address(0xB00B), 1e18);
 
         snapEnd();
     }
