@@ -4,9 +4,9 @@ pragma solidity ^0.8.17;
 import {Test} from "forge-std/Test.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {Permit2} from "../../src/Permit2.sol";
-import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
-import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
+import {Permit2} from "../../src/ERC20/Permit2.sol";
+import {IAllowanceTransfer} from "../../src/ERC20/interfaces/IAllowanceTransfer.sol";
+import {ISignatureTransfer} from "../../src/ERC20/interfaces/ISignatureTransfer.sol";
 
 contract PermitSignature is Test {
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
