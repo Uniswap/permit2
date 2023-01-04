@@ -559,7 +559,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         uint256 startBalanceFrom0 = token0.balanceOf(from);
         uint256 startBalanceFrom1 = token1.balanceOf(from);
         uint256 startBalanceTo0 = token0.balanceOf(address0);
-        uint256 startBalanceTo1 = token0.balanceOf(address0);
+        uint256 startBalanceTo1 = token1.balanceOf(address0);
 
         permit2.permit(from, permitBatch, sig);
 
@@ -578,7 +578,7 @@ contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnaps
         assertEq(token0.balanceOf(from), startBalanceFrom0 - 1 ** 18);
         assertEq(token1.balanceOf(from), startBalanceFrom1 - 1 ** 18);
         assertEq(token0.balanceOf(address0), startBalanceTo0 + 1 ** 18);
-        assertEq(token0.balanceOf(address0), startBalanceTo1 + 1 ** 18);
+        assertEq(token1.balanceOf(address0), startBalanceTo1 + 1 ** 18);
         (amount,,) = permit2.allowance(from, address(token0), address(this));
         assertEq(amount, defaultAmount - 1 ** 18);
         (amount,,) = permit2.allowance(from, address(token1), address(this));
