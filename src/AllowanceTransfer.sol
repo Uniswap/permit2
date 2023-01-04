@@ -47,10 +47,12 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         signature.verify(_hashTypedData(permitBatch.hash()), owner);
 
         address spender = permitBatch.spender;
-        unchecked {
-            uint256 length = permitBatch.details.length;
-            for (uint256 i = 0; i < length; ++i) {
-                _updateApproval(permitBatch.details[i], owner, spender);
+
+        uint256 length = permitBatch.details.length;
+        for (uint256 i = 0; i < length;) {
+            _updateApproval(permitBatch.details[i], owner, spender);
+            unchecked {
+                ++i;
             }
         }
     }
@@ -62,11 +64,12 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
 
     /// @inheritdoc IAllowanceTransfer
     function transferFrom(AllowanceTransferDetails[] calldata transferDetails) external {
-        unchecked {
-            uint256 length = transferDetails.length;
-            for (uint256 i = 0; i < length; ++i) {
-                AllowanceTransferDetails memory transferDetail = transferDetails[i];
-                _transfer(transferDetail.from, transferDetail.to, transferDetail.amount, transferDetail.token);
+        uint256 length = transferDetails.length;
+        for (uint256 i = 0; i < length;) {
+            AllowanceTransferDetails memory transferDetail = transferDetails[i];
+            _transfer(transferDetail.from, transferDetail.to, transferDetail.amount, transferDetail.token);
+            unchecked {
+                ++i;
             }
         }
     }
@@ -97,14 +100,16 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function lockdown(TokenSpenderPair[] calldata approvals) external {
         address owner = msg.sender;
         // Revoke allowances for each pair of spenders and tokens.
-        unchecked {
-            uint256 length = approvals.length;
-            for (uint256 i = 0; i < length; ++i) {
-                address token = approvals[i].token;
-                address spender = approvals[i].spender;
 
-                allowance[owner][token][spender].amount = 0;
-                emit Lockdown(owner, token, spender);
+        uint256 length = approvals.length;
+        for (uint256 i = 0; i < length;) {
+            address token = approvals[i].token;
+            address spender = approvals[i].spender;
+
+            allowance[owner][token][spender].amount = 0;
+            emit Lockdown(owner, token, spender);
+            unchecked {
+                ++i;
             }
         }
     }
