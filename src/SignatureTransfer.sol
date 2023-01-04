@@ -111,17 +111,19 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         _useUnorderedNonce(owner, permit.nonce);
         signature.verify(_hashTypedData(dataHash), owner);
 
-        unchecked {
-            for (uint256 i = 0; i < numPermitted; ++i) {
-                TokenPermissions memory permitted = permit.permitted[i];
-                uint256 requestedAmount = transferDetails[i].requestedAmount;
+        for (uint256 i = 0; i < numPermitted;) {
+            TokenPermissions memory permitted = permit.permitted[i];
+            uint256 requestedAmount = transferDetails[i].requestedAmount;
 
-                if (requestedAmount > permitted.amount) revert InvalidAmount(permitted.amount);
+            if (requestedAmount > permitted.amount) revert InvalidAmount(permitted.amount);
 
-                if (requestedAmount != 0) {
-                    // allow spender to specify which of the permitted tokens should be transferred
-                    ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
-                }
+            if (requestedAmount != 0) {
+                // allow spender to specify which of the permitted tokens should be transferred
+                ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
