@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
 import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
-import {ERC20} from "solmate/src/tokens/ERC20.sol";
+import {ERC721} from "solmate/src/tokens/ERC721.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
@@ -11,7 +11,6 @@ import {EIP712} from "./EIP712.sol";
 
 contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using SignatureVerification for bytes;
-    using SafeTransferLib for ERC20;
     using PermitHash for PermitTransferFrom;
     using PermitHash for PermitBatchTransferFrom;
 
@@ -55,16 +54,18 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes32 dataHash,
         bytes calldata signature
     ) private {
-        uint256 requestedAmount = transferDetails.requestedAmount;
+        uint256 requestedTokenId = transferDetails.requestedTokenId;
 
         if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
-        if (requestedAmount > permit.permitted.amount) revert InvalidAmount(permit.permitted.amount);
+        if (permit.permitted.tokenId != type(uint160).max && requestedTokenId != permit.permitted.tokenId) {
+            revert InvalidTokenId(permit.permitted.tokenId);
+        }
 
         _useUnorderedNonce(owner, permit.nonce);
 
         signature.verify(_hashTypedData(dataHash), owner);
 
-        ERC20(permit.permitted.token).safeTransferFrom(owner, transferDetails.to, requestedAmount);
+        ERC721(permit.permitted.token).safeTransferFrom(owner, transferDetails.to, requestedTokenId);
     }
 
     /// @inheritdoc ISignatureTransfer
@@ -114,13 +115,15 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         unchecked {
             for (uint256 i = 0; i < numPermitted; ++i) {
                 TokenPermissions memory permitted = permit.permitted[i];
-                uint256 requestedAmount = transferDetails[i].requestedAmount;
+                uint256 requestedTokenId = transferDetails[i].requestedTokenId;
 
-                if (requestedAmount > permitted.amount) revert InvalidAmount(permitted.amount);
+                if (permitted.tokenId != type(uint160).max && requestedTokenId != permitted.tokenId) {
+                    revert InvalidTokenId(permitted.tokenId);
+                }
 
-                if (requestedAmount != 0) {
+                if (requestedTokenId != 0) {
                     // allow spender to specify which of the permitted tokens should be transferred
-                    ERC20(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedAmount);
+                    ERC721(permitted.token).safeTransferFrom(owner, transferDetails[i].to, requestedTokenId);
                 }
             }
         }

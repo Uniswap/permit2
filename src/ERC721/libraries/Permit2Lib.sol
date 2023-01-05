@@ -11,6 +11,7 @@ import {SafeCast160} from "./SafeCast160.sol";
 /// @title Permit2Lib
 /// @notice Enables efficient transfers and EIP-2612/DAI
 /// permits for any token by falling back to Permit2.
+// TODO enable for erc721
 library Permit2Lib {
     using SafeCast160 for uint256;
     /*//////////////////////////////////////////////////////////////
