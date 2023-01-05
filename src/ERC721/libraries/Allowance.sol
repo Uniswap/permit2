@@ -12,7 +12,7 @@ library Allowance {
     /// @dev If the inputted expiration is 0, the stored expiration is set to block.timestamp
     function updateAll(
         IAllowanceTransfer.PackedAllowance storage allowed,
-        uint160 amount,
+        uint160 tokenId,
         uint48 expiration,
         uint48 nonce
     ) internal {
@@ -23,7 +23,7 @@ library Allowance {
 
         uint48 storedExpiration = expiration == BLOCK_TIMESTAMP_EXPIRATION ? uint48(block.timestamp) : expiration;
 
-        uint256 word = pack(amount, storedExpiration, storedNonce);
+        uint256 word = pack(tokenId, storedExpiration, storedNonce);
         assembly {
             sstore(allowed.slot, word)
         }
@@ -31,18 +31,18 @@ library Allowance {
 
     /// @notice Sets the allowed amount and expiry of the spender's permissions on owner's token.
     /// @dev Nonce does not need to be incremented.
-    function updateAmountAndExpiration(
+    function updateTokenIdAndExpiration(
         IAllowanceTransfer.PackedAllowance storage allowed,
-        uint160 amount,
+        uint160 tokenId,
         uint48 expiration
     ) internal {
         // If the inputted expiration is 0, the allowance only lasts the duration of the block.
         allowed.expiration = expiration == 0 ? uint48(block.timestamp) : expiration;
-        allowed.amount = amount;
+        allowed.tokenId = tokenId;
     }
 
     /// @notice Computes the packed slot of the amount, expiration, and nonce that make up PackedAllowance
-    function pack(uint160 amount, uint48 expiration, uint48 nonce) internal pure returns (uint256 word) {
-        word = (uint256(nonce) << 208) | uint256(expiration) << 160 | amount;
+    function pack(uint160 tokenId, uint48 expiration, uint48 nonce) internal pure returns (uint256 word) {
+        word = (uint256(nonce) << 208) | uint256(expiration) << 160 | tokenId;
     }
 }
