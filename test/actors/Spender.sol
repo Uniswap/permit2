@@ -1,7 +1,7 @@
 pragma solidity 0.8.17;
 
 import {Test} from "forge-std/Test.sol";
-import {Permit2} from "../../src/Permit2.sol";
+import {Permit2} from "../../src/ERC20/Permit2.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 
 contract Spender is Test {
