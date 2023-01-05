@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import {Permit2} from "../src/Permit2.sol";
+import {Permit2} from "../src/ERC20/Permit2.sol";
 
 // forge test --match-contract EIP712
 contract EIP712Test is Test {

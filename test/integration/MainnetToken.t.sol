@@ -7,9 +7,9 @@ import {ERC20} from "solmate/src/tokens/ERC20.sol";
 import {AddressBuilder} from "../utils/AddressBuilder.sol";
 import {StructBuilder} from "../utils/StructBuilder.sol";
 import {PermitSignature} from "../utils/PermitSignature.sol";
-import {Permit2} from "../../src/Permit2.sol";
-import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
-import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
+import {Permit2} from "../../src/ERC20/Permit2.sol";
+import {IAllowanceTransfer} from "../../src/ERC20/interfaces/IAllowanceTransfer.sol";
+import {ISignatureTransfer} from "../../src/ERC20/interfaces/ISignatureTransfer.sol";
 
 /// @dev generic token test suite
 /// @dev extend this contract with a concrete token on mainnet to test it

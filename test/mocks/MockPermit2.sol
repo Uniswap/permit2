@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {Permit2} from "../../src/Permit2.sol";
-import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
-import {Allowance} from "../../src/libraries/Allowance.sol";
+import {Permit2} from "../../src/ERC20/Permit2.sol";
+import {IAllowanceTransfer} from "../../src/ERC20/interfaces/IAllowanceTransfer.sol";
+import {Allowance} from "../../src/ERC20/libraries/Allowance.sol";
 
 contract MockPermit2 is Permit2 {
     function doStore(address from, address token, address spender, uint256 word) public {

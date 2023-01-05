@@ -2,9 +2,9 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
-import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
-import {PermitHash} from "../../src/libraries/PermitHash.sol";
+import {ISignatureTransfer} from "../../src/ERC20/interfaces/ISignatureTransfer.sol";
+import {IAllowanceTransfer} from "../../src/ERC20/interfaces/IAllowanceTransfer.sol";
+import {PermitHash} from "../../src/ERC20/libraries/PermitHash.sol";
 
 contract MockHash {
     using PermitHash for ISignatureTransfer.PermitTransferFrom;

@@ -3,15 +3,15 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
-import {Permit2} from "../src/Permit2.sol";
+import {Permit2} from "../src/ERC20/Permit2.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
-import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
+import {SignatureVerification} from "../src/ERC20/libraries/SignatureVerification.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {StructBuilder} from "./utils/StructBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
-import {AllowanceTransfer} from "../src/AllowanceTransfer.sol";
-import {SignatureExpired, InvalidNonce} from "../src/PermitErrors.sol";
-import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
+import {AllowanceTransfer} from "../src/ERC20/AllowanceTransfer.sol";
+import {SignatureExpired, InvalidNonce} from "../src/ERC20/PermitErrors.sol";
+import {IAllowanceTransfer} from "../src/ERC20/interfaces/IAllowanceTransfer.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 
 contract AllowanceTransferTest is Test, TokenProvider, PermitSignature, GasSnapshot {

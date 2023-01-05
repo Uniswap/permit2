@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {ERC20} from "solmate/src/tokens/ERC20.sol";
-import {Permit2Lib} from "../../src/libraries/Permit2Lib.sol";
+import {Permit2Lib} from "../../src/ERC20/libraries/Permit2Lib.sol";
 
 contract MockPermit2Lib {
     /// @dev The address for the WETH9 contract on Ethereum mainnet, encoded as a bytes32.
