@@ -21,7 +21,7 @@ contract AllowanceUnitTest is Test, TokenProvider {
 
         (,, uint48 nonce) = permit2.allowance(from, token, spender);
 
-        permit2.mockUpdateAmountAndExpiration(from, token, spender, amount, expiration);
+        permit2.mockUpdateSome(from, token, spender, amount, expiration);
 
         uint48 timestampAfterUpdate = expiration == 0 ? uint48(block.timestamp) : expiration;
 
