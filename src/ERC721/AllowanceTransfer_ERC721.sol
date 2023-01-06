@@ -2,33 +2,32 @@
 pragma solidity 0.8.17;
 
 import {ERC721} from "solmate/src/tokens/ERC721.sol";
-import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
-import {PermitHash} from "./libraries/PermitHash.sol";
+import {PermitHash_ERC721} from "./libraries/PermitHash_ERC721.sol";
 import {SignatureVerification} from "../shared/SignatureVerification.sol";
-import {EIP712} from "./EIP712.sol";
-import {IAllowanceTransfer} from "./interfaces/IAllowanceTransfer.sol";
+import {EIP712_ERC721} from "./EIP712_ERC721.sol";
+import {IAllowanceTransfer_ERC721} from "./interfaces/IAllowanceTransfer_ERC721.sol";
 import {SignatureExpired, InvalidNonce} from "../shared/PermitErrors.sol";
-import {Allowance} from "./libraries/Allowance.sol";
+import {Allowance_ERC721} from "./libraries/Allowance_ERC721.sol";
 
-contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
+contract AllowanceTransfer_ERC721 is IAllowanceTransfer_ERC721, EIP712_ERC721 {
     using SignatureVerification for bytes;
-    using PermitHash for PermitSingle;
-    using PermitHash for PermitBatch;
-    using Allowance for PackedAllowance;
+    using PermitHash_ERC721 for PermitSingle;
+    using PermitHash_ERC721 for PermitBatch;
+    using Allowance_ERC721 for PackedAllowance;
 
     /// @notice Maps users to tokens to spender addresses and information about the approval on the token
     /// @dev Indexed in the order of token owner address, token address, spender address
     /// @dev The stored word saves the allowed tokenId, expiration on the allowance, and nonce
     mapping(address => mapping(address => mapping(address => PackedAllowance))) public allowance;
 
-    /// @inheritdoc IAllowanceTransfer
+    /// @inheritdoc IAllowanceTransfer_ERC721
     function approve(address token, address spender, uint160 tokenId, uint48 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.updateTokenIdAndExpiration(tokenId, expiration);
         emit Approval(msg.sender, token, spender, tokenId, expiration);
     }
 
-    /// @inheritdoc IAllowanceTransfer
+    /// @inheritdoc IAllowanceTransfer_ERC721
     function permit(address owner, PermitSingle memory permitSingle, bytes calldata signature) external {
         if (block.timestamp > permitSingle.sigDeadline) revert SignatureExpired(permitSingle.sigDeadline);
 
@@ -38,7 +37,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         _updateApproval(permitSingle.details, owner, permitSingle.spender);
     }
 
-    /// @inheritdoc IAllowanceTransfer
+    /// @inheritdoc IAllowanceTransfer_ERC721
     function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external {
         if (block.timestamp > permitBatch.sigDeadline) revert SignatureExpired(permitBatch.sigDeadline);
 
@@ -54,12 +53,12 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         }
     }
 
-    /// @inheritdoc IAllowanceTransfer
+    /// @inheritdoc IAllowanceTransfer_ERC721
     function transferFrom(address from, address to, uint160 tokenId, address token) external {
         _transfer(from, to, tokenId, token);
     }
 
-    /// @inheritdoc IAllowanceTransfer
+    /// @inheritdoc IAllowanceTransfer_ERC721
     function transferFrom(AllowanceTransferDetails[] calldata transferDetails) external {
         unchecked {
             uint256 length = transferDetails.length;
@@ -91,7 +90,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         ERC721(token).safeTransferFrom(from, to, tokenId);
     }
 
-    /// @inheritdoc IAllowanceTransfer
+    /// @inheritdoc IAllowanceTransfer_ERC721
     function lockdown(TokenSpenderPair[] calldata approvals) external {
         address owner = msg.sender;
         // Revoke allowances for each pair of spenders and tokens.
@@ -107,7 +106,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
         }
     }
 
-    /// @inheritdoc IAllowanceTransfer
+    /// @inheritdoc IAllowanceTransfer_ERC721
     function invalidateNonces(address token, address spender, uint48 newNonce) external {
         uint48 oldNonce = allowance[msg.sender][token][spender].nonce;
 

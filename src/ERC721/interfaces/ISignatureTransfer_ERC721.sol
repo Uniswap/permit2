@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 /// @title SignatureTransfer
 /// @notice Handles ERC721 token transfers through signature based actions
 /// @dev Requires user's token approval on the Permit2 contract
-interface ISignatureTransfer {
+interface ISignatureTransfer_ERC721 {
     /// @notice Thrown when the requested tokenId for a transfer is not the permitted tokenId
     /// @param tokenId The valid tokenId a spender can request to transfer
     error InvalidTokenId(uint256 tokenId);

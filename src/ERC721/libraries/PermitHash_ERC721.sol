@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
-import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
+import {IAllowanceTransfer_ERC721} from "../interfaces/IAllowanceTransfer_ERC721.sol";
+import {ISignatureTransfer_ERC721} from "../interfaces/ISignatureTransfer_ERC721.sol";
 
-library PermitHash {
+library PermitHash_ERC721 {
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
         keccak256("PermitDetails(address token,uint160 tokenId,uint48 expiration,uint48 nonce)");
 
@@ -34,13 +34,13 @@ library PermitHash {
     string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
         "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
 
-    function hash(IAllowanceTransfer.PermitSingle memory permitSingle) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer_ERC721.PermitSingle memory permitSingle) internal pure returns (bytes32) {
         bytes32 permitHash = _hashPermitDetails(permitSingle.details);
         return
             keccak256(abi.encode(_PERMIT_SINGLE_TYPEHASH, permitHash, permitSingle.spender, permitSingle.sigDeadline));
     }
 
-    function hash(IAllowanceTransfer.PermitBatch memory permitBatch) internal pure returns (bytes32) {
+    function hash(IAllowanceTransfer_ERC721.PermitBatch memory permitBatch) internal pure returns (bytes32) {
         uint256 numPermits = permitBatch.details.length;
         bytes32[] memory permitHashes = new bytes32[](numPermits);
         for (uint256 i = 0; i < numPermits; ++i) {
@@ -56,14 +56,14 @@ library PermitHash {
         );
     }
 
-    function hash(ISignatureTransfer.PermitTransferFrom memory permit) internal view returns (bytes32) {
+    function hash(ISignatureTransfer_ERC721.PermitTransferFrom memory permit) internal view returns (bytes32) {
         bytes32 tokenPermissionsHash = _hashTokenPermissions(permit.permitted);
         return keccak256(
             abi.encode(_PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissionsHash, msg.sender, permit.nonce, permit.deadline)
         );
     }
 
-    function hash(ISignatureTransfer.PermitBatchTransferFrom memory permit) internal view returns (bytes32) {
+    function hash(ISignatureTransfer_ERC721.PermitBatchTransferFrom memory permit) internal view returns (bytes32) {
         uint256 numPermitted = permit.permitted.length;
         bytes32[] memory tokenPermissionHashes = new bytes32[](numPermitted);
 
@@ -83,7 +83,7 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer_ERC721.PermitTransferFrom memory permit,
         bytes32 witness,
         string calldata witnessTypeString
     ) internal view returns (bytes32) {
@@ -94,7 +94,7 @@ library PermitHash {
     }
 
     function hashWithWitness(
-        ISignatureTransfer.PermitBatchTransferFrom memory permit,
+        ISignatureTransfer_ERC721.PermitBatchTransferFrom memory permit,
         bytes32 witness,
         string calldata witnessTypeString
     ) internal view returns (bytes32) {
@@ -120,11 +120,15 @@ library PermitHash {
         );
     }
 
-    function _hashPermitDetails(IAllowanceTransfer.PermitDetails memory details) private pure returns (bytes32) {
+    function _hashPermitDetails(IAllowanceTransfer_ERC721.PermitDetails memory details)
+        private
+        pure
+        returns (bytes32)
+    {
         return keccak256(abi.encode(_PERMIT_DETAILS_TYPEHASH, details));
     }
 
-    function _hashTokenPermissions(ISignatureTransfer.TokenPermissions memory permitted)
+    function _hashTokenPermissions(ISignatureTransfer_ERC721.TokenPermissions memory permitted)
         private
         pure
         returns (bytes32)

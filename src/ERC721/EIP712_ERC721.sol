@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-/// @notice EIP712 helpers for permit2
+/// @notice EIP712 helpers for Permit2 for ERC721s
 /// @dev Maintains cross-chain replay protection in the event of a fork
 /// @dev Reference: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/EIP712.sol
-contract EIP712 {
+contract EIP712_ERC721 {
     // Cache the domain separator as an immutable value, but also store the chain id that it
     // corresponds to, in order to invalidate the cached domain separator if the chain id changes.
     bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
     uint256 private immutable _CACHED_CHAIN_ID;
 
-    // TODO Update naming
-    bytes32 private constant _HASHED_NAME = keccak256("Permit2");
+    bytes32 private constant _HASHED_NAME = keccak256("Permit2_ERC721");
     bytes32 private constant _TYPE_HASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
