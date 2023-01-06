@@ -6,7 +6,7 @@ import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/
 import {IMockPermit2} from "../mocks/MockPermit2.sol";
 import {InvalidNonce} from "../../src/shared/PermitErrors.sol";
 
-contract BaseNonceBitmapTest is Test {
+abstract contract BaseNonceBitmapTest is Test {
     IMockPermit2 permit2;
 
     function setUp() public virtual {}
@@ -46,7 +46,7 @@ contract BaseNonceBitmapTest is Test {
     }
 
     function testInvalidateFullWord() public {
-        permit2.invalidateUnorderedNonces(0, 2 ** 256 - 1);
+        invalidateUnorderedNonces(0, 2 ** 256 - 1);
 
         vm.expectRevert(InvalidNonce.selector);
         permit2.useUnorderedNonce(address(this), 0);
@@ -60,7 +60,7 @@ contract BaseNonceBitmapTest is Test {
     }
 
     function testInvalidateNonzeroWord() public {
-        permit2.invalidateUnorderedNonces(1, 2 ** 256 - 1);
+        invalidateUnorderedNonces(1, 2 ** 256 - 1);
 
         permit2.useUnorderedNonce(address(this), 0);
         permit2.useUnorderedNonce(address(this), 254);
@@ -89,22 +89,25 @@ contract BaseNonceBitmapTest is Test {
     }
 
     function testInvalidateNoncesRandomly(uint248 wordPos, uint256 mask) public {
-        permit2.invalidateUnorderedNonces(wordPos, mask);
-        assertEq(mask, permit2.nonceBitmap(address(this), wordPos));
+        invalidateUnorderedNonces(wordPos, mask);
+        assertEq(mask, nonceBitmap(address(this), wordPos));
     }
 
     function testInvalidateTwoNoncesRandomly(uint248 wordPos, uint256 startBitmap, uint256 mask) public {
-        permit2.invalidateUnorderedNonces(wordPos, startBitmap);
-        assertEq(startBitmap, permit2.nonceBitmap(address(this), wordPos));
+        invalidateUnorderedNonces(wordPos, startBitmap);
+        assertEq(startBitmap, nonceBitmap(address(this), wordPos));
 
         // invalidating with the mask changes the original bitmap
         uint256 finalBitmap = startBitmap | mask;
-        permit2.invalidateUnorderedNonces(wordPos, mask);
-        uint256 savedBitmap = permit2.nonceBitmap(address(this), wordPos);
+        invalidateUnorderedNonces(wordPos, mask);
+        uint256 savedBitmap = nonceBitmap(address(this), wordPos);
         assertEq(finalBitmap, savedBitmap);
 
         // invalidating with the same mask should do nothing
-        permit2.invalidateUnorderedNonces(wordPos, mask);
-        assertEq(savedBitmap, permit2.nonceBitmap(address(this), wordPos));
+        invalidateUnorderedNonces(wordPos, mask);
+        assertEq(savedBitmap, nonceBitmap(address(this), wordPos));
     }
+
+    function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) public virtual;
+    function nonceBitmap(address addr, uint256 wordPos) public virtual returns (uint256);
 }
