@@ -4,7 +4,7 @@ import "forge-std/Test.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/ERC20/Permit2.sol";
 import {IAllowanceTransfer} from "../src/ERC20/interfaces/IAllowanceTransfer.sol";
-import {SignatureVerification} from "../src/ERC20/libraries/SignatureVerification.sol";
+import {SignatureVerification} from "../src/shared/SignatureVerification.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {InvariantTest} from "./utils/InvariantTest.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
