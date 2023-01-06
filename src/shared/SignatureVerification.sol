@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IERC1271} from "../interfaces/IERC1271.sol";
+import {IERC1271} from "./IERC1271.sol";
 
 library SignatureVerification {
     /// @notice Thrown when the passed in signature is not a valid length
