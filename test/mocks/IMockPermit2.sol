@@ -22,7 +22,4 @@ abstract contract IMockPermit2 {
     {}
 
     function useUnorderedNonce(address from, uint256 nonce) public virtual {}
-
-    // stuck here bc this is defined at Permit2 but not the interface
-    // function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {}
 }
