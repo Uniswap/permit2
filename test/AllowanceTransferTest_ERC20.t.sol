@@ -82,6 +82,10 @@ contract AllowanceTransferTest_ERC20 is TokenProvider_ERC20, BaseAllowanceTransf
         return address(_token1);
     }
 
+    function balanceOf(address token, address from) public override returns (uint256) {
+        return MockERC20(token).balanceOf(from);
+    }
+
     function getPermitSignature(IPermitSingle memory permit, uint256 privateKey, bytes32 domainSeparator)
         public
         override
@@ -89,6 +93,17 @@ contract AllowanceTransferTest_ERC20 is TokenProvider_ERC20, BaseAllowanceTransf
     {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
         return bytes.concat(r, s, bytes1(v));
+    }
+
+    function getCompactPermitSignature(IPermitSingle memory permit, uint256 privateKey, bytes32 domainSeparator)
+        public
+        override
+        returns (bytes memory sig)
+    {
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
+        bytes32 vs;
+        (r, vs) = _getCompactSignature(v, r, s);
+        return bytes.concat(r, vs);
     }
 
     function getPermitSignatureRaw(IPermitSingle memory permit, uint256 privateKey, bytes32 domainSeparator)
