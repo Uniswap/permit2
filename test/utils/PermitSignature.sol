@@ -30,6 +30,16 @@ contract PermitSignature is Test {
         "PermitBatchTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
+    // used for testing abstraction
+    struct IPermitSingle {
+        address token;
+        uint160 amountOrId;
+        uint48 expiration;
+        uint48 nonce;
+        address spender;
+        uint256 sigDeadline;
+    }
+
     function getPermitSignatureRaw(
         IAllowanceTransfer.PermitSingle memory permit,
         uint256 privateKey,
@@ -235,13 +245,30 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function defaultERC20PermitAllowance(address token0, uint160 amount, uint48 expiration, uint48 nonce)
+    function defaultPermitAllowance(address token, uint160 amountOrId, uint48 expiration, uint48 nonce)
+        public
+        view
+        returns (IPermitSingle memory)
+    {
+        IAllowanceTransfer.PermitDetails memory details =
+            IAllowanceTransfer.PermitDetails({token: token, amount: amountOrId, expiration: expiration, nonce: nonce});
+        return IPermitSingle({
+            token: token,
+            amountOrId: amountOrId,
+            expiration: expiration,
+            nonce: nonce,
+            spender: address(this),
+            sigDeadline: block.timestamp + 100
+        });
+    }
+
+    function defaultERC20PermitAllowance(address token, uint160 amount, uint48 expiration, uint48 nonce)
         internal
         view
         returns (IAllowanceTransfer.PermitSingle memory)
     {
         IAllowanceTransfer.PermitDetails memory details =
-            IAllowanceTransfer.PermitDetails({token: token0, amount: amount, expiration: expiration, nonce: nonce});
+            IAllowanceTransfer.PermitDetails({token: token, amount: amount, expiration: expiration, nonce: nonce});
         return IAllowanceTransfer.PermitSingle({
             details: details,
             spender: address(this),
@@ -272,25 +299,25 @@ contract PermitSignature is Test {
         });
     }
 
-    function defaultERC20PermitTransfer(address token0, uint256 nonce)
+    function defaultERC20PermitTransfer(address token, uint256 nonce)
         internal
         view
         returns (ISignatureTransfer.PermitTransferFrom memory)
     {
         return ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: token0, amount: 10 ** 18}),
+            permitted: ISignatureTransfer.TokenPermissions({token: token, amount: 10 ** 18}),
             nonce: nonce,
             deadline: block.timestamp + 100
         });
     }
 
-    function defaultERC20PermitWitnessTransfer(address token0, uint256 nonce)
+    function defaultERC20PermitWitnessTransfer(address token, uint256 nonce)
         internal
         view
         returns (ISignatureTransfer.PermitTransferFrom memory)
     {
         return ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: token0, amount: 10 ** 18}),
+            permitted: ISignatureTransfer.TokenPermissions({token: token, amount: 10 ** 18}),
             nonce: nonce,
             deadline: block.timestamp + 100
         });

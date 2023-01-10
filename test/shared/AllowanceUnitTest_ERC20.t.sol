@@ -4,9 +4,9 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import "../mocks/MockPermit2.sol";
 import {BaseAllowanceUnitTest} from "./BaseAllowanceUnitTest.sol";
-import {TokenProvider} from "../utils/TokenProvider.sol";
+import {TokenProvider_ERC20} from "../utils/TokenProvider_ERC20.sol";
 
-contract AllowanceUnitTest_ERC20 is BaseAllowanceUnitTest {
+contract AllowanceUnitTest_ERC20 is TokenProvider_ERC20, BaseAllowanceUnitTest {
     function setUp() public override {
         permit2 = new MockPermit2();
         initializeERC20Tokens();
@@ -21,7 +21,7 @@ contract AllowanceUnitTest_ERC20 is BaseAllowanceUnitTest {
         return MockPermit2(address(permit2)).allowance(from, token, spender);
     }
 
-    function token() public view override returns (address) {
-        return address(token1);
+    function token1() public view override returns (address) {
+        return address(_token1);
     }
 }

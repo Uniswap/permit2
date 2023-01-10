@@ -3,9 +3,8 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../mocks/IMockPermit2.sol";
-import {TokenProvider} from "../utils/TokenProvider.sol";
 
-abstract contract BaseAllowanceUnitTest is Test, TokenProvider {
+abstract contract BaseAllowanceUnitTest is Test {
     IMockPermit2 permit2;
 
     address from = address(0xBEEE);
@@ -15,10 +14,10 @@ abstract contract BaseAllowanceUnitTest is Test, TokenProvider {
 
     function allowance(address from, address token, address spender) public virtual returns (uint160, uint48, uint48);
 
-    function token() public virtual returns (address);
+    function token1() public virtual returns (address);
 
     function testUpdateAmountExpirationRandomly(uint160 amount, uint48 expiration) public {
-        address token = token();
+        address token = token1();
 
         (,, uint48 nonce) = allowance(from, token, spender);
 
@@ -38,7 +37,7 @@ abstract contract BaseAllowanceUnitTest is Test, TokenProvider {
         // we assume we will never be able to reach 2**48
         vm.assume(nonce < type(uint48).max);
 
-        address token = token();
+        address token = token1();
 
         permit2.mockUpdateAll(from, token, spender, amount, expiration, nonce);
 
@@ -55,7 +54,7 @@ abstract contract BaseAllowanceUnitTest is Test, TokenProvider {
     function testPackAndUnpack(uint160 amount, uint48 expiration, uint48 nonce) public {
         // pack some numbers
         uint256 word = Allowance.pack(amount, expiration, nonce);
-        address token = token();
+        address token = token1();
         // store the raw word
         permit2.doStore(from, token, spender, word);
 
