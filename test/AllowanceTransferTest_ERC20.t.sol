@@ -6,6 +6,7 @@ import {BaseAllowanceTransferTest} from "./BaseAllowanceTransferTest.t.sol";
 import {Permit2} from "../src/ERC20/Permit2.sol";
 import {TokenProvider_ERC20} from "./utils/TokenProvider_ERC20.sol";
 import {PermitHash} from "../src/ERC20/libraries/PermitHash.sol";
+import {PermitAbstraction} from "./utils/PermitAbstraction.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {IAllowanceTransfer} from "../src/ERC20/interfaces/IAllowanceTransfer.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
@@ -55,7 +56,7 @@ contract AllowanceTransferTest_ERC20 is TokenProvider_ERC20, BaseAllowanceTransf
         return Permit2(permit2).allowance(from, token, spender);
     }
 
-    function permit2Permit(address from, PermitSignature.IPermitSingle memory permit, bytes memory sig)
+    function permit2Permit(address from, PermitAbstraction.IPermitSingle memory permit, bytes memory sig)
         public
         override
     {
@@ -72,6 +73,35 @@ contract AllowanceTransferTest_ERC20 is TokenProvider_ERC20, BaseAllowanceTransf
         });
 
         Permit2(permit2).permit(from, parsedPermit, sig);
+    }
+
+    function permit2Permit(address from, PermitAbstraction.IPermitBatch memory permitBatch, bytes memory sig)
+        public
+        override
+    {
+        // convert IPermitBatch to IAllowanceTransfer.PermitBatch
+
+        IAllowanceTransfer.PermitDetails[] memory details =
+            new IAllowanceTransfer.PermitDetails[](permitBatch.tokens.length);
+        for (uint256 i = 0; i < details.length; i++) {
+            details[i] = IAllowanceTransfer.PermitDetails({
+                token: permitBatch.tokens[i],
+                amount: permitBatch.amountOrIds[i],
+                expiration: permitBatch.expirations[i],
+                nonce: permitBatch.nonces[i]
+            });
+        }
+        IAllowanceTransfer.PermitBatch memory parsedPermitBatch = IAllowanceTransfer.PermitBatch({
+            details: details,
+            spender: permitBatch.spender,
+            sigDeadline: permitBatch.sigDeadline
+        });
+
+        Permit2(permit2).permit(from, parsedPermitBatch, sig);
+    }
+
+    function permit2TransferFrom(address from, address to, uint160 amountOrId, address token) public override {
+        Permit2(permit2).transferFrom(from, to, amountOrId, token);
     }
 
     function token0() public view override returns (address) {
@@ -102,7 +132,7 @@ contract AllowanceTransferTest_ERC20 is TokenProvider_ERC20, BaseAllowanceTransf
     {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
         bytes32 vs;
-        (r, vs) = _getCompactSignature(v, r, s);
+        (r, vs) = getCompactSignature(v, r, s);
         return bytes.concat(r, vs);
     }
 
@@ -128,5 +158,42 @@ contract AllowanceTransferTest_ERC20 is TokenProvider_ERC20, BaseAllowanceTransf
         );
 
         (v, r, s) = vm.sign(privateKey, msgHash);
+    }
+
+    function getPermitBatchSignature(IPermitBatch memory permit, uint256 privateKey, bytes32 domainSeparator)
+        public
+        override
+        returns (bytes memory)
+    {
+        bytes32[] memory permitHashes = new bytes32[](permit.tokens.length);
+        for (uint256 i = 0; i < permit.tokens.length; ++i) {
+            permitHashes[i] = keccak256(
+                abi.encode(
+                    PermitHash._PERMIT_DETAILS_TYPEHASH,
+                    permit.tokens[i],
+                    permit.amountOrIds[i],
+                    permit.expirations[i],
+                    permit.nonces[i]
+                )
+            );
+        }
+
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        PermitHash._PERMIT_BATCH_TYPEHASH,
+                        keccak256(abi.encodePacked(permitHashes)),
+                        permit.spender,
+                        permit.sigDeadline
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
     }
 }

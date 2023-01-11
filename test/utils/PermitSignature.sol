@@ -30,16 +30,6 @@ contract PermitSignature is Test {
         "PermitBatchTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
-    // used for testing abstraction
-    struct IPermitSingle {
-        address token;
-        uint160 amountOrId;
-        uint48 expiration;
-        uint48 nonce;
-        address spender;
-        uint256 sigDeadline;
-    }
-
     function getPermitSignatureRaw(
         IAllowanceTransfer.PermitSingle memory permit,
         uint256 privateKey,
@@ -74,7 +64,7 @@ contract PermitSignature is Test {
     ) internal returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
         bytes32 vs;
-        (r, vs) = _getCompactSignature(v, r, s);
+        (r, vs) = getCompactSignature(v, r, s);
         return bytes.concat(r, vs);
     }
 
@@ -98,15 +88,11 @@ contract PermitSignature is Test {
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         bytes32 vs;
-        (r, vs) = _getCompactSignature(v, r, s);
+        (r, vs) = getCompactSignature(v, r, s);
         return bytes.concat(r, vs);
     }
 
-    function _getCompactSignature(uint8 vRaw, bytes32 rRaw, bytes32 sRaw)
-        internal
-        pure
-        returns (bytes32 r, bytes32 vs)
-    {
+    function getCompactSignature(uint8 vRaw, bytes32 rRaw, bytes32 sRaw) public pure returns (bytes32 r, bytes32 vs) {
         uint8 v = vRaw - 27; // 27 is 0, 28 is 1
         vs = bytes32(uint256(v) << 255) | sRaw;
         return (rRaw, vs);
@@ -243,23 +229,6 @@ contract PermitSignature is Test {
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         return bytes.concat(r, s, bytes1(v));
-    }
-
-    function defaultPermitAllowance(address token, uint160 amountOrId, uint48 expiration, uint48 nonce)
-        public
-        view
-        returns (IPermitSingle memory)
-    {
-        IAllowanceTransfer.PermitDetails memory details =
-            IAllowanceTransfer.PermitDetails({token: token, amount: amountOrId, expiration: expiration, nonce: nonce});
-        return IPermitSingle({
-            token: token,
-            amountOrId: amountOrId,
-            expiration: expiration,
-            nonce: nonce,
-            spender: address(this),
-            sigDeadline: block.timestamp + 100
-        });
     }
 
     function defaultERC20PermitAllowance(address token, uint160 amount, uint48 expiration, uint48 nonce)
