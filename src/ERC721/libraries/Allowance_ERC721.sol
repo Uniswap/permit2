@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IAllowanceTransfer_ERC721} from "../interfaces/IAllowanceTransfer_ERC721.sol";
+import {IAllowanceTransferERC721} from "../interfaces/IAllowanceTransferERC721.sol";
 
 library Allowance_ERC721 {
     // note if the expiration passed is 0, then it the approval set to the block.timestamp
@@ -11,7 +11,7 @@ library Allowance_ERC721 {
     /// @dev Nonce is incremented.
     /// @dev If the inputted expiration is 0, the stored expiration is set to block.timestamp
     function updateAll(
-        IAllowanceTransfer_ERC721.PackedAllowance storage allowed,
+        IAllowanceTransferERC721.PackedAllowance storage allowed,
         uint160 tokenId,
         uint48 expiration,
         uint48 nonce
@@ -32,7 +32,7 @@ library Allowance_ERC721 {
     /// @notice Sets the allowed amount and expiry of the spender's permissions on owner's token.
     /// @dev Nonce does not need to be incremented.
     function updateTokenIdAndExpiration(
-        IAllowanceTransfer_ERC721.PackedAllowance storage allowed,
+        IAllowanceTransferERC721.PackedAllowance storage allowed,
         uint160 tokenId,
         uint48 expiration
     ) internal {

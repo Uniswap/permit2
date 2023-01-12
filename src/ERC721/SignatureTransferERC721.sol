@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {ISignatureTransfer_ERC721} from "./interfaces/ISignatureTransfer_ERC721.sol";
+import {ISignatureTransferERC721} from "./interfaces/ISignatureTransferERC721.sol";
 import {SignatureExpired, InvalidNonce} from "../shared/PermitErrors.sol";
 import {ERC721} from "solmate/src/tokens/ERC721.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 import {SignatureVerification} from "../shared/SignatureVerification.sol";
 import {PermitHash_ERC721} from "./libraries/PermitHash_ERC721.sol";
-import {EIP712_ERC721} from "./EIP712_ERC721.sol";
+import {EIP712ERC721} from "./EIP712ERC721.sol";
 
-contract SignatureTransfer_ERC721 is ISignatureTransfer_ERC721, EIP712_ERC721 {
+contract SignatureTransferERC721 is ISignatureTransferERC721, EIP712ERC721 {
     using SignatureVerification for bytes;
     using PermitHash_ERC721 for PermitTransferFrom;
     using PermitHash_ERC721 for PermitBatchTransferFrom;
 
-    /// @inheritdoc ISignatureTransfer_ERC721
+    /// @inheritdoc ISignatureTransferERC721
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
-    /// @inheritdoc ISignatureTransfer_ERC721
+    /// @inheritdoc ISignatureTransferERC721
     function permitTransferFrom(
         PermitTransferFrom memory permit,
         SignatureTransferDetails calldata transferDetails,
@@ -27,7 +27,7 @@ contract SignatureTransfer_ERC721 is ISignatureTransfer_ERC721, EIP712_ERC721 {
         _permitTransferFrom(permit, transferDetails, owner, permit.hash(), signature);
     }
 
-    /// @inheritdoc ISignatureTransfer_ERC721
+    /// @inheritdoc ISignatureTransferERC721
     function permitWitnessTransferFrom(
         PermitTransferFrom memory permit,
         SignatureTransferDetails calldata transferDetails,
@@ -68,7 +68,7 @@ contract SignatureTransfer_ERC721 is ISignatureTransfer_ERC721, EIP712_ERC721 {
         ERC721(permit.permitted.token).safeTransferFrom(owner, transferDetails.to, requestedTokenId);
     }
 
-    /// @inheritdoc ISignatureTransfer_ERC721
+    /// @inheritdoc ISignatureTransferERC721
     function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
         SignatureTransferDetails[] calldata transferDetails,
@@ -78,7 +78,7 @@ contract SignatureTransfer_ERC721 is ISignatureTransfer_ERC721, EIP712_ERC721 {
         _permitTransferFrom(permit, transferDetails, owner, permit.hash(), signature);
     }
 
-    /// @inheritdoc ISignatureTransfer_ERC721
+    /// @inheritdoc ISignatureTransferERC721
     function permitWitnessTransferFrom(
         PermitBatchTransferFrom memory permit,
         SignatureTransferDetails[] calldata transferDetails,
@@ -129,7 +129,7 @@ contract SignatureTransfer_ERC721 is ISignatureTransfer_ERC721, EIP712_ERC721 {
         }
     }
 
-    /// @inheritdoc ISignatureTransfer_ERC721
+    /// @inheritdoc ISignatureTransferERC721
     function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external {
         nonceBitmap[msg.sender][wordPos] |= mask;
 

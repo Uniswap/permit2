@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 /// @title AllowanceTransfer
 /// @notice Handles ERC721 token permissions through signature based allowance setting and ERC721 token transfers by checking stored permissions
 /// @dev Requires user's token approval on the Permit2 contract
-interface IAllowanceTransfer_ERC721 {
+interface IAllowanceTransferERC721 {
     /// @notice Thrown when an allowance on a token has expired.
     /// @param deadline The timestamp at which the permissions on the token are no longer valid
     error AllowanceExpired(uint256 deadline);
