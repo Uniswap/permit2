@@ -6,8 +6,9 @@ pragma solidity ^0.8.17;
 /// @dev Requires user's token approval on the Permit2 contract
 interface IAllowanceTransferERC721 {
     /// @notice Thrown when an allowance on a token has expired.
-    /// @param deadline The timestamp at which the permissions on the token are no longer valid
-    error AllowanceExpired(uint256 deadline);
+    /// @param allowanceDeadline The timestamp at which the permissions on the token for a specific tokenId are no longer valid
+    /// @param operatorDeadline The timestamp at which the permissions given to an operator of an entire collection are no longer valid.
+    error AllowanceExpired(uint256 allowanceDeadline, uint256 operatorDeadline);
 
     /// @notice Thrown when there is no allowance for a token.
     /// @param token The address of the token and tokenId
@@ -16,22 +17,30 @@ interface IAllowanceTransferERC721 {
     /// @notice Thrown when too many nonces are invalidated.
     error ExcessiveInvalidation();
 
-    /// @notice Emits an event when the owner successfully invalidates an ordered nonce.
+    /// @notice Emits an event when the owner successfully invalidates an ordered nonce on the operator mapping.
     event NonceInvalidation(
         address indexed owner, address indexed token, address indexed spender, uint48 newNonce, uint48 oldNonce
     );
 
+    /// @notice Emits an event when the owner successfully invalidates an ordered nonce on the allowance mapping.
+    event NonceInvalidation(
+        address indexed owner, address indexed token, uint256 indexed tokenId, uint48 newNonce, uint48 oldNonce
+    );
+
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
     event Approval(
-        address indexed owner, address indexed token, address indexed spender, uint160 tokenId, uint48 expiration
+        address indexed owner, address indexed token, address indexed spender, uint256 tokenId, uint48 expiration
     );
+
+    /// @notice Emits an event when the owner successfully gives a spender operator permissions on a token.
+    event ApprovalForAll(address indexed owner, address indexed token, address indexed spender, uint48 expiration);
 
     /// @notice Emits an event when the owner successfully sets permissions using a permit signature on a token for the spender.
     event Permit(
         address indexed owner,
         address indexed token,
         address indexed spender,
-        uint160 tokenId,
+        uint256 tokenId,
         uint48 expiration,
         uint48 nonce
     );
@@ -40,15 +49,14 @@ interface IAllowanceTransferERC721 {
     event Lockdown(address indexed owner, address token, address spender);
 
     /// @notice The permit data for a token
-    /// @dev Setting tokenId to type(uint160).max would set operator approval on the spender.
     struct PermitDetails {
         // ERC20 token address
         address token;
         // the tokenId allowed to spend
-        uint160 tokenId;
+        uint256 tokenId;
         // timestamp at which a spender's token allowances become invalid
         uint48 expiration;
-        // an incrementing value indexed per owner,token,and spender for each signature
+        // an incrementing value indexed per owner,token,and tokenId for each signature
         uint48 nonce;
     }
 
@@ -72,15 +80,35 @@ interface IAllowanceTransferERC721 {
         uint256 sigDeadline;
     }
 
-    /// @notice The saved permissions
-    /// @dev This info is saved per owner, per token, per spender and all signed over in the permit message
-    /// @dev Setting tokenId to type(uint160).max sets an operator approval. This means that the spender can transfer any tokenId you own in the collection.
+    /// @notice The permit message signed to set an operator for the token.
+    struct PermitAll {
+        // address of the token collection
+        address token;
+        // address of the spender who will act as an operator on all tokenIds owned by the signer for the token collection
+        address spender;
+        // expiration of the operator permissions
+        uint48 expiration;
+        // an incrementing value indexed per owner, per token, per spender
+        uint48 nonce;
+        // deadline on the permit signature
+        uint256 sigDeadline;
+    }
+
+    /// @notice The saved permissions on the allowance mapping
+    /// @dev This info is saved per owner, per token, per tokenId and all signed over in the permit message
     struct PackedAllowance {
-        // tokenId allowed
-        uint160 tokenId;
+        // spender allowed
+        address spender;
         // permission expiry
         uint48 expiration;
         // an incrementing value indexed per owner,token,and spender for each signature
+        uint48 nonce;
+    }
+
+    /// @notice The saved expiration on the operator.
+    /// @dev Holds a nonce value to prevent replay protection.
+    struct PackedOperatorAllowance {
+        uint48 expiration;
         uint48 nonce;
     }
 
@@ -92,6 +120,14 @@ interface IAllowanceTransferERC721 {
         address spender;
     }
 
+    /// @notice A token and tokenId pair.
+    struct TokenAndIdPair {
+        // the token collection address
+        address token;
+        // the tokenId
+        uint256 tokenId;
+    }
+
     /// @notice Details for a token transfer.
     struct AllowanceTransferDetails {
         // the owner of the token
@@ -99,15 +135,19 @@ interface IAllowanceTransferERC721 {
         // the recipient of the token
         address to;
         // the tokenId of the token
-        uint160 tokenId;
+        uint256 tokenId;
         // the token to be transferred
         address token;
     }
 
-    /// @notice A mapping from owner address to token address to spender address to PackedAllowance struct, which contains details and conditions of the approval.
-    /// @notice The mapping is indexed in the above order see: allowance[ownerAddress][tokenAddress][spenderAddress]
-    /// @dev The packed slot holds the allowed tokenId, expiration at which the permissions on the tokenId is no longer valid, and current nonce thats updated on any signature based approvals.
-    function allowance(address, address, address) external view returns (uint160, uint48, uint48);
+    /// @notice A mapping from owner address to token address to tokenId to PackedAllowance struct, which contains details and conditions of the approval.
+    /// @notice The mapping is indexed in the above order see: allowance[ownerAddress][tokenAddress][tokenId]
+    /// @dev The packed slot holds the allowed spender, expiration at which the permissions on the tokenId is no longer valid, and current nonce thats updated on any signature based approvals.
+    function allowance(address, address, uint256) external view returns (address, uint48, uint48);
+
+    /// @notice A mapping from owner address to token address to spender address to a PackedOperatorAllowance struct, which contains the expiration of the operator approval.
+    /// @notice The mapping is indexed in the above order see: operator[ownerAddress][tokenAddress][spenderAddress]
+    function operators(address, address, address) external view returns (uint48, uint48);
 
     /// @notice Approves the spender to transfer the tokenId of the specified token up until the expiration
     /// @param token The token to approve
@@ -115,8 +155,16 @@ interface IAllowanceTransferERC721 {
     /// @param tokenId The approved tokenId of the token
     /// @param expiration The timestamp at which the approval is no longer valid
     /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve
-    /// @dev Setting tokenId to type(uint160).max sets an operator approval
-    function approve(address token, address spender, uint160 tokenId, uint48 expiration) external;
+    /// @dev Passing in expiration as 0 sets the expiration to the block.timestamp
+    function approve(address token, address spender, uint256 tokenId, uint48 expiration) external;
+
+    /// @notice Approves the spender to be an operator of the specified token up until the expiration
+    /// @param token The token to approve
+    /// @param spender The spender address to approve
+    /// @param expiration The timestamp at which the operator approval is no longer valid
+    /// @dev The packed allowance also holds a nonce, which will stay unchanged in approve
+    /// @dev Passing in expiration as 0 DOES NOT set the expiration to the block.timestamp unlike `approve`.
+    function setApprovalForAll(address token, address spender, uint48 expiration) external;
 
     /// @notice Permit a spender to a given tokenId of the owners token via the owner's EIP-712 signature
     /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
@@ -132,6 +180,13 @@ interface IAllowanceTransferERC721 {
     /// @param signature The owner's signature over the permit data
     function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external;
 
+    /// @notice Permit a spender to be an operator of the owners tokens via the owner's EIP-712 signature
+    /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
+    /// @param owner The owner of the tokens being approved
+    /// @param permitAll Data signed over by the owner specifying the terms of approval
+    /// @param signature The owner's signature over the permit data
+    function permit(address owner, PermitAll memory permitAll, bytes calldata signature) external;
+
     /// @notice Transfer approved tokens from one address to another
     /// @param from The address to transfer from
     /// @param to The address of the recipient
@@ -139,7 +194,7 @@ interface IAllowanceTransferERC721 {
     /// @param token The token address to transfer
     /// @dev Requires the from address to have approved the desired tokenId or be an operator
     /// of the token to msg.sender.
-    function transferFrom(address from, address to, uint160 tokenId, address token) external;
+    function transferFrom(address from, address to, uint256 tokenId, address token) external;
 
     /// @notice Transfer approved tokens in a batch
     /// @param transferDetails Array of owners, recipients, tokenIds, and tokens for the transfers
@@ -149,8 +204,11 @@ interface IAllowanceTransferERC721 {
 
     /// @notice Enables performing a "lockdown" of the sender's Permit2 identity
     /// by batch revoking approvals
-    /// @param approvals Array of approvals to revoke.
-    function lockdown(TokenSpenderPair[] calldata approvals) external;
+    /// @param operatorApprovals Array of operator approvals to revoke.
+    /// @param tokenIdApprovals Array of tokenId approvals to revoke.
+    /// @dev Expires the allowances on each of the approval mappings, the operator and allowance mappings respectively.
+    function lockdown(TokenSpenderPair[] calldata operatorApprovals, TokenAndIdPair[] calldata tokenIdApprovals)
+        external;
 
     /// @notice Invalidate nonces for a given (token, spender) pair
     /// @param token The token to invalidate nonces for
@@ -158,4 +216,11 @@ interface IAllowanceTransferERC721 {
     /// @param newNonce The new nonce to set. Invalidates all nonces less than it.
     /// @dev Can't invalidate more than 2**16 nonces per transaction.
     function invalidateNonces(address token, address spender, uint48 newNonce) external;
+
+    /// @notice Invalidate nonces for a given (token, tokenId) pair
+    /// @param token The token to invalidate nonces for
+    /// @param tokenId The tokenId to invalidate nonces for
+    /// @param newNonce The new nonce to set. Invalidates all nonces less than it.
+    /// @dev Can't invalidate more than 2**16 nonces per transaction.
+    function invalidateNonces(address token, uint256 tokenId, uint48 newNonce) external;
 }

@@ -4,17 +4,20 @@ pragma solidity ^0.8.17;
 import {IAllowanceTransferERC721} from "../interfaces/IAllowanceTransferERC721.sol";
 import {ISignatureTransferERC721} from "../interfaces/ISignatureTransferERC721.sol";
 
-library PermitHash_ERC721 {
+library PermitHashERC721 {
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
-        keccak256("PermitDetails(address token,uint160 tokenId,uint48 expiration,uint48 nonce)");
+        keccak256("PermitDetails(address token,uint256 tokenId,uint48 expiration,uint48 nonce)");
 
     bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
-        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 tokenId,uint48 expiration,uint48 nonce)"
+        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint256 tokenId,uint48 expiration,uint48 nonce)"
     );
 
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 tokenId,uint48 expiration,uint48 nonce)"
+        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint256 tokenId,uint48 expiration,uint48 nonce)"
     );
+
+    bytes32 public constant _PERMIT_ALL_TYPEHASH =
+        keccak256("PermitAll(address token,address spender,uint48 expiration,uint48 nonce,uint256 sigDeadline)");
 
     bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 tokenId)");
 
@@ -52,6 +55,19 @@ library PermitHash_ERC721 {
                 keccak256(abi.encodePacked(permitHashes)),
                 permitBatch.spender,
                 permitBatch.sigDeadline
+            )
+        );
+    }
+
+    function hash(IAllowanceTransferERC721.PermitAll memory permitAll) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                _PERMIT_ALL_TYPEHASH,
+                permitAll.token,
+                permitAll.spender,
+                permitAll.expiration,
+                permitAll.nonce,
+                permitAll.sigDeadline
             )
         );
     }

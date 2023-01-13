@@ -6,13 +6,13 @@ import {SignatureExpired, InvalidNonce} from "../shared/PermitErrors.sol";
 import {ERC721} from "solmate/src/tokens/ERC721.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 import {SignatureVerification} from "../shared/SignatureVerification.sol";
-import {PermitHash_ERC721} from "./libraries/PermitHash_ERC721.sol";
+import {PermitHashERC721} from "./libraries/PermitHashERC721.sol";
 import {EIP712ERC721} from "./EIP712ERC721.sol";
 
 contract SignatureTransferERC721 is ISignatureTransferERC721, EIP712ERC721 {
     using SignatureVerification for bytes;
-    using PermitHash_ERC721 for PermitTransferFrom;
-    using PermitHash_ERC721 for PermitBatchTransferFrom;
+    using PermitHashERC721 for PermitTransferFrom;
+    using PermitHashERC721 for PermitBatchTransferFrom;
 
     /// @inheritdoc ISignatureTransferERC721
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
