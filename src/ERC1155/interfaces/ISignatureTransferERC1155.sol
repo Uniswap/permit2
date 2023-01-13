@@ -22,6 +22,8 @@ interface ISignatureTransferERC1155 {
         address token;
         // the maximum amount that can be spent
         uint256 amount;
+        // the tokenId that can be spent
+        uint256 tokenId;
     }
 
     /// @notice The signed permit message for a single token transfer
