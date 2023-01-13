@@ -13,6 +13,7 @@ contract AllowanceTransferERC1155 is IAllowanceTransferERC1155, EIP712ForERC1155
     using SignatureVerification for bytes;
     using PermitHashERC1155 for PermitSingle;
     using PermitHashERC1155 for PermitBatch;
+    using PermitHashERC1155 for PermitAll;
     using AllowanceERC1155 for PackedAllowance;
 
     /// @notice Maps users to tokens to spender addresses and information about the approval on the token
@@ -62,6 +63,22 @@ contract AllowanceTransferERC1155 is IAllowanceTransferERC1155, EIP712ForERC1155
                 _updateApproval(permitBatch.details[i], owner, spender);
             }
         }
+    }
+
+    /// @inheritdoc IAllowanceTransferERC1155
+    function permit(address owner, PermitAll memory permitAll, bytes calldata signature) external {
+        if (block.timestamp > permitAll.sigDeadline) revert SignatureExpired(permitAll.sigDeadline);
+
+        // Verify the signer address from the signature.
+        signature.verify(_hashTypedData(permitAll.hash()), owner);
+
+        PackedOperatorAllowance storage operator = operators[owner][permitAll.token][permitAll.spender];
+        if (operator.nonce != permitAll.nonce) revert InvalidNonce();
+
+        unchecked {
+            operator.nonce += 1;
+        }
+        operator.expiration = permitAll.expiration;
     }
 
     /// @inheritdoc IAllowanceTransferERC1155

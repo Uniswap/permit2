@@ -9,12 +9,15 @@ library PermitHashERC1155 {
         keccak256("PermitDetails(address token,uint256 tokenId,uint160 amount,uint48 expiration,uint48 nonce)");
 
     bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
-        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
+        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint256 tokenId,uint160 amount,uint48 expiration,uint48 nonce)"
     );
 
     bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
+        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint256 tokenId,uint160 amount,uint48 expiration,uint48 nonce)"
     );
+
+    bytes32 public constant _PERMIT_ALL_TYPEHASH =
+        keccak256("PermitAll(address token,address spender,uint48 expiration,uint48 nonce,uint256 sigDeadline)");
 
     bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
 
@@ -52,6 +55,19 @@ library PermitHashERC1155 {
                 keccak256(abi.encodePacked(permitHashes)),
                 permitBatch.spender,
                 permitBatch.sigDeadline
+            )
+        );
+    }
+
+    function hash(IAllowanceTransferERC1155.PermitAll memory permitAll) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                _PERMIT_ALL_TYPEHASH,
+                permitAll.token,
+                permitAll.spender,
+                permitAll.expiration,
+                permitAll.nonce,
+                permitAll.sigDeadline
             )
         );
     }

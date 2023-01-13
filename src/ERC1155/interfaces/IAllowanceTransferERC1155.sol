@@ -92,6 +92,20 @@ interface IAllowanceTransferERC1155 {
         uint256 sigDeadline;
     }
 
+    /// @notice The permit message signed to set an operator for the token.
+    struct PermitAll {
+        // address of the token collection
+        address token;
+        // address of the spender who will act as an operator on all tokenIds owned by the signer for the token collection
+        address spender;
+        // expiration of the operator permissions
+        uint48 expiration;
+        // an incrementing value indexed per owner, per token, per spender
+        uint48 nonce;
+        // deadline on the permit signature
+        uint256 sigDeadline;
+    }
+
     /// @notice The saved permissions
     /// @dev This info is saved per owner, per token, per spender and all signed over in the permit message
     /// @dev Setting amount to type(uint160).max sets an unlimited approval
@@ -178,6 +192,13 @@ interface IAllowanceTransferERC1155 {
     /// @param permitBatch Data signed over by the owner specifying the terms of approval
     /// @param signature The owner's signature over the permit data
     function permit(address owner, PermitBatch memory permitBatch, bytes calldata signature) external;
+
+    /// @notice Permit a spender to be an operator of the owners tokens via the owner's EIP-712 signature
+    /// @dev May fail if the owner's nonce was invalidated in-flight by invalidateNonce
+    /// @param owner The owner of the tokens being approved
+    /// @param permitAll Data signed over by the owner specifying the terms of approval
+    /// @param signature The owner's signature over the permit data
+    function permit(address owner, PermitAll memory permitAll, bytes calldata signature) external;
 
     /// @notice Transfer approved tokens from one address to another
     /// @param from The address to transfer from
