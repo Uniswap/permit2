@@ -73,6 +73,9 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
         signature.verify(_hashTypedData(permitAll.hash()), owner);
 
         PackedOperatorAllowance storage operator = operators[msg.sender][permitAll.token][permitAll.spender];
+
+        if (permitAll.nonce != operator.nonce) revert InvalidNonce();
+
         unchecked {
             operator.nonce += 1;
         }
