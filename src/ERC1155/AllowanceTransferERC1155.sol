@@ -100,17 +100,15 @@ contract AllowanceTransferERC1155 is IAllowanceTransferERC1155, EIP712ForERC1155
         }
 
         uint256 maxAmount = allowed.amount;
-        if (maxAmount != type(uint160).max) {
-            if (amount > maxAmount) {
-                // There is not a valid approval on the allowance mapping.
-                // However, only revert if there is also not a valid approval on the operator mapping.
-                // Otherwise, the spender is an operator & can transfer any amount of any tokenId in the collection.
-                if (operatorExpired) revert InsufficientAllowance(maxAmount);
-            } else {
-                unchecked {
-                    allowed.amount = uint160(maxAmount) - amount;
-                }
+
+        if (maxAmount != type(uint160).max && amount < maxAmount) {
+            unchecked {
+                allowed.amount = uint160(maxAmount) - amount;
             }
+        } else if (operatorExpired) {
+            // Only revert if there is also not a valid approval on the operator mapping.
+            // Otherwise, the spender is an operator & can transfer any amount of any tokenId in the collection.
+            revert InsufficientAllowance(maxAmount);
         }
 
         // Transfer the tokens from the from address to the recipient.
