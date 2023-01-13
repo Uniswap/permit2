@@ -4,14 +4,14 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {BaseAllowanceTransferTest} from "./BaseAllowanceTransferTest.t.sol";
 import {Permit2} from "../src/ERC20/Permit2.sol";
-import {TokenProvider_ERC20} from "./utils/TokenProvider_ERC20.sol";
+import {TokenProviderERC20} from "./utils/TokenProviderERC20.sol";
 import {PermitHash} from "../src/ERC20/libraries/PermitHash.sol";
 import {PermitAbstraction} from "./utils/PermitAbstraction.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {IAllowanceTransfer} from "../src/ERC20/interfaces/IAllowanceTransfer.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 
-contract AllowanceTransferTest_ERC20 is TokenProvider_ERC20, BaseAllowanceTransferTest {
+contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransferTest {
     function setUp() public override {
         permit2 = address(new Permit2());
         DOMAIN_SEPARATOR = Permit2(permit2).DOMAIN_SEPARATOR();

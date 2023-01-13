@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SignatureVerification} from "../src/shared/SignatureVerification.sol";
-import {TokenProvider_ERC20} from "./utils/TokenProvider_ERC20.sol";
+import {TokenProviderERC20} from "./utils/TokenProviderERC20.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
@@ -15,7 +15,7 @@ import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {ISignatureTransfer} from "../src/ERC20/interfaces/ISignatureTransfer.sol";
 import {InvalidNonce, SignatureExpired} from "../src/shared/PermitErrors.sol";
 
-contract SignatureTransferTest is Test, PermitSignature, TokenProvider_ERC20, GasSnapshot {
+contract SignatureTransferTest is Test, PermitSignature, TokenProviderERC20, GasSnapshot {
     using AddressBuilder for address[];
     using AmountBuilder for uint256[];
 

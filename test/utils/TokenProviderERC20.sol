@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 
-contract TokenProvider_ERC20 {
+contract TokenProviderERC20 {
     uint256 public constant MINT_AMOUNT_ERC20 = 100 ** 18;
     uint256 public constant MINT_AMOUNT_ERC1155 = 100;
 
