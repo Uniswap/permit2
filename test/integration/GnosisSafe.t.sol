@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import {IERC1271} from "../../src/ERC20/interfaces/IERC1271.sol";
+import {IERC1271} from "../../src/shared/IERC1271.sol";
 
 interface GnosisSafeProxy is IERC1271 {
     function setup(

@@ -9,7 +9,7 @@ import {ISignatureTransfer} from "../src/ERC20/interfaces/ISignatureTransfer.sol
 import {MockSignatureVerification} from "./mocks/MockSignatureVerification.sol";
 import {MockHash} from "./mocks/MockHash.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
-import {SignatureVerification} from "../src/ERC20/libraries/SignatureVerification.sol";
+import {SignatureVerification} from "../src/shared/SignatureVerification.sol";
 
 contract TypehashGeneration is Test, PermitSignature {
     using PermitHash for *;
