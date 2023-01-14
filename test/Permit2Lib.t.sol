@@ -5,24 +5,24 @@ import "forge-std/Test.sol";
 
 import {SafeERC20, IERC20, IERC20Permit} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {DSTestPlus} from "solmate/src/test/utils/DSTestPlus.sol";
-import {MockERC20, ERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {ERC20} from "solmate/src/tokens/ERC20.sol";
+import {MockERC20} from "./mocks/MockERC20.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {Permit2Lib} from "../src/libraries/Permit2Lib.sol";
 import {MockNonPermitERC20} from "./mocks/MockNonPermitERC20.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
+import {IPermitTypehash} from "../src/interfaces/IPermitTypehash.sol";
 import {MockPermit2Lib} from "./mocks/MockPermit2Lib.sol";
 import {SafeCast160} from "../src/libraries/SafeCast160.sol";
-import {MockPermitWithSmallDS, MockPermitWithLargerDS} from "./mocks/MockPermitWithDS.sol";
+import {MockPermitWithSmallTH, MockPermitWithLargerTH} from "./mocks/MockPermitWithTH.sol";
 import {MockNonPermitNonERC20WithDS} from "./mocks/MockNonPermitNonERC20WithDS.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {MockFallbackERC20} from "./mocks/MockFallbackERC20.sol";
 
 contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
-    bytes32 constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-
+    bytes32 immutable PERMIT_TYPEHASH;
     bytes32 immutable TOKEN_DOMAIN_SEPARATOR;
     bytes32 immutable PERMIT2_DOMAIN_SEPARATOR;
     bytes32 immutable TEST_SML_DS_DOMAIN_SEPARATOR;
@@ -42,10 +42,10 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
     MockNonPermitERC20 immutable nonPermitToken = new MockNonPermitERC20("Mock NonPermit Token", "MOCK", 18);
     MockFallbackERC20 immutable fallbackToken = new MockFallbackERC20("Mock Fallback Token", "MOCK", 18);
-    MockPermitWithSmallDS immutable lessDSToken =
-        new MockPermitWithSmallDS("Mock Permit Token Small Domain Sep", "MOCK", 18);
-    MockPermitWithLargerDS immutable largerDSToken =
-        new MockPermitWithLargerDS("Mock Permit Token Larger Domain Sep", "MOCK", 18);
+    MockPermitWithSmallTH immutable lessDSToken =
+        new MockPermitWithSmallTH("Mock Permit Token Small Domain Sep", "MOCK", 18);
+    MockPermitWithLargerTH immutable largerDSToken =
+        new MockPermitWithLargerTH("Mock Permit Token Larger Domain Sep", "MOCK", 18);
     MockNonPermitNonERC20WithDS immutable largerNonStandardDSToken = new MockNonPermitNonERC20WithDS();
 
     constructor() {
@@ -55,6 +55,7 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         vm.etch(address(permit2), address(tempPermit2).code);
         vm.etch(address(weth9Mainnet), address(nonPermitToken).code);
 
+        PERMIT_TYPEHASH = IPermitTypehash(address(token)).PERMIT_TYPEHASH();
         TOKEN_DOMAIN_SEPARATOR = token.DOMAIN_SEPARATOR();
         PERMIT2_DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
         TEST_SML_DS_DOMAIN_SEPARATOR = lessDSToken.DOMAIN_SEPARATOR();

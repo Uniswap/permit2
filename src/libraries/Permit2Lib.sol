@@ -5,11 +5,12 @@ import {ERC20} from "solmate/src/tokens/ERC20.sol";
 
 import {Permit2} from "../Permit2.sol";
 import {IDAIPermit} from "../interfaces/IDAIPermit.sol";
+import {IPermitTypehash} from "../interfaces/IPermitTypehash.sol";
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 import {SafeCast160} from "./SafeCast160.sol";
 
 /// @title Permit2Lib
-/// @notice Enables efficient transfers and EIP-2612/DAI
+/// @notice Enables efficient transfers and EIP-2612/DAI-like contract
 /// permits for any token by falling back to Permit2.
 library Permit2Lib {
     using SafeCast160 for uint256;
@@ -17,8 +18,8 @@ library Permit2Lib {
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev The unique EIP-712 domain domain separator for the DAI token contract.
-    bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
+    /// @dev The permit typehash for DAI style token contract.
+    bytes32 internal constant PERMIT_TYPEHASH = 0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb;
 
     /// @dev The address for the WETH9 contract on Ethereum mainnet, encoded as a bytes32.
     bytes32 internal constant WETH9_ADDRESS = 0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2;
@@ -77,11 +78,11 @@ library Permit2Lib {
         bytes32 r,
         bytes32 s
     ) internal {
-        // Generate calldata for a call to DOMAIN_SEPARATOR on the token.
-        bytes memory inputData = abi.encodeWithSelector(ERC20.DOMAIN_SEPARATOR.selector);
+        // Generate calldata for a call to PERMIT_TYPEHASH on the token.
+        bytes memory inputData = abi.encodeWithSelector(IPermitTypehash.PERMIT_TYPEHASH.selector);
 
         bool success; // Call the token contract as normal, capturing whether it succeeded.
-        bytes32 domainSeparator; // If the call succeeded, we'll capture the return value here.
+        bytes32 permitTypehash; // If the call succeeded, we'll capture the return value here.
 
         assembly {
             // If the token is WETH9, we know it doesn't have a DOMAIN_SEPARATOR, and we'll skip this step.
@@ -99,15 +100,15 @@ library Permit2Lib {
                         staticcall(5000, token, add(inputData, 32), mload(inputData), 0, 32)
                     )
 
-                domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
+                permitTypehash := mload(0) // Copy the return value into the permitTypehash variable.
             }
         }
 
         // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
         if (success) {
-            // We'll use DAI's special permit if it's DOMAIN_SEPARATOR matches,
+            // We'll use DAI style permit if its PERMIT_TYPEHASH matches,
             // otherwise we'll just encode a call to the standard permit function.
-            inputData = domainSeparator == DAI_DOMAIN_SEPARATOR
+            inputData = permitTypehash == PERMIT_TYPEHASH
                 ? abi.encodeCall(IDAIPermit.permit, (owner, spender, token.nonces(owner), deadline, true, v, r, s))
                 : abi.encodeCall(ERC20.permit, (owner, spender, amount, deadline, v, r, s));
 
@@ -117,7 +118,7 @@ library Permit2Lib {
         }
 
         if (!success) {
-            // If the initial DOMAIN_SEPARATOR call on the token failed or a
+            // If the initial PERMIT_TYPEHASH call on the token failed or a
             // subsequent call to permit failed, fall back to using Permit2.
 
             (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);

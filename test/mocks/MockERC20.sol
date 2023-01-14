@@ -9,4 +9,8 @@ contract MockERC20 is ERC20 {
     function mint(address _to, uint256 _amount) public {
         _mint(_to, _amount);
     }
+
+    function PERMIT_TYPEHASH() external virtual view returns (bytes32) {
+        return keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    }
 }

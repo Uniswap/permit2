@@ -9,4 +9,8 @@ contract MockNonPermitERC20 is MockERC20 {
     function DOMAIN_SEPARATOR() public pure override returns (bytes32) {
         return 0;
     }
+
+    function PERMIT_TYPEHASH() public pure returns (bytes32) {
+        return 0;
+    }
 }
