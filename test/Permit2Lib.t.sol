@@ -25,8 +25,8 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     bytes32 immutable PERMIT_TYPEHASH;
     bytes32 immutable TOKEN_DOMAIN_SEPARATOR;
     bytes32 immutable PERMIT2_DOMAIN_SEPARATOR;
-    bytes32 immutable TEST_SML_DS_DOMAIN_SEPARATOR;
-    bytes32 immutable TEST_LG_DS_DOMAIN_SEPARATOR;
+    bytes32 immutable TEST_SML_TH_DOMAIN_SEPARATOR;
+    bytes32 immutable TEST_LG_TH_DOMAIN_SEPARATOR;
 
     uint256 immutable PK;
     address immutable PK_OWNER;
@@ -42,10 +42,10 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
     MockNonPermitERC20 immutable nonPermitToken = new MockNonPermitERC20("Mock NonPermit Token", "MOCK", 18);
     MockFallbackERC20 immutable fallbackToken = new MockFallbackERC20("Mock Fallback Token", "MOCK", 18);
-    MockPermitWithSmallTH immutable lessDSToken =
-        new MockPermitWithSmallTH("Mock Permit Token Small Domain Sep", "MOCK", 18);
-    MockPermitWithLargerTH immutable largerDSToken =
-        new MockPermitWithLargerTH("Mock Permit Token Larger Domain Sep", "MOCK", 18);
+    MockPermitWithSmallTH immutable lessTHToken =
+        new MockPermitWithSmallTH("Mock Permit Token Small Permit Typehash", "MOCK", 18);
+    MockPermitWithLargerTH immutable largerTHToken =
+        new MockPermitWithLargerTH("Mock Permit Token Larger Permit Typehash", "MOCK", 18);
     MockNonPermitNonERC20WithDS immutable largerNonStandardDSToken = new MockNonPermitNonERC20WithDS();
 
     constructor() {
@@ -58,20 +58,20 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         PERMIT_TYPEHASH = IPermitTypehash(address(token)).PERMIT_TYPEHASH();
         TOKEN_DOMAIN_SEPARATOR = token.DOMAIN_SEPARATOR();
         PERMIT2_DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
-        TEST_SML_DS_DOMAIN_SEPARATOR = lessDSToken.DOMAIN_SEPARATOR();
-        TEST_LG_DS_DOMAIN_SEPARATOR = largerDSToken.DOMAIN_SEPARATOR();
+        TEST_SML_TH_DOMAIN_SEPARATOR = lessTHToken.DOMAIN_SEPARATOR();
+        TEST_LG_TH_DOMAIN_SEPARATOR = largerTHToken.DOMAIN_SEPARATOR();
 
         token.mint(address(this), type(uint128).max);
         token.approve(address(this), type(uint128).max);
         token.approve(address(permit2), type(uint128).max);
 
-        lessDSToken.mint(address(this), type(uint128).max);
-        lessDSToken.approve(address(this), type(uint128).max);
-        lessDSToken.approve(address(permit2), type(uint128).max);
+        lessTHToken.mint(address(this), type(uint128).max);
+        lessTHToken.approve(address(this), type(uint128).max);
+        lessTHToken.approve(address(permit2), type(uint128).max);
 
-        lessDSToken.mint(PK_OWNER, type(uint128).max);
+        lessTHToken.mint(PK_OWNER, type(uint128).max);
         vm.prank(PK_OWNER);
-        lessDSToken.approve(address(permit2), type(uint128).max);
+        lessTHToken.approve(address(permit2), type(uint128).max);
 
         token.mint(PK_OWNER, type(uint128).max);
         vm.prank(PK_OWNER);
@@ -290,12 +290,12 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         assertLt(gas1 - gasleft(), 50000); // If unbounded the staticcall will consume a wild amount of gas.
     }
 
-    function testPermit2SmallerDS() public {
-        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(lessDSToken), address(0xCAFE));
+    function testPermit2SmallerTH() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(lessTHToken), address(0xCAFE));
 
         IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
             details: IAllowanceTransfer.PermitDetails({
-                token: address(lessDSToken),
+                token: address(lessTHToken),
                 amount: 1e18,
                 expiration: type(uint48).max,
                 nonce: nonce
@@ -306,17 +306,17 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
-        Permit2Lib.permit2(MockERC20(address(lessDSToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
-        (uint160 amount,,) = permit2.allowance(PK_OWNER, address(lessDSToken), address(0xCAFE));
+        Permit2Lib.permit2(MockERC20(address(lessTHToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        (uint160 amount,,) = permit2.allowance(PK_OWNER, address(lessTHToken), address(0xCAFE));
         assertEq(amount, 1e18);
     }
 
-    function testPermit2LargerDS() public {
-        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(largerDSToken), address(0xCAFE));
+    function testPermit2LargerTH() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(largerTHToken), address(0xCAFE));
 
         IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
             details: IAllowanceTransfer.PermitDetails({
-                token: address(largerDSToken),
+                token: address(largerTHToken),
                 amount: 1e18,
                 expiration: type(uint48).max,
                 nonce: nonce
@@ -327,18 +327,18 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
-        Permit2Lib.permit2(MockERC20(address(largerDSToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
-        (uint160 amount,,) = permit2.allowance(PK_OWNER, address(largerDSToken), address(0xCAFE));
+        Permit2Lib.permit2(MockERC20(address(largerTHToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        (uint160 amount,,) = permit2.allowance(PK_OWNER, address(largerTHToken), address(0xCAFE));
         assertEq(amount, 1e18);
     }
 
-    function testPermit2LargerDSRevert() public {
+    function testPermit2LargerTHRevert() public {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
             PK,
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
-                    TEST_LG_DS_DOMAIN_SEPARATOR,
+                    TEST_LG_TH_DOMAIN_SEPARATOR,
                     keccak256(
                         abi.encode(
                             PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
@@ -349,23 +349,23 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         );
         // cannot recover signature
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
-        permit2Lib.permit2(MockERC20(address(largerDSToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        permit2Lib.permit2(MockERC20(address(largerTHToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
-    function testPermit2SmallerDSNoRevert() public {
+    function testPermit2SmallerTHNoRevert() public {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
             PK,
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
-                    TEST_SML_DS_DOMAIN_SEPARATOR,
+                    TEST_SML_TH_DOMAIN_SEPARATOR,
                     keccak256(
                         abi.encode(
                             PERMIT_TYPEHASH,
                             PK_OWNER,
                             address(0xB00B),
                             1e18,
-                            lessDSToken.nonces(PK_OWNER),
+                            lessTHToken.nonces(PK_OWNER),
                             block.timestamp
                         )
                     )
@@ -373,7 +373,7 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
             )
         );
 
-        Permit2Lib.permit2(lessDSToken, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.permit2(lessTHToken, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
     }
 
     /*/////////////////f/////////////////////////////////////////////
@@ -533,18 +533,18 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     }
 
     // mock tests
-    function testPermit2DSLessToken() public {
-        bool success = permit2Lib.testPermit2Code(MockERC20(address(lessDSToken)));
+    function testPermit2THLessToken() public {
+        bool success = permit2Lib.testPermit2Code(MockERC20(address(lessTHToken)));
         assertEq(success, true);
     }
 
-    function testPermit2DSMoreToken() public {
+    function testPermit2THMoreToken() public {
         bool success = permit2Lib.testPermit2Code(MockERC20(address(largerNonStandardDSToken)));
         assertEq(success, false);
     }
 
-    function testPermit2DSMore32Token() public {
-        bool success = permit2Lib.testPermit2Code(MockERC20(address(largerDSToken)));
+    function testPermit2THMore32Token() public {
+        bool success = permit2Lib.testPermit2Code(MockERC20(address(largerTHToken)));
         assertEq(success, false);
     }
 }
