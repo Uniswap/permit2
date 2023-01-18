@@ -2,19 +2,21 @@
 pragma solidity 0.8.17;
 
 /// @notice EIP712 helpers for permit2
-/// @dev Maintains cross-chain replay protection in the event of a fork
+/// @dev Maintains cross-chain replay protection in the event of a fork and properly handles delegated calls
 /// @dev Reference: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/EIP712.sol
 contract EIP712 {
     // Cache the domain separator as an immutable value, but also store the chain id that it
     // corresponds to, in order to invalidate the cached domain separator if the chain id changes.
     bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
     uint256 private immutable _CACHED_CHAIN_ID;
+    address private immutable _CACHED_THIS;
 
     bytes32 private constant _HASHED_NAME = keccak256("Permit2");
     bytes32 private constant _TYPE_HASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     constructor() {
+        _CACHED_THIS = address(this);
         _CACHED_CHAIN_ID = block.chainid;
         _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME);
     }
@@ -22,7 +24,7 @@ contract EIP712 {
     /// @notice Returns the domain separator for the current chain.
     /// @dev Uses cached version if chainid and address are unchanged from construction.
     function DOMAIN_SEPARATOR() public view returns (bytes32) {
-        return block.chainid == _CACHED_CHAIN_ID
+        return block.chainid == _CACHED_CHAIN_ID && address(this) == _CACHED_THIS
             ? _CACHED_DOMAIN_SEPARATOR
             : _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME);
     }
