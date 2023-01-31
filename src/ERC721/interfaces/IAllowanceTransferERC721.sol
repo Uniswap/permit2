@@ -106,7 +106,7 @@ interface IAllowanceTransferERC721 {
     }
 
     /// @notice The saved expiration on the operator.
-    /// @dev Holds a nonce value to prevent replay protection.
+    /// @dev Holds a nonce value to provide replay protection.
     struct PackedOperatorAllowance {
         uint48 expiration;
         uint48 nonce;
