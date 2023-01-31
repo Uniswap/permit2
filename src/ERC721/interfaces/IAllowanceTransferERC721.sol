@@ -143,10 +143,12 @@ interface IAllowanceTransferERC721 {
     /// @notice A mapping from owner address to token address to tokenId to PackedAllowance struct, which contains details and conditions of the approval.
     /// @notice The mapping is indexed in the above order see: allowance[ownerAddress][tokenAddress][tokenId]
     /// @dev The packed slot holds the allowed spender, expiration at which the permissions on the tokenId is no longer valid, and current nonce thats updated on any signature based approvals.
+    /// @dev Setting the expiration to 0, sets the expiration to block.timestamp so the approval only lasts for the duration of the block.
     function allowance(address, address, uint256) external view returns (address, uint48, uint48);
 
     /// @notice A mapping from owner address to token address to spender address to a PackedOperatorAllowance struct, which contains the expiration of the operator approval.
     /// @notice The mapping is indexed in the above order see: operator[ownerAddress][tokenAddress][spenderAddress]
+    /// @dev Unlike the allowance mappings, setting the expiration to 0 just invalidates the operator allowance. It does NOT set the allowance to block.timestamp.
     function operators(address, address, address) external view returns (uint48, uint48);
 
     /// @notice Approves the spender to transfer the tokenId of the specified token up until the expiration

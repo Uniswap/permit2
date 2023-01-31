@@ -5,14 +5,15 @@ import "forge-std/Test.sol";
 import "../mocks/MockPermit2.sol";
 import {BaseAllowanceUnitTest} from "./BaseAllowanceUnitTest.sol";
 import {TokenProvider} from "../utils/TokenProvider.sol";
+import {Allowance} from "../../src/ERC20/libraries/Allowance.sol";
 
-contract AllowanceUnitTest_ERC20 is BaseAllowanceUnitTest {
+contract AllowanceUnitTestERC20 is BaseAllowanceUnitTest {
     function setUp() public override {
         permit2 = new MockPermit2();
         initializeERC20Tokens();
     }
 
-    function allowance(address from, address token, address spender)
+    function allowance(address from, address token, address spender, uint256 tokenId)
         public
         view
         override
