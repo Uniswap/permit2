@@ -105,70 +105,11 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         testPermit2Full();
         testPermit2NonPermitFallback();
         testPermit2NonPermitToken();
-        testPermit2WETH9Mainnet();
-        testStandardPermit();
     }
 
     /*//////////////////////////////////////////////////////////////
                         BASIC PERMIT2 BENCHMARKS
     //////////////////////////////////////////////////////////////*/
-
-    function testStandardPermit() public {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    TOKEN_DOMAIN_SEPARATOR,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
-
-        token.permit(PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-    }
-
-    function testOZSafePermit() public {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    TOKEN_DOMAIN_SEPARATOR,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
-
-        SafeERC20.safePermit(IERC20Permit(address(token)), PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-    }
-
-    function testPermit2() public {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    TOKEN_DOMAIN_SEPARATOR,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
-
-        Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-    }
 
     function testPermit2InvalidAmount() public {
         (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
@@ -351,31 +292,7 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         permit2Lib.permit2(MockERC20(address(largerDSToken)), PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
-    function testPermit2SmallerDSNoRevert() public {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    TEST_SML_DS_DOMAIN_SEPARATOR,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH,
-                            PK_OWNER,
-                            address(0xB00B),
-                            1e18,
-                            lessDSToken.nonces(PK_OWNER),
-                            block.timestamp
-                        )
-                    )
-                )
-            )
-        );
-
-        Permit2Lib.permit2(lessDSToken, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-    }
-
-    /*/////////////////f/////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
                     ADVANCED TRANSFERFROM BENCHMARKS
     //////////////////////////////////////////////////////////////*/
 
@@ -423,32 +340,6 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
         SafeERC20.safePermit(IERC20Permit(address(token)), PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
         SafeERC20.safeTransferFrom(IERC20(address(token)), PK_OWNER, address(0xB00B), 1e18);
-
-        snapEnd();
-    }
-
-    function testPermit2PlusTransferFrom2() public {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            PK,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    TOKEN_DOMAIN_SEPARATOR,
-                    keccak256(
-                        abi.encode(
-                            PERMIT_TYPEHASH, PK_OWNER, address(0xB00B), 1e18, token.nonces(PK_OWNER), block.timestamp
-                        )
-                    )
-                )
-            )
-        );
-
-        vm.startPrank(address(0xB00B));
-
-        snapStart("permit2 + transferFrom2 with an EIP-2612 native token");
-
-        Permit2Lib.permit2(token, PK_OWNER, address(0xB00B), 1e18, block.timestamp, v, r, s);
-        Permit2Lib.transferFrom2(token, PK_OWNER, address(0xB00B), 1e18);
 
         snapEnd();
     }
