@@ -58,8 +58,8 @@ library Permit2Lib {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Permit a user to spend a given amount of
-    /// another user's tokens via the owner's EIP-712 signature
-    /// trying to call the native permit function of the token first (if any).
+    /// another user's tokens via native EIP-2612 permit if possible, falling
+    /// back to Permit2 if native permit fails or is not implemented on the token.
     /// @param token The token to permit spending.
     /// @param owner The user to permit spending from.
     /// @param spender The user to permit spending to.
@@ -124,7 +124,7 @@ library Permit2Lib {
         }
     }
 
-    /// @notice Permit on the Permit2 contract.
+    /// @notice Simple unlimited permit on the Permit2 contract.
     /// @param token The token to permit spending.
     /// @param owner The user to permit spending from.
     /// @param spender The user to permit spending to.
