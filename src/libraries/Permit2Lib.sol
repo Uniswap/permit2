@@ -120,30 +120,11 @@ library Permit2Lib {
         if (!success) {
             // If the initial DOMAIN_SEPARATOR call on the token failed or a
             // subsequent call to permit failed, fall back to using Permit2.
-
-            (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
-
-            PERMIT2.permit(
-                owner,
-                IAllowanceTransfer.PermitSingle({
-                    details: IAllowanceTransfer.PermitDetails({
-                        token: address(token),
-                        amount: amount.toUint160(),
-                        // Use an unlimited expiration because it most
-                        // closely mimics how a standard approval works.
-                        expiration: type(uint48).max,
-                        nonce: nonce
-                    }),
-                    spender: spender,
-                    sigDeadline: deadline
-                }),
-                bytes.concat(r, s, bytes1(v))
-            );
+            simplePermit2(token, owner, spender, amount, deadline, v, r, s);
         }
     }
 
-    /// @notice Permit a user to spend a given amount of
-    /// another user's tokens via the owner's EIP-712 signature.
+    /// @notice Permit on the Permit2 contract.
     /// @param token The token to permit spending.
     /// @param owner The user to permit spending from.
     /// @param spender The user to permit spending to.

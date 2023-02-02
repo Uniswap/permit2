@@ -231,7 +231,6 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
         Permit2Lib.simplePermit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
     }
 
-
     /*//////////////////////////////////////////////////////////////
                      BASIC TRANSFERFROM2 BENCHMARKS
     //////////////////////////////////////////////////////////////*/
