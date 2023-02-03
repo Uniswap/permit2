@@ -16,17 +16,17 @@ contract TokenProviderERC20 {
 
     address faucet = address(0x98765);
 
-    function initializeERC20Tokens() public {
+    function initializeTokens() public {
         _token0 = new MockERC20("Test0", "TEST0", 18);
         _token1 = new MockERC20("Test1", "TEST1", 18);
     }
 
-    function setERC20TestTokens(address from) public {
+    function setTokens(address from) public {
         _token0.mint(from, MINT_AMOUNT_ERC20);
         _token1.mint(from, MINT_AMOUNT_ERC20);
     }
 
-    function setERC20TestTokenApprovals(Vm vm, address owner, address spender) public {
+    function setTokenApprovals(Vm vm, address owner, address spender) public {
         vm.startPrank(owner);
         _token0.approve(spender, type(uint256).max);
         _token1.approve(spender, type(uint256).max);

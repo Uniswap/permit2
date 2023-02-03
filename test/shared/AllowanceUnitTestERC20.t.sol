@@ -10,7 +10,7 @@ import {Allowance} from "../../src/ERC20/libraries/Allowance.sol";
 contract AllowanceUnitTestERC20 is BaseAllowanceUnitTest, TokenProviderERC20 {
     function setUp() public override {
         permit2 = new MockPermit2();
-        initializeERC20Tokens();
+        initializeTokens();
     }
 
     function allowance(address from, address token, address spender, uint256 tokenId)

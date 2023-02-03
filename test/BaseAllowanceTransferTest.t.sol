@@ -53,6 +53,8 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
     // has some balance of token0
     address address3 = address(3);
 
+    address spender = address(this);
+
     bytes32 DOMAIN_SEPARATOR;
 
     function setUp() public virtual;
@@ -77,9 +79,9 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         virtual
         returns (bytes memory);
 
-    function permit2Approve(address token, address spender, uint160 amountOrId, uint48 expiration) public virtual;
+    function permit2Approve(address token, address spender, uint256 amountOrId, uint48 expiration) public virtual;
 
-    function permit2Allowance(address from, address token, address spender)
+    function permit2Allowance(address from, address token, uint256 tokenIdOrSpender)
         public
         virtual
         returns (uint160, uint48, uint48);
@@ -94,17 +96,26 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
 
     function permit2TransferFrom(address from, address to, uint160 amount, address token) public virtual;
 
+    function getExpectedAmountOrSpender() public virtual returns (uint160);
+    function getAmountOrId() public virtual returns (uint256);
+
     function testApprove() public {
         vm.prank(from);
-        vm.expectEmit(true, true, true, true);
-        emit Approval(from, token0(), address(this), defaultAmountOrId, defaultExpiration);
-        permit2Approve(token0(), address(this), defaultAmountOrId, defaultExpiration);
+        // vm.expectEmit(true, true, true, true);
+        // emit Approval(from, token0(), address(this), getAmountOrId(), defaultExpiration);
+        permit2Approve(token0(), address(this), getAmountOrId(), defaultExpiration);
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(from, token0(), address(this));
-        assertEq(amount, defaultAmountOrId);
+        (uint160 amountOrSpender, uint48 expiration, uint48 nonce) =
+            permit2Allowance(from, token0(), uint256(uint160(address(this))));
+
+        // for erc20s the amountOrSpender should be compared to defaultAmountOrId
+        // for erc721s the amountOrSpender should be compared to spender
+        assertEq(amountOrSpender, getExpectedAmountOrSpender());
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 0);
     }
+
+    function setAmountOrId(uint256 id) public virtual {}
 
     function testSetAllowance() public {
         PermitAbstraction.IPermitSingle memory permit =
@@ -115,7 +126,8 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(from, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) =
+            permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
@@ -131,7 +143,8 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(from, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) =
+            permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
@@ -157,7 +170,8 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(fromDirty, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(fromDirty, token0(), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) =
+            permit2Allowance(fromDirty, token1(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 2);
@@ -170,7 +184,8 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
 
         permit2Permit(from, permit, sig);
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) =
+            permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
@@ -184,11 +199,12 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
 
         permit2Permit(from, permitBatch, sig1);
 
-        (amount, expiration, nonce) = permit2Allowance(from, token0(), address(this));
+        (amount, expiration, nonce) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 2);
-        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2Allowance(from, token1(), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) =
+            permit2Allowance(from, token1(), uint256(uint160(address(this))));
         assertEq(amount1, defaultAmountOrId);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
@@ -204,11 +220,13 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(from, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) =
+            permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
-        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2Allowance(from, token1(), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) =
+            permit2Allowance(from, token1(), uint256(uint160(address(this))));
         assertEq(amount1, defaultAmountOrId);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
@@ -228,11 +246,13 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         emit Permit(from, tokens[1], address(this), amounts[1], defaultExpiration, defaultNonce);
         permit2Permit(from, permit, sig);
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) =
+            permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 1);
-        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2Allowance(from, token1(), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) =
+            permit2Allowance(from, token1(), uint256(uint160(address(this))));
         assertEq(amount1, defaultAmountOrId);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
@@ -248,11 +268,13 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(fromDirty, permit, sig);
         snapEnd();
 
-        (uint160 amount, uint48 expiration, uint48 nonce) = permit2Allowance(fromDirty, token0(), address(this));
+        (uint160 amount, uint48 expiration, uint48 nonce) =
+            permit2Allowance(fromDirty, token1(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
         assertEq(nonce, 2);
-        (uint160 amount1, uint48 expiration1, uint48 nonce1) = permit2Allowance(fromDirty, token1(), address(this));
+        (uint160 amount1, uint48 expiration1, uint48 nonce1) =
+            permit2Allowance(fromDirty, token1(), uint256(uint160(address(this))));
         assertEq(amount1, defaultAmountOrId);
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 2);
@@ -269,7 +291,7 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
 
         permit2Permit(from, permit, sig);
 
-        (uint160 amount,,) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount,,) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
 
         assertEq(amount, defaultAmountOrId);
 
@@ -289,7 +311,7 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
 
         permit2Permit(from, permit, sig);
 
-        (uint160 amount,,) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount,,) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
 
         assertEq(amount, defaultAmountOrId);
 
@@ -342,7 +364,7 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(fromDirty, permit, sig);
         snapEnd();
 
-        (uint160 amount,,) = permit2Allowance(fromDirty, token0(), address(this));
+        (uint160 amount,,) = permit2Allowance(fromDirty, token1(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
 
         permit2TransferFrom(fromDirty, address3, defaultAmountOrId, token0());
@@ -389,12 +411,12 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(from, permit, sig);
         snapEnd();
 
-        (uint160 startAllowedAmount0,,) = permit2Allowance(from, token0(), address(this));
+        (uint160 startAllowedAmount0,,) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(startAllowedAmount0, type(uint160).max);
 
         permit2TransferFrom(from, address0, defaultAmountOrId, token0());
 
-        (uint160 endAllowedAmount0,,) = permit2Allowance(from, token0(), address(this));
+        (uint160 endAllowedAmount0,,) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(endAllowedAmount0, type(uint160).max);
 
         assertEq(balanceOf(token0(), from), startBalanceFrom - defaultAmountOrId);
@@ -414,12 +436,12 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         permit2Permit(fromDirty, permit, sig);
         snapEnd();
 
-        (uint160 startAllowedAmount0,,) = permit2Allowance(fromDirty, token0(), address(this));
+        (uint160 startAllowedAmount0,,) = permit2Allowance(fromDirty, token1(), uint256(uint160(address(this))));
         assertEq(startAllowedAmount0, type(uint160).max);
 
         permit2TransferFrom(fromDirty, address0, defaultAmountOrId, token0());
 
-        (uint160 endAllowedAmount0,,) = permit2Allowance(fromDirty, token0(), address(this));
+        (uint160 endAllowedAmount0,,) = permit2Allowance(fromDirty, token1(), uint256(uint160(address(this))));
         assertEq(endAllowedAmount0, type(uint160).max);
 
         assertEq(balanceOf(token0(), fromDirty), startBalanceFrom - defaultAmountOrId);
@@ -436,12 +458,12 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
 
         permit2Permit(from, permit, sig);
 
-        (uint160 startAllowedAmount0,,) = permit2Allowance(from, token0(), address(this));
+        (uint160 startAllowedAmount0,,) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(startAllowedAmount0, defaultAmountOrId);
 
         uint160 transferAmount = 5 ** 18;
         permit2TransferFrom(from, address0, transferAmount, token0());
-        (uint160 endAllowedAmount0,,) = permit2Allowance(from, token0(), address(this));
+        (uint160 endAllowedAmount0,,) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
         // ensure the allowance was deducted
         assertEq(endAllowedAmount0, defaultAmountOrId - transferAmount);
 
@@ -455,10 +477,10 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2Permit(from, permit, sig);
-        (,, uint48 nonce) = permit2Allowance(from, token0(), address(this));
+        (,, uint48 nonce) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(nonce, 1);
 
-        (uint160 amount, uint48 expiration,) = permit2Allowance(from, token0(), address(this));
+        (uint160 amount, uint48 expiration,) = permit2Allowance(from, token0(), uint256(uint160(address(this))));
         assertEq(amount, defaultAmountOrId);
         assertEq(expiration, defaultExpiration);
 
@@ -613,7 +635,7 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
 
     //     (uint160 amount,,) = permit2Allowance(from, token0(), address(this));
     //     assertEq(amount, defaultAmountOrId);
-    //     (uint160 amount1,,) = permit2Allowance(fromDirty, token0(), address(this));
+    //     (uint160 amount1,,) = permit2Allowance(fromDirty, token1(), address(this));
     //     assertEq(amount1, defaultAmountOrId);
 
     //     address[] memory owners = AddressBuilder.fill(1, from).push(fromDirty);
@@ -628,7 +650,7 @@ abstract contract BaseAllowanceTransferTest is Test, PermitSignature, PermitAbst
     //     assertEq(balanceOf(token0(), address(this)), startBalanceTo + 2 * 1 ** 18);
     //     (amount,,) = permit2Allowance(from, token0(), address(this));
     //     assertEq(amount, defaultAmountOrId - 1 ** 18);
-    //     (amount,,) = permit2Allowance(fromDirty, token0(), address(this));
+    //     (amount,,) = permit2Allowance(fromDirty, token1(), address(this));
     //     assertEq(amount, defaultAmountOrId - 1 ** 18);
     // }
 

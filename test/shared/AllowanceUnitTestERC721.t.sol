@@ -9,7 +9,7 @@ import {TokenProviderERC721} from "../utils/TokenProviderERC721.sol";
 contract AllowanceUnitTestERC721 is BaseAllowanceUnitTest, TokenProviderERC721 {
     function setUp() public override {
         permit2 = new MockPermit2ERC721();
-        initializeERC721TestTokens();
+        initializeTokens();
     }
 
     function allowance(address from, address token, address spender, uint256 tokenId)

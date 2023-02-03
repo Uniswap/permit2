@@ -67,10 +67,10 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProviderERC20, Gas
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
 
-        initializeERC20Tokens();
+        initializeTokens();
 
-        setERC20TestTokens(from);
-        setERC20TestTokenApprovals(vm, from, address(permit2));
+        setTokens(from);
+        setTokenApprovals(vm, from, address(permit2));
     }
 
     function testCorrectWitnessTypehashes() public {

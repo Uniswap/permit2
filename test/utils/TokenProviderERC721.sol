@@ -16,21 +16,29 @@ contract TokenProviderERC721 {
 
     address faucet = address(0x98765);
 
-    function initializeERC721TestTokens() public {
+    function initializeTokens() public {
         _token0 = new MockERC721("TestNFT1", "NFT1");
         _token1 = new MockERC721("TestNFT2", "NFT2");
     }
 
-    function setERC721TestTokens(address from) public {
+    function setToken0(address from) public {
         // mint with id 1
         _token0.mint(from, 1);
+    }
+
+    function setToken1(address from) public {
         // mint with id 2
         _token1.mint(from, 2);
     }
 
-    function setERC721TestTokenApprovals(Vm vm, address owner, address spender) public {
+    function setTokenApprovals0(Vm vm, address owner, address spender) public {
         vm.startPrank(owner);
         _token0.approve(spender, 1);
+        vm.stopPrank();
+    }
+
+    function setTokenApprovals1(Vm vm, address owner, address spender) public {
+        vm.startPrank(owner);
         _token1.approve(spender, 2);
         vm.stopPrank();
     }

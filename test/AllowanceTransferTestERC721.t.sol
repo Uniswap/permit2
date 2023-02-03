@@ -3,21 +3,24 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {BaseAllowanceTransferTest} from "./BaseAllowanceTransferTest.t.sol";
-import {Permit2} from "../src/ERC20/Permit2.sol";
-import {TokenProviderERC20} from "./utils/TokenProviderERC20.sol";
-import {PermitHash} from "../src/ERC20/libraries/PermitHash.sol";
+import {Permit2ERC721} from "../src/ERC721/Permit2ERC721.sol";
+import {TokenProviderERC721} from "./utils/TokenProviderERC721.sol";
+import {PermitHashERC721} from "../src/ERC721/libraries/PermitHashERC721.sol";
 import {PermitAbstraction} from "./utils/PermitAbstraction.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
-import {IAllowanceTransfer} from "../src/ERC20/interfaces/IAllowanceTransfer.sol";
+import {IAllowanceTransferERC721} from "../src/ERC721/interfaces/IAllowanceTransferERC721.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 
-contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransferTest {
-    function setUp() public override {
-        permit2 = address(new Permit2());
-        DOMAIN_SEPARATOR = Permit2(permit2).DOMAIN_SEPARATOR();
+contract AllowanceTransferTestERC721 is TokenProviderERC721, BaseAllowanceTransferTest {
+    uint256 currentId = 1;
 
+    function setUp() public override {
+        permit2 = address(new Permit2ERC721());
+        DOMAIN_SEPARATOR = Permit2ERC721(permit2).DOMAIN_SEPARATOR();
+
+        uint256 mintAmount = 10 ** 18;
         // amount for ERC20s
-        defaultAmountOrId = 10 ** 18;
+        defaultAmountOrId = 0;
 
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
@@ -28,34 +31,35 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
 
         initializeTokens();
 
-        setTokens(from);
-        setTokenApprovals(vm, from, address(permit2));
+        setToken0(from);
+        setTokenApprovals0(vm, from, address(permit2));
 
-        setTokens(fromDirty);
-        setTokenApprovals(vm, fromDirty, address(permit2));
+        setToken1(fromDirty);
+        setTokenApprovals1(vm, fromDirty, address(permit2));
 
         // dirty the nonce for fromDirty address on token0 and token1
+        // use token1 for fromDirty tests
         vm.startPrank(fromDirty);
-        Permit2(permit2).invalidateNonces(token0(), address(this), 1);
-        Permit2(permit2).invalidateNonces(token1(), address(this), 1);
+        Permit2ERC721(permit2).invalidateNonces(token1(), address(this), 1);
         vm.stopPrank();
-        // ensure address3 has some balance of token0 and token1 for dirty sstore on transfer
-        MockERC20(token0()).mint(address3, defaultAmountOrId);
-        MockERC20(token1()).mint(address3, defaultAmountOrId);
-    }
-
-    function getAmountOrId() public override returns (uint256) {
-        // default amount
-        return defaultAmountOrId;
     }
 
     function getExpectedAmountOrSpender() public override returns (uint160) {
-        // expected amount is the defaultAmountOrId
-        return uint160(defaultAmountOrId);
+        // spender is this address
+        return uint160(address(this));
+    }
+
+    function setAmountOrId(uint256 id) public override {
+        currentId = id;
+    }
+
+    function getAmountOrId() public override returns (uint256) {
+        // tokenId for token0 is 1
+        return currentId;
     }
 
     function permit2Approve(address token, address spender, uint256 amountOrId, uint48 expiration) public override {
-        Permit2(permit2).approve(token, spender, uint160(amountOrId), expiration);
+        Permit2ERC721(permit2).approve(token, spender, amountOrId, expiration);
     }
 
     function permit2Allowance(address from, address token, uint256 tokenIdOrSpender)
@@ -63,7 +67,9 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
         override
         returns (uint160, uint48, uint48)
     {
-        return Permit2(permit2).allowance(from, token, address(uint160(tokenIdOrSpender)));
+        (address spender1, uint48 expiration1, uint48 nonce1) =
+            Permit2ERC721(address(permit2)).allowance(from, token, getAmountOrId());
+        return (uint160(spender1), expiration1, nonce1);
     }
 
     function permit2Permit(address from, PermitAbstraction.IPermitSingle memory permit, bytes memory sig)
@@ -71,10 +77,10 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
         override
     {
         // convert IPermitSingle to AllowanceTransfer.PermitSingle
-        IAllowanceTransfer.PermitSingle memory parsedPermit = IAllowanceTransfer.PermitSingle({
-            details: IAllowanceTransfer.PermitDetails({
+        IAllowanceTransferERC721.PermitSingle memory parsedPermit = IAllowanceTransferERC721.PermitSingle({
+            details: IAllowanceTransferERC721.PermitDetails({
                 token: permit.token,
-                amount: permit.amountOrId,
+                tokenId: permit.amountOrId,
                 expiration: permit.expiration,
                 nonce: permit.nonce
             }),
@@ -82,36 +88,36 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
             sigDeadline: permit.sigDeadline
         });
 
-        Permit2(permit2).permit(from, parsedPermit, sig);
+        Permit2ERC721(permit2).permit(from, parsedPermit, sig);
     }
 
     function permit2Permit(address from, PermitAbstraction.IPermitBatch memory permitBatch, bytes memory sig)
         public
         override
     {
-        // convert IPermitBatch to IAllowanceTransfer.PermitBatch
+        // convert IPermitBatch to IAllowanceTransferERC721.PermitBatch
 
-        IAllowanceTransfer.PermitDetails[] memory details =
-            new IAllowanceTransfer.PermitDetails[](permitBatch.tokens.length);
+        IAllowanceTransferERC721.PermitDetails[] memory details =
+            new IAllowanceTransferERC721.PermitDetails[](permitBatch.tokens.length);
         for (uint256 i = 0; i < details.length; i++) {
-            details[i] = IAllowanceTransfer.PermitDetails({
+            details[i] = IAllowanceTransferERC721.PermitDetails({
                 token: permitBatch.tokens[i],
-                amount: permitBatch.amountOrIds[i],
+                tokenId: permitBatch.amountOrIds[i],
                 expiration: permitBatch.expirations[i],
                 nonce: permitBatch.nonces[i]
             });
         }
-        IAllowanceTransfer.PermitBatch memory parsedPermitBatch = IAllowanceTransfer.PermitBatch({
+        IAllowanceTransferERC721.PermitBatch memory parsedPermitBatch = IAllowanceTransferERC721.PermitBatch({
             details: details,
             spender: permitBatch.spender,
             sigDeadline: permitBatch.sigDeadline
         });
 
-        Permit2(permit2).permit(from, parsedPermitBatch, sig);
+        Permit2ERC721(permit2).permit(from, parsedPermitBatch, sig);
     }
 
     function permit2TransferFrom(address from, address to, uint160 amountOrId, address token) public override {
-        Permit2(permit2).transferFrom(from, to, amountOrId, token);
+        Permit2ERC721(permit2).transferFrom(from, to, amountOrId, token);
     }
 
     function token0() public view override returns (address) {
@@ -153,7 +159,11 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
         // convert IPermitSingle to permit details & hash
         bytes32 permitHash = keccak256(
             abi.encode(
-                PermitHash._PERMIT_DETAILS_TYPEHASH, permit.token, permit.amountOrId, permit.expiration, permit.nonce
+                PermitHashERC721._PERMIT_DETAILS_TYPEHASH,
+                permit.token,
+                permit.amountOrId,
+                permit.expiration,
+                permit.nonce
             )
         );
 
@@ -162,7 +172,7 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
                 "\x19\x01",
                 domainSeparator,
                 keccak256(
-                    abi.encode(PermitHash._PERMIT_SINGLE_TYPEHASH, permitHash, permit.spender, permit.sigDeadline)
+                    abi.encode(PermitHashERC721._PERMIT_SINGLE_TYPEHASH, permitHash, permit.spender, permit.sigDeadline)
                 )
             )
         );
@@ -179,7 +189,7 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
         for (uint256 i = 0; i < permit.tokens.length; ++i) {
             permitHashes[i] = keccak256(
                 abi.encode(
-                    PermitHash._PERMIT_DETAILS_TYPEHASH,
+                    PermitHashERC721._PERMIT_DETAILS_TYPEHASH,
                     permit.tokens[i],
                     permit.amountOrIds[i],
                     permit.expirations[i],
@@ -194,7 +204,7 @@ contract AllowanceTransferTestERC20 is TokenProviderERC20, BaseAllowanceTransfer
                 domainSeparator,
                 keccak256(
                     abi.encode(
-                        PermitHash._PERMIT_BATCH_TYPEHASH,
+                        PermitHashERC721._PERMIT_BATCH_TYPEHASH,
                         keccak256(abi.encodePacked(permitHashes)),
                         permit.spender,
                         permit.sigDeadline

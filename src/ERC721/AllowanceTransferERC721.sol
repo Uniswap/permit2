@@ -8,6 +8,7 @@ import {EIP712ERC721} from "./EIP712ERC721.sol";
 import {IAllowanceTransferERC721} from "./interfaces/IAllowanceTransferERC721.sol";
 import {SignatureExpired, InvalidNonce} from "../shared/PermitErrors.sol";
 import {AllowanceERC721} from "./libraries/AllowanceERC721.sol";
+import "forge-std/console2.sol";
 
 contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
     using SignatureVerification for bytes;
