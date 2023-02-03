@@ -64,7 +64,7 @@ contract PermitSignature is Test {
     ) internal returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
         bytes32 vs;
-        (r, vs) = _getCompactSignature(v, r, s);
+        (r, vs) = getCompactSignature(v, r, s);
         return bytes.concat(r, vs);
     }
 
@@ -88,15 +88,11 @@ contract PermitSignature is Test {
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         bytes32 vs;
-        (r, vs) = _getCompactSignature(v, r, s);
+        (r, vs) = getCompactSignature(v, r, s);
         return bytes.concat(r, vs);
     }
 
-    function _getCompactSignature(uint8 vRaw, bytes32 rRaw, bytes32 sRaw)
-        internal
-        pure
-        returns (bytes32 r, bytes32 vs)
-    {
+    function getCompactSignature(uint8 vRaw, bytes32 rRaw, bytes32 sRaw) public pure returns (bytes32 r, bytes32 vs) {
         uint8 v = vRaw - 27; // 27 is 0, 28 is 1
         vs = bytes32(uint256(v) << 255) | sRaw;
         return (rRaw, vs);
@@ -235,13 +231,13 @@ contract PermitSignature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function defaultERC20PermitAllowance(address token0, uint160 amount, uint48 expiration, uint48 nonce)
+    function defaultERC20PermitAllowance(address token, uint160 amount, uint48 expiration, uint48 nonce)
         internal
         view
         returns (IAllowanceTransfer.PermitSingle memory)
     {
         IAllowanceTransfer.PermitDetails memory details =
-            IAllowanceTransfer.PermitDetails({token: token0, amount: amount, expiration: expiration, nonce: nonce});
+            IAllowanceTransfer.PermitDetails({token: token, amount: amount, expiration: expiration, nonce: nonce});
         return IAllowanceTransfer.PermitSingle({
             details: details,
             spender: address(this),
@@ -272,25 +268,25 @@ contract PermitSignature is Test {
         });
     }
 
-    function defaultERC20PermitTransfer(address token0, uint256 nonce)
+    function defaultERC20PermitTransfer(address token, uint256 nonce)
         internal
         view
         returns (ISignatureTransfer.PermitTransferFrom memory)
     {
         return ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: token0, amount: 10 ** 18}),
+            permitted: ISignatureTransfer.TokenPermissions({token: token, amount: 10 ** 18}),
             nonce: nonce,
             deadline: block.timestamp + 100
         });
     }
 
-    function defaultERC20PermitWitnessTransfer(address token0, uint256 nonce)
+    function defaultERC20PermitWitnessTransfer(address token, uint256 nonce)
         internal
         view
         returns (ISignatureTransfer.PermitTransferFrom memory)
     {
         return ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: token0, amount: 10 ** 18}),
+            permitted: ISignatureTransfer.TokenPermissions({token: token, amount: 10 ** 18}),
             nonce: nonce,
             deadline: block.timestamp + 100
         });

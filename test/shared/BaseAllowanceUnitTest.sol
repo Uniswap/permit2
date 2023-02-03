@@ -3,9 +3,8 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../mocks/IMockPermit2.sol";
-import {TokenProvider} from "../utils/TokenProvider.sol";
 
-abstract contract BaseAllowanceUnitTest is Test, TokenProvider {
+abstract contract BaseAllowanceUnitTest is Test {
     IMockPermit2 permit2;
 
     address from = address(0xBEEE);

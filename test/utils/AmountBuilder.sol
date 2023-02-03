@@ -23,8 +23,8 @@ library AmountBuilder {
         }
     }
 
-    function fillUInt64(uint256 length, uint64 exp) external pure returns (uint64[] memory exps) {
-        exps = new uint64[](length);
+    function fillUInt48(uint256 length, uint48 exp) external pure returns (uint48[] memory exps) {
+        exps = new uint48[](length);
         for (uint256 i = 0; i < length; ++i) {
             exps[i] = exp;
         }

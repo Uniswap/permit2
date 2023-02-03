@@ -1,7 +1,7 @@
 pragma solidity 0.8.17;
 
 import "forge-std/Test.sol";
-import {TokenProvider} from "./utils/TokenProvider.sol";
+import {TokenProviderERC20} from "./utils/TokenProviderERC20.sol";
 import {Permit2} from "../src/ERC20/Permit2.sol";
 import {IAllowanceTransfer} from "../src/ERC20/interfaces/IAllowanceTransfer.sol";
 import {SignatureVerification} from "../src/shared/SignatureVerification.sol";
