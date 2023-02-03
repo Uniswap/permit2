@@ -7,34 +7,49 @@ import {Allowance} from "../../src/ERC20/libraries/Allowance.sol";
 import {IMockPermit2} from "../mocks/IMockPermit2.sol";
 
 contract MockPermit2 is IMockPermit2, Permit2 {
-    function doStore(address from, address token, address spender, uint256 word) public override {
+    function doStore(address from, address token, address spender, uint256 tokenId, uint256 word) public override {
         IAllowanceTransfer.PackedAllowance storage allowed = allowance[from][token][spender];
         assembly {
             sstore(allowed.slot, word)
         }
     }
 
-    function getStore(address from, address token, address spender) public view override returns (uint256 word) {
+    function getStore(address from, address token, address spender, uint256 tokenId)
+        public
+        view
+        override
+        returns (uint256 word)
+    {
         IAllowanceTransfer.PackedAllowance storage allowed = allowance[from][token][spender];
         assembly {
             word := sload(allowed.slot)
         }
     }
 
-    function mockUpdateSome(address from, address token, address spender, uint160 data, uint48 expiration)
-        public
-        override
-    {
+    function mockUpdateSome(
+        address from,
+        address token,
+        address spender,
+        uint160 updateData,
+        uint256 tokenId,
+        uint48 expiration
+    ) public override {
+        // uint256 tokenId unused
         IAllowanceTransfer.PackedAllowance storage allowed = allowance[from][token][spender];
-        Allowance.updateAmountAndExpiration(allowed, data, expiration);
+        Allowance.updateAmountAndExpiration(allowed, updateData, expiration);
     }
 
-    function mockUpdateAll(address from, address token, address spender, uint160 data, uint48 expiration, uint48 nonce)
-        public
-        override
-    {
+    function mockUpdateAll(
+        address from,
+        address token,
+        address spender,
+        uint160 updateData,
+        uint256 tokenId,
+        uint48 expiration,
+        uint48 nonce
+    ) public override {
         IAllowanceTransfer.PackedAllowance storage allowed = allowance[from][token][spender];
-        Allowance.updateAll(allowed, data, expiration, nonce);
+        Allowance.updateAll(allowed, updateData, expiration, nonce);
     }
 
     function useUnorderedNonce(address from, uint256 nonce) public override {

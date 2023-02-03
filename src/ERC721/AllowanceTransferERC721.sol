@@ -72,7 +72,10 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
         // Verify the signer address from the signature.
         signature.verify(_hashTypedData(permitAll.hash()), owner);
 
-        PackedOperatorAllowance storage operator = operators[msg.sender][permitAll.token][permitAll.spender];
+        PackedOperatorAllowance storage operator = operators[owner][permitAll.token][permitAll.spender];
+
+        if (permitAll.nonce != operator.nonce) revert InvalidNonce();
+
         unchecked {
             operator.nonce += 1;
         }
@@ -108,15 +111,13 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
             revert AllowanceExpired(allowed.expiration, operatorExpiration);
         }
 
-        if (allowed.spender != msg.sender) {
-            if (operatorExpired) {
-                // If there is no tokenId permissions and no operator permissions on msg.sender
-                // then the msg.sender has insufficient allowance.
-                revert InsufficientAllowance(token, tokenId);
-            }
-        } else {
-            // Since msg.sender has given tokenId permissions to the spender, reset the tokenId permissions before the transfer.
+        if (allowed.spender == msg.sender) {
+            // Reset permissions before transfer.
             allowed.spender = address(0);
+        } else if (operatorExpired) {
+            // If there is no tokenId permissions and no operator permissions on msg.sender
+            // then the msg.sender has insufficient allowance.
+            revert InsufficientAllowance(token, tokenId);
         }
 
         // Transfer the token from the from address to the recipient.
