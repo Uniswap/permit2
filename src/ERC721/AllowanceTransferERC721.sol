@@ -152,7 +152,7 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
     }
 
     /// @inheritdoc IAllowanceTransferERC721
-    function invalidateNonces(address token, address spender, uint48 newNonce) external {
+    function invalidateOperatorNonces(address token, address spender, uint48 newNonce) external {
         uint48 oldNonce = operators[msg.sender][token][spender].nonce;
 
         if (newNonce <= oldNonce) revert InvalidNonce();
@@ -164,7 +164,7 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
         }
 
         operators[msg.sender][token][spender].nonce = newNonce;
-        emit NonceInvalidation(msg.sender, token, uint256(uint160(spender)), newNonce, oldNonce);
+        emit NonceInvalidationForOperator(msg.sender, token, spender, newNonce, oldNonce);
     }
 
     /// @inheritdoc IAllowanceTransferERC721

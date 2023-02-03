@@ -9,7 +9,8 @@ import {TokenProvider} from "../utils/TokenProvider.sol";
 contract AllowanceUnitTestERC721 is BaseAllowanceUnitTest {
     function setUp() public override {
         permit2 = new MockPermit2ERC721();
-        initializeNFTTokens();
+        initializeForOwner(1, from);
+        initializeERC721TokensAndApprove(vm, from, address(permit2), 1);
     }
 
     function allowance(address from, address token, address spender, uint256 tokenId)
@@ -24,6 +25,6 @@ contract AllowanceUnitTestERC721 is BaseAllowanceUnitTest {
     }
 
     function token() public view override returns (address) {
-        return address(nft1);
+        return address(getNFT(from, 0));
     }
 }

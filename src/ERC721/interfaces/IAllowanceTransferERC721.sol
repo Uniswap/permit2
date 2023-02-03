@@ -27,6 +27,11 @@ interface IAllowanceTransferERC721 {
         address indexed owner, address indexed token, uint256 indexed tokenId, uint48 newNonce, uint48 oldNonce
     );
 
+    /// @notice Emits an event when the owner successfully invalidates an ordered nonce on the allowance mapping.
+    event NonceInvalidationForOperator(
+        address indexed owner, address indexed token, address indexed spender, uint48 newNonce, uint48 oldNonce
+    );
+
     /// @notice Emits an event when the owner successfully sets permissions on a token for the spender.
     event Approval(
         address indexed owner, address indexed token, address indexed spender, uint256 tokenId, uint48 expiration
@@ -217,7 +222,7 @@ interface IAllowanceTransferERC721 {
     /// @param spender The spender to invalidate nonces for
     /// @param newNonce The new nonce to set. Invalidates all nonces less than it.
     /// @dev Can't invalidate more than 2**16 nonces per transaction.
-    function invalidateNonces(address token, address spender, uint48 newNonce) external;
+    function invalidateOperatorNonces(address token, address spender, uint48 newNonce) external;
 
     /// @notice Invalidate nonces for a given (token, tokenId) pair
     /// @param token The token to invalidate nonces for
