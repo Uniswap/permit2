@@ -15,12 +15,13 @@ contract TokenProvider {
 
     MockERC20 token0;
     MockERC20 token1;
-    MockERC721 nft1;
-    MockERC721 nft2;
+    mapping(address => MockERC721[]) public nfts;
     MockERC1155 nft3;
     MockERC1155 nft4;
 
     address faucet = address(0x98765);
+
+    error MintMoreNFTs();
 
     function initializeERC20Tokens() public {
         token0 = new MockERC20("Test0", "TEST0", 18);
@@ -39,31 +40,24 @@ contract TokenProvider {
         vm.stopPrank();
     }
 
-    function initializeNFTTokens() public {
-        nft1 = new MockERC721("TestNFT1", "NFT1");
-        nft2 = new MockERC721("TestNFT2", "NFT2");
-        nft3 = new MockERC1155();
-        nft4 = new MockERC1155();
+    function initializeForOwner(uint256 amount, address owner) public {
+        nfts[owner] = new MockERC721[](amount);
     }
 
-    // 721s
-    function setNFTTestTokens(address from) public {
-        // mint with id 1
-        nft1.mint(from, 1);
-        // mint with id 2
-        nft2.mint(from, 2);
-        // mint 10 with id 1
-        nft3.mint(from, 1, MINT_AMOUNT_ERC1155);
-        // mint 10 with id 2
-        nft4.mint(from, 2, MINT_AMOUNT_ERC1155);
+    function getNFT(address owner, uint256 index) public view returns (MockERC721) {
+        return nfts[owner][index];
     }
 
-    function setNFTTestTokenApprovals(Vm vm, address owner, address spender) public {
-        vm.startPrank(owner);
-        nft1.approve(spender, 1);
-        nft2.approve(spender, 2);
-        nft3.setApprovalForAll(spender, true);
-        nft4.setApprovalForAll(spender, true);
-        vm.stopPrank();
+    function initializeERC721TokensAndApprove(Vm vm, address owner, address spender, uint256 amount) public {
+        if (amount > nfts[owner].length) revert MintMoreNFTs();
+        string memory base = "TestNFT";
+        for (uint256 i = 0; i < amount; i++) {
+            string memory name = string(abi.encodePacked(base, i));
+            MockERC721 nft = new MockERC721(name, "NFT");
+            nft.mint(owner, i);
+            vm.prank(owner);
+            nft.approve(spender, i);
+            nfts[owner][i] = nft;
+        }
     }
 }

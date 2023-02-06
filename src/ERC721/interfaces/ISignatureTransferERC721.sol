@@ -2,26 +2,26 @@
 pragma solidity ^0.8.17;
 
 /// @title SignatureTransfer
-/// @notice Handles ERC20 token transfers through signature based actions
+/// @notice Handles ERC721 token transfers through signature based actions
 /// @dev Requires user's token approval on the Permit2 contract
-interface ISignatureTransfer {
-    /// @notice Thrown when the requested amount for a transfer is larger than the permissioned amount
-    /// @param maxAmount The maximum amount a spender can request to transfer
-    error InvalidAmount(uint256 maxAmount);
+interface ISignatureTransferERC721 {
+    /// @notice Thrown when the requested tokenId for a transfer is not the permitted tokenId
+    /// @param tokenId The valid tokenId a spender can request to transfer
+    error InvalidTokenId(uint256 tokenId);
 
     /// @notice Thrown when the number of tokens permissioned to a spender does not match the number of tokens being transferred
-    /// @dev If the spender does not need to transfer the number of tokens permitted, the spender can request amount 0 to be transferred
+    /// @dev If the spender does not need to transfer the number of tokens permitted, the spender can request tokenId 0 to be transferred
     error LengthMismatch();
 
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event UnorderedNonceInvalidation(address indexed owner, uint256 word, uint256 mask);
 
-    /// @notice The token and amount details for a transfer signed in the permit transfer signature
+    /// @notice The token and tokenId details for a transfer signed in the permit transfer signature
     struct TokenPermissions {
         // ERC20 token address
         address token;
-        // the maximum amount that can be spent
-        uint256 amount;
+        // the tokenId to transfer
+        uint256 tokenId;
     }
 
     /// @notice The signed permit message for a single token transfer
@@ -34,20 +34,20 @@ interface ISignatureTransfer {
     }
 
     /// @notice Specifies the recipient address and amount for batched transfers.
-    /// @dev Recipients and amounts correspond to the index of the signed token permissions array.
-    /// @dev Reverts if the requested amount is greater than the permitted signed amount.
+    /// @dev Recipients and tokenIds correspond to the index of the signed token permissions array.
+    /// @dev Reverts if the requested tokenId is not the signed tokenId or if the user did not sign operator permissions.
     struct SignatureTransferDetails {
         // recipient address
         address to;
-        // spender requested amount
-        uint256 requestedAmount;
+        // spender requested tokenId
+        uint256 requestedTokenId;
     }
 
     /// @notice Used to reconstruct the signed permit message for multiple token transfers
     /// @dev Do not need to pass in spender address as it is required that it is msg.sender
     /// @dev Note that a user still signs over a spender address
     struct PermitBatchTransferFrom {
-        // the tokens and corresponding amounts permitted for a transfer
+        // the tokens and corresponding tokenIds permitted for a transfer
         TokenPermissions[] permitted;
         // a unique value for every token owner's signature to prevent signature replays
         uint256 nonce;
@@ -63,7 +63,7 @@ interface ISignatureTransfer {
     function nonceBitmap(address, uint256) external view returns (uint256);
 
     /// @notice Transfers a token using a signed permit message
-    /// @dev Reverts if the requested amount is greater than the permitted signed amount
+    /// @dev Reverts if the requested tokenId is not the permitted signed tokenId or if the permitted signed tokenId is not the maximum
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param transferDetails The spender's requested transfer details for the permitted token
@@ -78,7 +78,7 @@ interface ISignatureTransfer {
     /// @notice Transfers a token using a signed permit message
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @dev The witness type string must follow EIP712 ordering of nested structs and must include the TokenPermissions type definition
-    /// @dev Reverts if the requested amount is greater than the permitted signed amount
+    /// @dev Reverts if the requested tokenId is not the permitted signed tokenId or if the permitted signed tokenId is not the maximum
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
     /// @param transferDetails The spender's requested transfer details for the permitted token
@@ -97,7 +97,7 @@ interface ISignatureTransfer {
     /// @notice Transfers multiple tokens using a signed permit message
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param transferDetails Specifies the recipient and requested amount for the token transfer
+    /// @param transferDetails Specifies the recipient and requested tokenId for the token transfer
     /// @param signature The signature to verify
     function permitTransferFrom(
         PermitBatchTransferFrom memory permit,
@@ -111,7 +111,7 @@ interface ISignatureTransfer {
     /// @notice Includes extra data provided by the caller to verify signature over
     /// @param permit The permit data signed over by the owner
     /// @param owner The owner of the tokens to transfer
-    /// @param transferDetails Specifies the recipient and requested amount for the token transfer
+    /// @param transferDetails Specifies the recipient and requested tokenId for the token transfer
     /// @param witness Extra data to include when checking the user signature
     /// @param witnessTypeString The EIP-712 type definition for remaining string stub of the typehash
     /// @param signature The signature to verify
