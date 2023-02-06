@@ -116,6 +116,29 @@ contract AllowanceTransferTestERC721 is Test, TokenProvider, PermitSignatureERC7
         assertEq(nonce, 1);
     }
 
+    function testERC721SetAllowanceAndTransfer() public {
+        IAllowanceTransferERC721.PermitSingle memory permit =
+            defaultERC721PermitAllowance(address(nft1), defaultTokenId, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        permit2.permit(from, permit, sig);
+
+        (address spender, uint48 expiration, uint48 nonce) = permit2.allowance(from, address(nft1), defaultTokenId);
+        assertEq(spender, address(this)); // spender address is reset
+        assertEq(expiration, defaultExpiration);
+        assertEq(nonce, 1);
+
+        permit2.transferFrom(from, address2, defaultTokenId, address(nft1));
+
+        (spender, expiration, nonce) = permit2.allowance(from, address(nft1), defaultTokenId);
+
+        assertEq(spender, address(0)); // spender address is reset
+        assertEq(expiration, 0); // expiration is reset
+        assertEq(nonce, 1);
+        assertEq(nft1.balanceOf(from), 0);
+        assertEq(nft1.balanceOf(address2), 1);
+    }
+
     function testERC721SetAllowanceCompactSig() public {
         IAllowanceTransferERC721.PermitSingle memory permit =
             defaultERC721PermitAllowance(address(nft1), defaultTokenId, defaultExpiration, defaultNonce);
@@ -189,6 +212,8 @@ contract AllowanceTransferTestERC721 is Test, TokenProvider, PermitSignatureERC7
         assertEq(expiration1, defaultExpiration);
         assertEq(nonce1, 1);
     }
+
+    // TODO add more test coverage, copied over from erc20 testsuite
 
     // function testERC721SetAllowanceBatch() public {
     //     address[] memory tokens = AddressBuilder.fill(1, address(nft1)).push(address(token1));

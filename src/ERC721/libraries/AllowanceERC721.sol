@@ -37,7 +37,7 @@ library AllowanceERC721 {
         uint48 expiration
     ) internal {
         // If the inputted expiration is 0, the allowance only lasts the duration of the block.
-        allowed.expiration = expiration == 0 ? uint48(block.timestamp) : expiration;
+        allowed.expiration = expiration == BLOCK_TIMESTAMP_EXPIRATION ? uint48(block.timestamp) : expiration;
         allowed.spender = spender;
     }
 

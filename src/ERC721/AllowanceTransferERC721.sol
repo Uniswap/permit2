@@ -114,6 +114,7 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
         if (allowed.spender == msg.sender) {
             // Reset permissions before transfer.
             allowed.spender = address(0);
+            allowed.expiration = 0;
         } else if (operatorExpired) {
             // If there is no tokenId permissions and no operator permissions on msg.sender
             // then the msg.sender has insufficient allowance.
