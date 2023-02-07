@@ -190,6 +190,48 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
     }
 
     /*//////////////////////////////////////////////////////////////
+                        BASIC SIMPLE PERMIT2 BENCHMARKS
+    //////////////////////////////////////////////////////////////*/
+
+    function testSimplePermit2InvalidAmount() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(nonPermitToken),
+                amount: type(uint160).max,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+        vm.expectRevert(SafeCast160.UnsafeCast.selector);
+        permit2Lib.simplePermit2(nonPermitToken, PK_OWNER, address(0xCAFE), 2 ** 170, block.timestamp, v, r, s);
+    }
+
+    function testSimplePermit2() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(token), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(token),
+                amount: 1e18,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        Permit2Lib.simplePermit2(token, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                      BASIC TRANSFERFROM2 BENCHMARKS
     //////////////////////////////////////////////////////////////*/
 
@@ -527,6 +569,32 @@ contract Permit2LibTest is Test, PermitSignature, GasSnapshot {
 
         Permit2Lib.permit2(weth9Mainnet, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
         Permit2Lib.transferFrom2(weth9Mainnet, PK_OWNER, address(0xB00B), 1e18);
+
+        snapEnd();
+    }
+
+    function testSimplePermit2PlusTransferFrom2WithNonPermit() public {
+        (,, uint48 nonce) = permit2.allowance(PK_OWNER, address(nonPermitToken), address(0xCAFE));
+
+        IAllowanceTransfer.PermitSingle memory permit = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: address(nonPermitToken),
+                amount: 1e18,
+                expiration: type(uint48).max,
+                nonce: nonce
+            }),
+            spender: address(0xCAFE),
+            sigDeadline: block.timestamp
+        });
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+
+        vm.startPrank(address(0xCAFE));
+
+        snapStart("simplePermit2 + transferFrom2 with a non EIP-2612 native token");
+
+        Permit2Lib.permit2(nonPermitToken, PK_OWNER, address(0xCAFE), 1e18, block.timestamp, v, r, s);
+        Permit2Lib.transferFrom2(nonPermitToken, PK_OWNER, address(0xB00B), 1e18);
 
         snapEnd();
     }

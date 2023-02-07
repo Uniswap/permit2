@@ -58,7 +58,8 @@ library Permit2Lib {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Permit a user to spend a given amount of
-    /// another user's tokens via the owner's EIP-712 signature.
+    /// another user's tokens via native EIP-2612 permit if possible, falling
+    /// back to Permit2 if native permit fails or is not implemented on the token.
     /// @param token The token to permit spending.
     /// @param owner The user to permit spending from.
     /// @param spender The user to permit spending to.
@@ -119,25 +120,46 @@ library Permit2Lib {
         if (!success) {
             // If the initial DOMAIN_SEPARATOR call on the token failed or a
             // subsequent call to permit failed, fall back to using Permit2.
-
-            (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
-
-            PERMIT2.permit(
-                owner,
-                IAllowanceTransfer.PermitSingle({
-                    details: IAllowanceTransfer.PermitDetails({
-                        token: address(token),
-                        amount: amount.toUint160(),
-                        // Use an unlimited expiration because it most
-                        // closely mimics how a standard approval works.
-                        expiration: type(uint48).max,
-                        nonce: nonce
-                    }),
-                    spender: spender,
-                    sigDeadline: deadline
-                }),
-                bytes.concat(r, s, bytes1(v))
-            );
+            simplePermit2(token, owner, spender, amount, deadline, v, r, s);
         }
+    }
+
+    /// @notice Simple unlimited permit on the Permit2 contract.
+    /// @param token The token to permit spending.
+    /// @param owner The user to permit spending from.
+    /// @param spender The user to permit spending to.
+    /// @param amount The amount to permit spending.
+    /// @param deadline  The timestamp after which the signature is no longer valid.
+    /// @param v Must produce valid secp256k1 signature from the owner along with r and s.
+    /// @param r Must produce valid secp256k1 signature from the owner along with v and s.
+    /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
+    function simplePermit2(
+        ERC20 token,
+        address owner,
+        address spender,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal {
+        (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
+
+        PERMIT2.permit(
+            owner,
+            IAllowanceTransfer.PermitSingle({
+                details: IAllowanceTransfer.PermitDetails({
+                    token: address(token),
+                    amount: amount.toUint160(),
+                    // Use an unlimited expiration because it most
+                    // closely mimics how a standard approval works.
+                    expiration: type(uint48).max,
+                    nonce: nonce
+                }),
+                spender: spender,
+                sigDeadline: deadline
+            }),
+            bytes.concat(r, s, bytes1(v))
+        );
     }
 }
