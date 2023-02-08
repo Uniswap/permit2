@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 import {ERC20} from "solmate/src/tokens/ERC20.sol";
 
-import {Permit2} from "../Permit2.sol";
 import {IDAIPermit} from "../interfaces/IDAIPermit.sol";
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 import {SafeCast160} from "./SafeCast160.sol";
@@ -24,7 +23,8 @@ library Permit2Lib {
     bytes32 internal constant WETH9_ADDRESS = 0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2;
 
     /// @dev The address of the Permit2 contract the library will use.
-    Permit2 internal constant PERMIT2 = Permit2(address(0x000000000022D473030F116dDEE9F6B43aC78BA3));
+    IAllowanceTransfer internal constant PERMIT2 =
+        IAllowanceTransfer(address(0x000000000022D473030F116dDEE9F6B43aC78BA3));
 
     /// @notice Transfer a given amount of tokens from one user to another.
     /// @param token The token to transfer.
