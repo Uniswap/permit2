@@ -15,7 +15,7 @@ contract SignatureTransferERC721 is ISignatureTransferERC721, EIP712ERC721 {
     using PermitHashERC721 for PermitBatchTransferFrom;
 
     /// @inheritdoc ISignatureTransferERC721
-    mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
+    mapping(address owner => mapping(uint256 word => uint256 bitmap)) public nonceBitmap;
 
     /// @inheritdoc ISignatureTransferERC721
     function permitTransferFrom(
