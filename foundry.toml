@@ -1,5 +1,4 @@
 [profile.default]
-solc = "0.8.17"
 bytecode_hash = "none"
 optimizer = true
 via_ir = true

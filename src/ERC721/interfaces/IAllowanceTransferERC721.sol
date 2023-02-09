@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.18;
 
 /// @title AllowanceTransfer
 /// @notice Handles ERC721 token permissions through signature based allowance setting and ERC721 token transfers by checking stored permissions

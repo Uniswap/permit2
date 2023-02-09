@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 
 import {ERC721} from "solmate/src/tokens/ERC721.sol";
 import {PermitHashERC721} from "./libraries/PermitHashERC721.sol";
-import {SignatureVerification} from "../shared/SignatureVerification.sol";
+import {SignatureVerification} from "../ERC721/SignatureVerification.sol";
 import {EIP712ERC721} from "./EIP712ERC721.sol";
 import {IAllowanceTransferERC721} from "./interfaces/IAllowanceTransferERC721.sol";
-import {SignatureExpired, InvalidNonce} from "../shared/PermitErrors.sol";
+import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
 import {AllowanceERC721} from "./libraries/AllowanceERC721.sol";
 
 contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
@@ -19,12 +19,12 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
     /// @notice Maps users to tokens to tokenId and information about the approval, including the approved spender, on the token
     /// @dev Indexed in the order of token owner address, token address, and tokenId
     /// @dev The stored word saves the allowed spender, expiration on the allowance, and nonce
-    mapping(address => mapping(address => mapping(uint256 => PackedAllowance))) public allowance;
+    mapping(address owner => mapping(address token => mapping(uint256 tokenId => PackedAllowance allowed))) public allowance;
 
     /// @notice Maps users to tokens to spender and sets whether or not the spender has operator status on an entire token collection.
     /// @dev Indexed in the order of token owner address, token address, then spender address.
     /// @dev Sets a timestamp at which the spender no longer has operator status. Max expiration is type(uint48).max
-    mapping(address => mapping(address => mapping(address => PackedOperatorAllowance))) public operators;
+    mapping(address owner => mapping(address token => mapping(address spender => PackedOperatorAllowance))) public operators;
 
     /// @inheritdoc IAllowanceTransferERC721
     function approve(address token, address spender, uint256 tokenId, uint48 expiration) external {

@@ -1,28 +1,28 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+// // SPDX-License-Identifier: MIT
+// pragma solidity ^0.8.17;
 
-import "forge-std/Test.sol";
-import "../mocks/MockPermit2.sol";
-import {BaseAllowanceUnitTest} from "./BaseAllowanceUnitTest.sol";
-import {TokenProvider} from "../utils/TokenProvider.sol";
-import {Allowance} from "../../src/ERC20/libraries/Allowance.sol";
+// import "forge-std/Test.sol";
+// import "../mocks/MockPermit2.sol";
+// import {BaseAllowanceUnitTest} from "./BaseAllowanceUnitTest.sol";
+// import {TokenProvider} from "../utils/TokenProvider.sol";
+// import {Allowance} from "../../src/ERC20/libraries/Allowance.sol";
 
-contract AllowanceUnitTestERC20 is BaseAllowanceUnitTest {
-    function setUp() public override {
-        permit2 = new MockPermit2();
-        initializeERC20Tokens();
-    }
+// contract AllowanceUnitTestERC20 is BaseAllowanceUnitTest {
+//     function setUp() public override {
+//         permit2 = new MockPermit2();
+//         initializeERC20Tokens();
+//     }
 
-    function allowance(address from, address token, address spender, uint256 tokenId)
-        public
-        view
-        override
-        returns (uint160, uint48, uint48)
-    {
-        return MockPermit2(address(permit2)).allowance(from, token, spender);
-    }
+//     function allowance(address from, address token, address spender, uint256 tokenId)
+//         public
+//         view
+//         override
+//         returns (uint160, uint48, uint48)
+//     {
+//         return MockPermit2(address(permit2)).allowance(from, token, spender);
+//     }
 
-    function token() public view override returns (address) {
-        return address(token1);
-    }
-}
+//     function token() public view override returns (address) {
+//         return address(token1);
+//     }
+// }

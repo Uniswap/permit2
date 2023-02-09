@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 
 import {ISignatureTransferERC721} from "./interfaces/ISignatureTransferERC721.sol";
-import {SignatureExpired, InvalidNonce} from "../shared/PermitErrors.sol";
+import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
 import {ERC721} from "solmate/src/tokens/ERC721.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
-import {SignatureVerification} from "../shared/SignatureVerification.sol";
+import {SignatureVerification} from "../ERC721/SignatureVerification.sol";
 import {PermitHashERC721} from "./libraries/PermitHashERC721.sol";
 import {EIP712ERC721} from "./EIP712ERC721.sol";
 
