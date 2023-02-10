@@ -143,7 +143,9 @@ library Permit2Lib {
         bytes32 r,
         bytes32 s
     ) internal {
-        (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
+        (uint160 allowanceAmount,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
+        
+        if (uint160(amount) == allowanceAmount) return;
 
         PERMIT2.permit(
             owner,
