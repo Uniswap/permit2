@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 
 /// @notice EIP712 helpers for Permit2 for ERC721s
 /// @dev Maintains cross-chain replay protection in the event of a fork

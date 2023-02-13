@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 
 import {SignatureTransferERC721} from "./SignatureTransferERC721.sol";
 import {AllowanceTransferERC721} from "./AllowanceTransferERC721.sol";

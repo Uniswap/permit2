@@ -16,7 +16,7 @@ import {MockPermit2Lib} from "./mocks/MockPermit2Lib.sol";
 import {SafeCast160} from "../src/ERC20/libraries/SafeCast160.sol";
 import {MockPermitWithSmallDS, MockPermitWithLargerDS} from "./mocks/MockPermitWithDS.sol";
 import {MockNonPermitNonERC20WithDS} from "./mocks/MockNonPermitNonERC20WithDS.sol";
-import {SignatureVerification} from "../src/shared/SignatureVerification.sol";
+import {SignatureVerification} from "../src/ERC20/SignatureVerification.sol";
 import {MockFallbackERC20} from "./mocks/MockFallbackERC20.sol";
 
 contract Permit2LibTest is Test, PermitSignature, GasSnapshot {

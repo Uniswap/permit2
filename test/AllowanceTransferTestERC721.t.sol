@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.18;
 
 import "forge-std/Test.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2ERC721} from "../src/ERC721/Permit2ERC721.sol";
 import {PermitSignatureERC721} from "./utils/PermitSignatureERC721.sol";
-import {SignatureVerification} from "../src/shared/SignatureVerification.sol";
+import {SignatureVerification} from "../src/ERC20/SignatureVerification.sol";
 import {AddressBuilder} from "./utils/AddressBuilder.sol";
 import {StructBuilder} from "./utils/StructBuilder.sol";
 import {AmountBuilder} from "./utils/AmountBuilder.sol";
 import {AllowanceTransferERC721} from "../src/ERC721/AllowanceTransferERC721.sol";
-import {SignatureExpired, InvalidNonce} from "../src/shared/PermitErrors.sol";
+import {SignatureExpired, InvalidNonce} from "../src/ERC721/PermitErrors.sol";
 import {IAllowanceTransferERC721} from "../src/ERC721/interfaces/IAllowanceTransferERC721.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {MockERC721} from "./mocks/MockERC721.sol";
