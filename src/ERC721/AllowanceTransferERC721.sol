@@ -19,12 +19,14 @@ contract AllowanceTransferERC721 is IAllowanceTransferERC721, EIP712ERC721 {
     /// @notice Maps users to tokens to tokenId and information about the approval, including the approved spender, on the token
     /// @dev Indexed in the order of token owner address, token address, and tokenId
     /// @dev The stored word saves the allowed spender, expiration on the allowance, and nonce
-    mapping(address owner => mapping(address token => mapping(uint256 tokenId => PackedAllowance allowed))) public allowance;
+    mapping(address owner => mapping(address token => mapping(uint256 tokenId => PackedAllowance allowed))) public
+        allowance;
 
     /// @notice Maps users to tokens to spender and sets whether or not the spender has operator status on an entire token collection.
     /// @dev Indexed in the order of token owner address, token address, then spender address.
     /// @dev Sets a timestamp at which the spender no longer has operator status. Max expiration is type(uint48).max
-    mapping(address owner => mapping(address token => mapping(address spender => PackedOperatorAllowance))) public operators;
+    mapping(address owner => mapping(address token => mapping(address spender => PackedOperatorAllowance))) public
+        operators;
 
     /// @inheritdoc IAllowanceTransferERC721
     function approve(address token, address spender, uint256 tokenId, uint48 expiration) external {
