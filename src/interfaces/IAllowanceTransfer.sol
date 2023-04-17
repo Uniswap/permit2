@@ -51,7 +51,7 @@ interface IAllowanceTransfer {
         uint48 nonce;
     }
 
-    /// @notice The permit message signed for a single token allownce
+    /// @notice The permit message signed for a single token allowance
     struct PermitSingle {
         // the permit data for a single token alownce
         PermitDetails details;
