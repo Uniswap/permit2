@@ -7,7 +7,7 @@ import {Script} from "forge-std/Script.sol";
 /// @dev useful if testing externally against permit2 and want to avoid
 /// recompiling entirely and requiring viaIR compilation
 contract DeployPermit2 is Script {
-    address constant PERMIT2_ADDRESS = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    address public constant PERMIT2_ADDRESS = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     function deployPermit2() public returns (address) {
         return run();
