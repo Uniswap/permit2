@@ -1,6 +1,5 @@
 pragma solidity 0.8.17;
 
-import "forge-std/Test.sol";
 import {Permit2} from "../../src/Permit2.sol";
 import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
 import {PermitSignature} from "../utils/PermitSignature.sol";
