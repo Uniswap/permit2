@@ -35,7 +35,7 @@ contract PermitSignature {
         IAllowanceTransfer.PermitSingle memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (uint8 v, bytes32 r, bytes32 s) {
+    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
         bytes32 permitHash = keccak256(abi.encode(_PERMIT_DETAILS_TYPEHASH, permit.details));
 
         bytes32 msgHash = keccak256(
@@ -53,7 +53,7 @@ contract PermitSignature {
         IAllowanceTransfer.PermitSingle memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal pure returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
         return bytes.concat(r, s, bytes1(v));
     }
@@ -62,7 +62,7 @@ contract PermitSignature {
         IAllowanceTransfer.PermitSingle memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal pure returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
         bytes32 vs;
         (r, vs) = _getCompactSignature(v, r, s);
@@ -73,7 +73,7 @@ contract PermitSignature {
         ISignatureTransfer.PermitTransferFrom memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal view returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
         bytes32 msgHash = keccak256(
             abi.encodePacked(
@@ -107,7 +107,7 @@ contract PermitSignature {
         IAllowanceTransfer.PermitBatch memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal pure returns (bytes memory sig) {
         bytes32[] memory permitHashes = new bytes32[](permit.details.length);
         for (uint256 i = 0; i < permit.details.length; ++i) {
             permitHashes[i] = keccak256(abi.encode(_PERMIT_DETAILS_TYPEHASH, permit.details[i]));
@@ -135,7 +135,7 @@ contract PermitSignature {
         ISignatureTransfer.PermitTransferFrom memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal view returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
         bytes32 msgHash = keccak256(
             abi.encodePacked(
@@ -159,7 +159,7 @@ contract PermitSignature {
         bytes32 typehash,
         bytes32 witness,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal view returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
 
         bytes32 msgHash = keccak256(
@@ -178,7 +178,7 @@ contract PermitSignature {
         ISignatureTransfer.PermitBatchTransferFrom memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal view returns (bytes memory sig) {
         bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
         for (uint256 i = 0; i < permit.permitted.length; ++i) {
             tokenPermissions[i] = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted[i]));
@@ -209,7 +209,7 @@ contract PermitSignature {
         bytes32 typeHash,
         bytes32 witness,
         bytes32 domainSeparator
-    ) internal returns (bytes memory sig) {
+    ) internal view returns (bytes memory sig) {
         bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
         for (uint256 i = 0; i < permit.permitted.length; ++i) {
             tokenPermissions[i] = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted[i]));
