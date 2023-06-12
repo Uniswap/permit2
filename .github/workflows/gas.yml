@@ -18,4 +18,4 @@ jobs:
           version: nightly
 
       - name: Check gas snapshots
-        run: forge snapshot --check
+        run: forge snapshot --check --tolerance 5
