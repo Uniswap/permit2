@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.0;
 
 library SafeCast160 {
     /// @notice Thrown when a valude greater than type(uint160).max is cast to uint160
