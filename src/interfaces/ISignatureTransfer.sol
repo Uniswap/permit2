@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import {IEIP712} from "./IEIP712.sol";
+
 /// @title SignatureTransfer
 /// @notice Handles ERC20 token transfers through signature based actions
 /// @dev Requires user's token approval on the Permit2 contract
-interface ISignatureTransfer {
+interface ISignatureTransfer is IEIP712 {
     /// @notice Thrown when the requested amount for a transfer is larger than the permissioned amount
     /// @param maxAmount The maximum amount a spender can request to transfer
     error InvalidAmount(uint256 maxAmount);
