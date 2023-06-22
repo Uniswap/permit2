@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import {IEIP712} from "./IEIP712.sol";
+
 /// @title AllowanceTransfer
 /// @notice Handles ERC20 token permissions through signature based allowance setting and ERC20 token transfers by checking allowed amounts
 /// @dev Requires user's token approval on the Permit2 contract
-interface IAllowanceTransfer {
+interface IAllowanceTransfer is IEIP712 {
     /// @notice Thrown when an allowance on a token has expired.
     /// @param deadline The timestamp at which the allowed amount is no longer valid
     error AllowanceExpired(uint256 deadline);

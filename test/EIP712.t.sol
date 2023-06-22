@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {Permit2} from "../src/Permit2.sol";
 
 // forge test --match-contract EIP712

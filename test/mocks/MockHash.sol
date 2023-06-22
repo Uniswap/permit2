@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "forge-std/Test.sol";
 import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
-import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
 import {PermitHash} from "../../src/libraries/PermitHash.sol";
 
 contract MockHash {
