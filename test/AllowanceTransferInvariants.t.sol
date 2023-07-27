@@ -1,12 +1,12 @@
 pragma solidity 0.8.17;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
+import {StdInvariant} from "forge-std/StdInvariant.sol";
 import {TokenProvider} from "./utils/TokenProvider.sol";
 import {Permit2} from "../src/Permit2.sol";
 import {IAllowanceTransfer} from "../src/interfaces/IAllowanceTransfer.sol";
 import {SignatureVerification} from "../src/libraries/SignatureVerification.sol";
 import {PermitSignature} from "./utils/PermitSignature.sol";
-import {InvariantTest} from "./utils/InvariantTest.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {Permitter} from "./actors/Permitter.sol";
 import {Spender} from "./actors/Spender.sol";
@@ -77,7 +77,7 @@ contract Runner {
     }
 }
 
-contract AllowanceTransferInvariants is Test, InvariantTest {
+contract AllowanceTransferInvariants is StdInvariant, Test {
     Permit2 permit2;
     Runner runner;
     MockERC20 token;
@@ -86,8 +86,8 @@ contract AllowanceTransferInvariants is Test, InvariantTest {
         permit2 = new Permit2();
         runner = new Runner(permit2);
 
-        addTargetContract(address(runner));
-        addTargetSender(address(vm.addr(0xb0b0)));
+        targetContract(address(runner));
+        targetSender(address(vm.addr(0xb0b0)));
     }
 
     function invariant_spendNeverExceedsPermit() public {

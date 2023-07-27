@@ -1,6 +1,6 @@
 pragma solidity 0.8.17;
 
-import "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {Permit2} from "../../src/Permit2.sol";
 import {IAllowanceTransfer} from "../../src/interfaces/IAllowanceTransfer.sol";
 import {PermitSignature} from "../utils/PermitSignature.sol";
@@ -10,6 +10,8 @@ contract Permitter is PermitSignature {
     uint256 private immutable privateKey;
     Permit2 private immutable permit2;
     MockERC20 private immutable token;
+    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+
     address public immutable signer;
 
     mapping(address => uint48) private nonces;
