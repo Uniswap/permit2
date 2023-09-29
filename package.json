@@ -1,0 +1,16 @@
+{
+  "name": "@uniswap/permit2",
+  "description": "Low-overhead, next generation token approval/meta-tx system to make token approvals easier, more secure, and more consistent across applications",
+  "version": "1.0.0",
+  "bugs": "https://github.com/Uniswap/permit2/issues",
+  "keywords": [
+    "ethereum",
+    "permit2",
+    "uniswap"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Uniswap/permit2.git"
+  }
+}
