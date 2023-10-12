@@ -72,7 +72,8 @@ contract PermitSignature {
     function getCompactPermitTransferSignature(
         ISignatureTransfer.PermitTransferFrom memory permit,
         uint256 privateKey,
-        bytes32 domainSeparator
+        bytes32 domainSeparator,
+        address spender
     ) internal view returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
         bytes32 msgHash = keccak256(
@@ -80,9 +81,7 @@ contract PermitSignature {
                 "\x19\x01",
                 domainSeparator,
                 keccak256(
-                    abi.encode(
-                        _PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, address(this), permit.nonce, permit.deadline
-                    )
+                    abi.encode(_PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline)
                 )
             )
         );
@@ -134,7 +133,8 @@ contract PermitSignature {
     function getPermitTransferSignature(
         ISignatureTransfer.PermitTransferFrom memory permit,
         uint256 privateKey,
-        bytes32 domainSeparator
+        bytes32 domainSeparator,
+        address spender
     ) internal view returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
         bytes32 msgHash = keccak256(
@@ -142,9 +142,7 @@ contract PermitSignature {
                 "\x19\x01",
                 domainSeparator,
                 keccak256(
-                    abi.encode(
-                        _PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, address(this), permit.nonce, permit.deadline
-                    )
+                    abi.encode(_PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline)
                 )
             )
         );
@@ -158,7 +156,8 @@ contract PermitSignature {
         uint256 privateKey,
         bytes32 typehash,
         bytes32 witness,
-        bytes32 domainSeparator
+        bytes32 domainSeparator,
+        address spender
     ) internal view returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
 
@@ -166,7 +165,7 @@ contract PermitSignature {
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
-                keccak256(abi.encode(typehash, tokenPermissions, address(this), permit.nonce, permit.deadline, witness))
+                keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness))
             )
         );
 
@@ -177,7 +176,8 @@ contract PermitSignature {
     function getPermitBatchTransferSignature(
         ISignatureTransfer.PermitBatchTransferFrom memory permit,
         uint256 privateKey,
-        bytes32 domainSeparator
+        bytes32 domainSeparator,
+        address spender
     ) internal view returns (bytes memory sig) {
         bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
         for (uint256 i = 0; i < permit.permitted.length; ++i) {
@@ -191,7 +191,7 @@ contract PermitSignature {
                     abi.encode(
                         _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
                         keccak256(abi.encodePacked(tokenPermissions)),
-                        address(this),
+                        spender,
                         permit.nonce,
                         permit.deadline
                     )
@@ -208,7 +208,8 @@ contract PermitSignature {
         uint256 privateKey,
         bytes32 typeHash,
         bytes32 witness,
-        bytes32 domainSeparator
+        bytes32 domainSeparator,
+        address spender
     ) internal view returns (bytes memory sig) {
         bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
         for (uint256 i = 0; i < permit.permitted.length; ++i) {
@@ -223,7 +224,7 @@ contract PermitSignature {
                     abi.encode(
                         typeHash,
                         keccak256(abi.encodePacked(tokenPermissions)),
-                        address(this),
+                        spender,
                         permit.nonce,
                         permit.deadline,
                         witness
@@ -236,25 +237,25 @@ contract PermitSignature {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function defaultERC20PermitAllowance(address token0, uint160 amount, uint48 expiration, uint48 nonce)
-        internal
-        view
-        returns (IAllowanceTransfer.PermitSingle memory)
-    {
+    function defaultERC20PermitAllowance(
+        address token0,
+        uint160 amount,
+        uint48 expiration,
+        uint48 nonce,
+        address spender
+    ) internal view returns (IAllowanceTransfer.PermitSingle memory) {
         IAllowanceTransfer.PermitDetails memory details =
             IAllowanceTransfer.PermitDetails({token: token0, amount: amount, expiration: expiration, nonce: nonce});
-        return IAllowanceTransfer.PermitSingle({
-            details: details,
-            spender: address(this),
-            sigDeadline: block.timestamp + 100
-        });
+        return IAllowanceTransfer.PermitSingle({details: details, spender: spender, sigDeadline: block.timestamp + 100});
     }
 
-    function defaultERC20PermitBatchAllowance(address[] memory tokens, uint160 amount, uint48 expiration, uint48 nonce)
-        internal
-        view
-        returns (IAllowanceTransfer.PermitBatch memory)
-    {
+    function defaultERC20PermitBatchAllowance(
+        address[] memory tokens,
+        uint160 amount,
+        uint48 expiration,
+        uint48 nonce,
+        address spender
+    ) internal view returns (IAllowanceTransfer.PermitBatch memory) {
         IAllowanceTransfer.PermitDetails[] memory details = new IAllowanceTransfer.PermitDetails[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; ++i) {
@@ -266,11 +267,7 @@ contract PermitSignature {
             });
         }
 
-        return IAllowanceTransfer.PermitBatch({
-            details: details,
-            spender: address(this),
-            sigDeadline: block.timestamp + 100
-        });
+        return IAllowanceTransfer.PermitBatch({details: details, spender: spender, sigDeadline: block.timestamp + 100});
     }
 
     function defaultERC20PermitTransfer(address token0, uint256 nonce)
