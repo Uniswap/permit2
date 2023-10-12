@@ -63,7 +63,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
     function testPermit() public {
         IAllowanceTransfer.PermitSingle memory permit =
-            defaultERC20PermitAllowance(address(token()), AMOUNT, EXPIRATION, NONCE);
+            defaultERC20PermitAllowance(address(token()), AMOUNT, EXPIRATION, NONCE, address(this));
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(from, permit, sig);
@@ -76,7 +76,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
     function testTransferFrom() public {
         IAllowanceTransfer.PermitSingle memory permit =
-            defaultERC20PermitAllowance(address(token()), AMOUNT, EXPIRATION, NONCE);
+            defaultERC20PermitAllowance(address(token()), AMOUNT, EXPIRATION, NONCE, address(this));
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token().balanceOf(from);
@@ -96,7 +96,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
     function testTransferFromInsufficientBalance() public {
         IAllowanceTransfer.PermitSingle memory permit =
-            defaultERC20PermitAllowance(address(token()), AMOUNT * 2, EXPIRATION, NONCE);
+            defaultERC20PermitAllowance(address(token()), AMOUNT * 2, EXPIRATION, NONCE, address(this));
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         permit2.permit(from, permit, sig);
@@ -110,7 +110,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
     function testBatchTransferFrom() public {
         IAllowanceTransfer.PermitSingle memory permit =
-            defaultERC20PermitAllowance(address(token()), AMOUNT, EXPIRATION, NONCE);
+            defaultERC20PermitAllowance(address(token()), AMOUNT, EXPIRATION, NONCE, address(this));
         bytes memory sig = getPermitSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
         uint256 startBalanceFrom = token().balanceOf(from);
@@ -136,7 +136,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
     function testPermitTransferFrom() public {
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token()), NONCE);
-        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR, address(this));
 
         uint256 startBalanceFrom = token().balanceOf(from);
         uint256 startBalanceTo = token().balanceOf(RECIPIENT);
@@ -155,7 +155,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
         bytes32 witness = keccak256(abi.encode(witnessData));
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitWitnessTransfer(address(token()), NONCE);
         bytes memory sig = getPermitWitnessTransferSignature(
-            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR, address(this)
         );
 
         uint256 startBalanceFrom = token().balanceOf(from);
