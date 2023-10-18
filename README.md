@@ -1,5 +1,7 @@
 # permit2
 
+[![Integration Tests](https://github.com/Uniswap/permit2/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/Uniswap/permit2/actions/workflows/integration-tests.yml)
+
 Permit2 introduces a low-overhead, next-generation token approval/meta-tx system to make token approvals easier, more secure, and more consistent across applications.
 
 ## Features
