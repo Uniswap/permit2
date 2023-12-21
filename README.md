@@ -81,10 +81,10 @@ forge snapshot
 
 ### Deploy
 
-Run the command below. Remove `--broadcast`, `---rpc-url`, `--private-key` and `--verify` options to test locally
+Run the command below. Remove `--broadcast`, `---rpc-url`, `--private-key`, `--verify` and `--etherscan-api-key` options to test locally
 
 ```sh
-forge script --broadcast --rpc-url <RPC-URL> --private-key <PRIVATE_KEY> --verify script/DeployPermit2.s.sol:DeployPermit2
+forge script --broadcast --rpc-url <RPC-URL> --private-key <PRIVATE_KEY> --verify --etherscan-api-key <your_etherscan_api_key> script/DeployPermit2.s.sol:DeployPermit2
 ```
 
 ## Acknowledgments
