@@ -15,6 +15,8 @@ import {SignatureTransfer} from "../src/SignatureTransfer.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {ISignatureTransfer} from "../src/interfaces/ISignatureTransfer.sol";
 import {InvalidNonce, SignatureExpired} from "../src/PermitErrors.sol";
+import {IPermit2} from "../src/interfaces/IPermit2.sol";
+import {MockContract} from "./mocks/MockContract.sol";
 
 contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnapshot {
     using AddressBuilder for address[];
@@ -58,12 +60,14 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
     address address0 = address(0x0);
     address address2 = address(0x2);
+    MockContract mockContract;
 
     bytes32 DOMAIN_SEPARATOR;
 
     function setUp() public {
         permit2 = new Permit2();
         DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
+        mockContract = new MockContract(IPermit2(address(permit2)));
 
         fromPrivateKey = 0x12341234;
         from = vm.addr(fromPrivateKey);
@@ -107,6 +111,35 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         assertEq(token0.balanceOf(from), startBalanceFrom - defaultAmount);
         assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
+    }
+
+    function testPermitTransferFromContract() public {
+        uint256 nonce = 0;
+        ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig = getPermitTransferSignature(permit, address(mockContract), fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 startBalance = token0.balanceOf(from);
+
+        uint256 amount = 1e18; // default amount in defaultERC20PermitTransfer
+        vm.prank(from);
+        mockContract.depositWithPermit(address(token0), amount, permit, sig);
+
+        // token0 transferred from `from` to `mockContract`
+        assertEq(token0.balanceOf(address(mockContract)), amount);
+        assertEq(token0.balanceOf(address(from)), startBalance - amount);
+    }
+
+    function test_revert_PermitTransferFromContract() public {
+        uint256 nonce = 0;
+        ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+
+        // the default signature, where the signer approves to=address(this)
+        // signature will fail when a contract (invalid recipient) tries to use it
+        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+
+        uint256 amount = 1e18;
+        vm.expectRevert();
+        mockContract.depositWithPermit(address(token0), amount, permit, sig);
     }
 
     function testPermitTransferFromCompactSig() public {

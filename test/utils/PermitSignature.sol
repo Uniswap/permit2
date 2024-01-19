@@ -131,20 +131,38 @@ contract PermitSignature {
         return bytes.concat(r, s, bytes1(v));
     }
 
+    /// @notice Get the permitted signature for a transferFrom to the current contract (address(this))
+    /// @param permit The permit to sign
+    /// @param privateKey The private key to sign with, provided to vm.sign
+    /// @param domainSeparator The domain separator for the permit
+    /// @return sig The concatenated signature, authorizing a transfer from signer to the current contract
     function getPermitTransferSignature(
         ISignatureTransfer.PermitTransferFrom memory permit,
         uint256 privateKey,
         bytes32 domainSeparator
     ) internal view returns (bytes memory sig) {
+        return getPermitTransferSignature(permit, address(this), privateKey, domainSeparator);
+    }
+
+    /// @notice Get the permitted signature for a transferFrom to a designated address
+    /// @param permit The permit to sign
+    /// @param to The recipient of the transferFrom
+    /// @param privateKey The private key to sign with, provided to vm.sign
+    /// @param domainSeparator The domain separator for the permit
+    /// @return sig The concatenated signature, authorizing a transfer from signer to the provided address
+    function getPermitTransferSignature(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        address to,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal pure returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
                 keccak256(
-                    abi.encode(
-                        _PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, address(this), permit.nonce, permit.deadline
-                    )
+                    abi.encode(_PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, to, permit.nonce, permit.deadline)
                 )
             )
         );
