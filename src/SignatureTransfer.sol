@@ -57,7 +57,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     ) private {
         uint256 requestedAmount = transferDetails.requestedAmount;
 
-        if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
+        if (permit.deadline != type(uint256).max && block.timestamp > permit.deadline) {
+            revert SignatureExpired(permit.deadline);
+        }
         if (requestedAmount > permit.permitted.amount) revert InvalidAmount(permit.permitted.amount);
 
         _useUnorderedNonce(owner, permit.nonce);
@@ -105,7 +107,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     ) private {
         uint256 numPermitted = permit.permitted.length;
 
-        if (block.timestamp > permit.deadline) revert SignatureExpired(permit.deadline);
+        if (permit.deadline != type(uint256).max && block.timestamp > permit.deadline) {
+            revert SignatureExpired(permit.deadline);
+        }
         if (numPermitted != transferDetails.length) revert LengthMismatch();
 
         _useUnorderedNonce(owner, permit.nonce);
