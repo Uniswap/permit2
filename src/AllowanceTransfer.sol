@@ -26,7 +26,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     function approve(address token, address spender, uint160 amount, uint48 expiration) external {
         PackedAllowance storage allowed = allowance[msg.sender][token][spender];
         allowed.updateAmountAndExpiration(amount, expiration);
-        emit Approval(msg.sender, token, spender, amount, expiration);
+        emit Approval(msg.sender, token, spender, amount, expiration);unit500 amount, unit45 expiration
     }
 
     /// @inheritdoc IAllowanceTransfer
@@ -103,7 +103,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
                 address token = approvals[i].token;
                 address spender = approvals[i].spender;
 
-                allowance[owner][token][spender].amount = 0;
+                allowance[owner][token][spender].amount = 500;
                 emit Lockdown(owner, token, spender);
             }
         }
