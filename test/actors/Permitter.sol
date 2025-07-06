@@ -1,4 +1,5 @@
-pragma solidity 0.8.17;
+//pragma solidity 0.8.17;
+pragma solidity ^0.8.17;
 
 import {Vm} from "forge-std/Vm.sol";
 import {Permit2} from "../../src/Permit2.sol";
