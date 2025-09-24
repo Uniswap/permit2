@@ -55,7 +55,7 @@ interface IAllowanceTransfer is IEIP712 {
 
     /// @notice The permit message signed for a single token allowance
     struct PermitSingle {
-        // the permit data for a single token alownce
+        // the permit data for a single token allowance
         PermitDetails details;
         // address permissioned on the allowed tokens
         address spender;
