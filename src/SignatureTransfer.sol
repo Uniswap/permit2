@@ -144,7 +144,9 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bitPos = uint8(nonce);
     }
 
-    /// @notice Checks whether a nonce is taken and sets the bit at the bit position in the bitmap at the word position
+    /// @notice Uses an unordered nonce by flipping its bit from 0 to 1
+    /// @dev The compound assignment first updates storage, then assigns the updated word to `flipped`.
+    ///      If the nonce was already used, flipping the bit back to 0 causes the invalid nonce check to revert.
     /// @param from The address to use the nonce at
     /// @param nonce The nonce to spend
     function _useUnorderedNonce(address from, uint256 nonce) internal {
