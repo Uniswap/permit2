@@ -126,7 +126,7 @@ contract AllowanceTransfer is IAllowanceTransfer, EIP712 {
     }
 
     /// @notice Sets the new values for amount, expiration, and nonce.
-    /// @dev Will check that the signed nonce is equal to the current nonce and then incrememnt the nonce value by 1.
+    /// @dev Will check that the signed nonce is equal to the current nonce and then increment the nonce value by 1.
     /// @dev Emits a Permit event.
     function _updateApproval(PermitDetails memory details, address owner, address spender) private {
         uint48 nonce = details.nonce;
