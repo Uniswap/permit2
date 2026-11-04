@@ -233,8 +233,8 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
 
         bytes memory sig = getPermitBatchTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-        // must fill address to even though token0 wont get sent.
-        // transfer details must be lenght of permit
+        // must fill address to even though token0 won't get sent.
+        // transfer details must be length of permit
         address[] memory to = AddressBuilder.fill(1, address(address0)).push(address(address0));
         ISignatureTransfer.SignatureTransferDetails[] memory toAmountPairs =
             StructBuilder.fillSigTransferDetails(defaultAmount, to);
